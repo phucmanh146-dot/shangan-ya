@@ -1,0 +1,106 @@
+'use strict';
+const $ = id => document.getElementById(id);
+let activeRoute = null, activeRun = null, pendingChange = null, completionTask = null, running = false;
+let routes = [], config = {};
+const localDate = () => { const d = new Date(); return [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-'); };
+function el(tag, text, cls) { const node = document.createElement(tag); if(text != null) node.textContent = text; if(cls) node.className = cls; return node; }
+function clear(node) { node.replaceChildren(); }
+function safeLink(url, title) { const a = el('a', title); try { const u = new URL(url); if(['https:','http:'].includes(u.protocol)) a.href = u.href; } catch {} a.target='_blank'; a.rel='noopener noreferrer'; return a; }
+async function api(path, data) {
+  const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 120000);
+  try {
+    const response = await fetch(path, { method: data === undefined ? 'GET' : 'POST', headers: data === undefined ? {} : {'Content-Type':'application/json'}, body: data === undefined ? undefined : JSON.stringify(data), signal:controller.signal });
+    const value = await response.json(); if(!response.ok) throw new Error(value.error || `接口错误 ${response.status}`); return value;
+  } catch(error) { if(error.name === 'AbortError') throw new Error('请求超时，请稍后刷新查看执行记录。'); throw error; } finally { clearTimeout(timer); }
+}
+async function health() {
+  try { const status = await api('/api/agent/health'); config = status.ai; $('connection').textContent = config.configured ? `后端已连接 · ${config.model}` : '后端已连接 · 待设置模型'; $('connection').classList.toggle('bad', !config.configured); }
+  catch { $('connection').textContent = '后端未连接'; $('connection').classList.add('bad'); }
+}
+async function refreshState(selectId) {
+  const state = await api('/api/agent/state'); routes = state.routes; clear($('saved-routes'));
+  if(!routes.length) $('saved-routes').append(el('p','生成后自动保存在后端，刷新页面仍能继续。','hint'));
+  for(const route of routes) { const button = el('button', `${route.title} · ${route.tasks.filter(x=>x.status==='done').length}/${route.tasks.length}`); button.type='button'; if(route.id === (selectId || activeRoute?.id)) button.className='selected'; button.onclick=()=>renderRoute(route); $('saved-routes').append(button); }
+  if(selectId) { const found = routes.find(x=>x.id === selectId); if(found) renderRoute(found); }
+  return state;
+}
+function sourceCards(parent, sources) {
+  clear(parent);
+  for(const source of sources || []) {
+    const card=el('article',null,'source-card'); card.append(safeLink(source.url, `[${source.id}] ${source.title}`));
+    const status = {fulltext:'已读取正文',snippet:'仅检索摘要',partial:'内容不完整',failed:'正文读取失败'}[source.readStatus] || '待读取';
+    card.append(el('div',`${status} · ${new Date(source.retrievedAt).toLocaleString()} · ${new URL(source.url).hostname}`,'source-meta'));
+    if(source.snippet) card.append(el('p',source.snippet)); parent.append(card);
+  }
+}
+function renderRoute(route) {
+  activeRoute=route; $('route-panel').hidden=false; $('empty-state').hidden=true; $('research-panel').hidden=true;
+  $('route-title').textContent=route.title; $('route-meta').textContent=`已保存 · 版本 ${route.version} · ${route.tasks.filter(x=>x.status==='done').length}/${route.tasks.length} 已完成`;
+  $('route-summary').textContent=route.summary; clear($('assumptions'));
+  for(const assumption of route.assumptions || []) $('assumptions').append(el('div','假设：'+assumption,'assumption'));
+  if(route.diagnosis) $('assumptions').append(el('p',route.diagnosis,'summary-text'));
+  clear($('conflicts'));
+  if(route.conflicts?.length) { const box=el('div',null,'warning-box'); box.append(el('strong',`还有 ${route.unscheduledMinutes} 分钟排不进当前时间。`)); const list=el('ul'); for(const c of route.conflicts) list.append(el('li',`${c.title}：${c.reason}，剩余 ${c.minutes} 分钟`)); box.append(list,el('p','可以减少任务范围、增加可用时间，或调整目标截止日期。系统不会把超时任务当作完成。')); $('conflicts').append(box); }
+  clear($('tasks'));
+  route.tasks.forEach((task,index)=>{
+    const card=el('article',null,'card task-card'+(task.status==='done'?' done':'')), top=el('div',null,'task-top'), title=el('div');
+    title.append(el('span',`任务 ${String(index+1).padStart(2,'0')} · ${task.id}`,'task-index'),el('h3',task.title)); top.append(title,el('span',task.status==='done'?'已完成':`约 ${task.minutes} 分钟`,'tag')); card.append(top);
+    const deliverable=el('p',null,'task-description'); deliverable.append(el('strong','留下什么：'),document.createTextNode(task.deliverable)); card.append(deliverable);
+    const acceptance=el('p',null,'task-description'); acceptance.append(el('strong','如何验收：'),document.createTextNode(task.acceptance)); card.append(acceptance,el('div','现在先做：'+task.firstStep,'first-step'));
+    const bottom=el('div',null,'task-bottom'), info=[]; if(task.dependsOn?.length) info.push('前置 '+task.dependsOn.join('、')); if(task.sourceIds?.length) info.push('来源 '+task.sourceIds.join('、')); if(task.sessions?.length) info.push(task.sessions[0].date+' 起'); bottom.append(el('span',info.join(' · ')));
+    if(task.status !== 'done') { const button=el('button','记录成果，验收完成'); button.onclick=()=>{completionTask=task; $('completion-criteria').textContent=task.acceptance; $('completion-evidence').value=''; $('complete-error').textContent=''; $('complete-dialog').showModal();}; bottom.append(button); } else if(task.evidence) card.append(el('p','完成证据：'+task.evidence,'hint'));
+    card.append(bottom); $('tasks').append(card);
+  });
+  clear($('calendar'));
+  for(const day of route.days || []) { const card=el('article',null,'card day-card'), h=el('h3',day.date); h.append(el('span',`${day.used}/${day.capacity} 分钟`,'tag')); card.append(h); const list=el('ol'); for(const s of day.sessions) list.append(el('li',s.title+` · ${s.minutes} 分钟`)); if(!day.sessions.length) card.append(el('p','这一天留给其他安排。','hint')); card.append(list); $('calendar').append(card); }
+  if(!route.days?.length) $('calendar').append(el('p','当前没有待执行的已排期任务。','hint'));
+  sourceCards($('sources'),route.sources);
+  $('tutorial-video').hidden=true; $('tutorial-video').removeAttribute('src'); $('download-video').hidden=true; $('video-status').textContent=''; $('make-video').disabled=false; $('undo').disabled=route.version<2;
+}
+function renderEvents(run) { clear($('events')); for(const e of run.events) { const node=el('li',e.message); $('events').append(node); } $('events').scrollTop=$('events').scrollHeight; $('run-state').textContent={queued:'排队中',running:'执行中',completed:'已完成',failed:'需要处理',interrupted:'已中断'}[run.status] || run.status; }
+function busy(value) { running=value; $('start').disabled=value; $('research').disabled=value; $('start').textContent=value?'正在检索与规划…':'检索资料，生成可执行路线 ↗'; }
+async function poll(identifier) {
+  activeRun=identifier;
+  try { const run=await api('/api/agent/run?id='+encodeURIComponent(identifier)); if(activeRun!==identifier) return; renderEvents(run);
+    if(['queued','running'].includes(run.status)) return setTimeout(()=>poll(identifier),1500);
+    busy(false);
+    if(run.status==='completed') { if(run.result?.mode==='research-only') { $('research-panel').hidden=false; sourceCards($('research-sources'),run.result.sources); } else { await refreshState(run.result.id); } }
+    else { $('form-error').textContent=run.error || '执行未完成'; if(run.result?.sources) { $('research-panel').hidden=false; sourceCards($('research-sources'),run.result.sources); } }
+  } catch(error) { busy(false); $('form-error').textContent=error.message+' 已提交的后台任务不会因此重复执行，刷新后可恢复。'; }
+}
+function once(node,event,timeout=15000) { return new Promise((resolve,reject)=>{ const timer=setTimeout(()=>{cleanup();reject(new Error('媒体读取超时，请换用短录屏或截图。'));},timeout); const success=()=>{cleanup();resolve();}, fail=()=>{cleanup();reject(new Error('浏览器无法解码该媒体，请转换为常见视频或图片格式。'));}; function cleanup(){clearTimeout(timer);node.removeEventListener(event,success);node.removeEventListener('error',fail);} node.addEventListener(event,success,{once:true});node.addEventListener('error',fail,{once:true}); }); }
+function jpeg(media) { const canvas=document.createElement('canvas'); const width=media.videoWidth||media.naturalWidth, height=media.videoHeight||media.naturalHeight; if(!width||!height) throw new Error('画面尺寸无效'); const scale=Math.min(1,1100/width,900/height); canvas.width=Math.round(width*scale);canvas.height=Math.round(height*scale);canvas.getContext('2d').drawImage(media,0,0,canvas.width,canvas.height);return canvas.toDataURL('image/jpeg',.7); }
+async function mediaFrames() {
+  const file=$('media').files[0]; if(!file) return []; if(file.size>100*1024*1024) throw new Error('请使用小于 100 MB 的短录屏，或截取关键截图。');
+  const objectURL=URL.createObjectURL(file);
+  try { if(file.type.startsWith('image/')) { const img=new Image(); const ready=once(img,'load');img.src=objectURL;await ready;return [{timestamp:0,image:jpeg(img)}]; }
+    if(!file.type.startsWith('video/')) throw new Error('请选择截图或视频文件。');
+    const video=document.createElement('video');video.muted=true;video.preload='auto';const ready=once(video,'loadeddata');video.src=objectURL;await ready;
+    if(!Number.isFinite(video.duration)||video.duration<=0) throw new Error('无法读取视频时长。');
+    const frames=[];for(let i=0;i<6;i++) { const point=Math.min(video.duration*.999,video.duration*i/5);if(Math.abs(video.currentTime-point)>.001){const seek=once(video,'seeked');video.currentTime=point;await seek;} frames.push({timestamp:Math.round(point*10)/10,image:jpeg(video)}); }
+    video.removeAttribute('src');video.load();return frames;
+  } finally { URL.revokeObjectURL(objectURL); }
+}
+async function start(researchOnly=false) {
+  if(running||!$('goal-form').reportValidity())return;busy(true);$('form-error').textContent='';clear($('events'));$('events').append(el('li','准备输入与时间约束…'));
+  try { const frames=researchOnly?[]:await mediaFrames(); const input={goal:$('goal').value,level:$('level').value,mode:$('mode').value,frames,researchOnly,
+    urls:$('urls').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),settings:{startDate:localDate(),dailyMinutes:Number($('daily').value),deadline:$('deadline').value||''}};
+    const run=await api('/api/agent/run',input);poll(run.runId);
+  } catch(error) {busy(false);$('form-error').textContent=error.message;}
+}
+$('goal-form').addEventListener('submit',event=>{event.preventDefault();start();});$('research').onclick=()=>start(true);
+$('mode').onchange=()=>{if($('mode').value!=='competition')$('deadline').value='';};
+document.querySelectorAll('[data-close]').forEach(button=>button.onclick=()=>$(button.dataset.close).close());
+document.querySelectorAll('[data-tab]').forEach(button=>button.onclick=()=>{document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b===button));document.querySelectorAll('.tab-panel').forEach(p=>p.hidden=p.id!==button.dataset.tab);});
+document.querySelectorAll('[data-example]').forEach(button=>button.onclick=()=>{const pm=button.dataset.example==='pm';$('mode').value=pm?'learning':'rescue';$('goal').value=pm?'我想成为 AI 产品经理，已经有一些产品基础，但不清楚 Agent 应该学什么。请用上岸鸭作为实战项目，给我一条能产出作品的学习路线。':'我正在开发上岸鸭，但遇到了报错。请根据我上传的截图或录屏，定位卡点，给出可操作步骤和验证方法。';$('deadline').value='';$('goal').focus();});
+$('open-config').onclick=()=>{$('ai-base').value=config.base||'';$('ai-model').value=config.model||'';$('ai-protocol').value=config.protocol||'chat';$('ai-key').value='';$('config-message').textContent='';$('config-dialog').showModal();};
+$('config-form').onsubmit=async event=>{event.preventDefault();const button=event.submitter;button.disabled=true;$('config-message').textContent='正在测试真实模型请求…';try{config=await api('/api/ai-config',{base:$('ai-base').value,model:$('ai-model').value,protocol:$('ai-protocol').value,key:$('ai-key').value,keepKey:true,verify:true});$('ai-key').value='';$('config-message').textContent='模型已返回真实响应，连接成功。';await health();}catch(error){$('config-message').textContent=error.message;}finally{button.disabled=false;}};
+$('open-replan').onclick=()=>{if(!activeRoute)return;$('replan-daily').value=activeRoute.settings.dailyMinutes||90;$('unavailable').value=(activeRoute.settings.unavailableDates||[]).join(',');$('new-title').value='';$('change-reason').value='';$('new-deadline').value='';clear($('replan-preview'));$('apply-replan').disabled=true;$('replan-error').textContent='';pendingChange=null;$('replan-dialog').showModal();};
+$('replan-form').addEventListener('input',()=>{pendingChange=null;$('apply-replan').disabled=true;});
+$('replan-form').onsubmit=async event=>{event.preventDefault();const payload={routeId:activeRoute.id,version:activeRoute.version,requestId:crypto.randomUUID().replaceAll('-',''),reason:$('change-reason').value||'临时安排调整',settings:{dailyMinutes:Number($('replan-daily').value),startDate:localDate(),unavailableDates:$('unavailable').value.split(/[,，\s]+/).map(x=>x.trim()).filter(Boolean)}};if($('new-title').value.trim())payload.newTask={title:$('new-title').value,minutes:Number($('new-minutes').value),deadline:$('new-deadline').value};
+  $('replan-error').textContent='';try {const preview=await api('/api/agent/replan',payload);pendingChange=payload;clear($('replan-preview'));$('replan-preview').append(el('strong',`${preview.lastChange.changes.length} 个任务的安排改变；${preview.conflicts.length} 个冲突。`));const list=el('ul');for(const change of preview.lastChange.changes)list.append(el('li',`${change.title} → ${change.after.map(x=>x.date+' '+x.minutes+'分钟').join('、')||'暂无可用时间'}`));$('replan-preview').append(list);if(preview.unscheduledMinutes)$('replan-preview').append(el('p',`时间缺口：${preview.unscheduledMinutes} 分钟，请调整范围或增加可用时间。`,'error'));$('apply-replan').disabled=false;}catch(error){$('replan-error').textContent=error.message;}};
+$('apply-replan').onclick=async()=>{if(!pendingChange)return;$('apply-replan').disabled=true;try{const updated=await api('/api/agent/replan',{...pendingChange,apply:true});$('replan-dialog').close();await refreshState(updated.id);}catch(error){$('replan-error').textContent=error.message;$('apply-replan').disabled=false;}};
+$('undo').onclick=async()=>{if(!activeRoute)return;try{const result=await api('/api/agent/undo',{routeId:activeRoute.id,version:activeRoute.version});await refreshState(result.id);}catch(error){$('form-error').textContent=error.message;}};
+$('complete-form').onsubmit=async event=>{event.preventDefault();if(!completionTask)return;try{const updated=await api('/api/agent/complete',{routeId:activeRoute.id,version:activeRoute.version,taskId:completionTask.id,evidence:$('completion-evidence').value});$('complete-dialog').close();await refreshState(updated.id);}catch(error){$('complete-error').textContent=error.message;}};
+$('make-video').onclick=async()=>{if(!activeRoute)return;const identifier=activeRoute.id;$('make-video').disabled=true;$('video-status').textContent='后端正在生成 MP4 字幕讲解，通常需要几秒到一分钟…';try{const result=await api('/api/agent/tutorial',{routeId:identifier});if(activeRoute.id!==identifier)return;$('tutorial-video').src=result.url;$('tutorial-video').hidden=false;$('download-video').href=result.url;$('download-video').hidden=false;$('video-status').textContent='已生成真实 MP4 文件，可播放或下载。';}catch(error){$('video-status').textContent=error.message;}finally{$('make-video').disabled=false;}};
+(async()=>{await health();try{const state=await refreshState();if(routes.length)renderRoute(routes[0]);const running=state.runs.find(r=>['queued','running'].includes(r.status));if(running){busy(true);poll(running.id);}else if(state.runs[0]){const last=await api('/api/agent/run?id='+state.runs[0].id);renderEvents(last);}}catch(error){$('form-error').textContent=error.message;}})();
