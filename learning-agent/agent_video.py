@@ -13,7 +13,8 @@ def render(identifier):
     ffmpeg = shutil.which('ffmpeg')
     if not ffmpeg:
         raise ValueError('未找到 FFmpeg，仍可阅读步骤；安装 FFmpeg 后可生成字幕视频')
-    fonts = [Path(os.environ.get('WINDIR', 'C:/Windows')) / 'Fonts/msyh.ttc',
+    fonts = [Path(os.environ.get('SHANGAN_AGENT_FONT', '/nonexistent')),
+             Path(os.environ.get('WINDIR', 'C:/Windows')) / 'Fonts/msyh.ttc',
              Path('/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc'),
              Path('/usr/share/fonts/truetype/wqy/wqy-microhei.ttc')]
     font_path = next((p for p in fonts if p.is_file()), None)
@@ -22,15 +23,18 @@ def render(identifier):
     font = ImageFont.truetype(str(font_path), 31)
     small = ImageFont.truetype(str(font_path), 23)
     title_font = ImageFont.truetype(str(font_path), 40)
-    steps = body.get('tutorialSteps') or [{'title': t['title'], 'instruction': t['firstStep'], 'check': t['acceptance']}
-                                          for t in body['tasks'][:6]]
+    steps = body.get('tutorialSteps') or [
+        {'title':a['title'],'instruction':a['instruction'],'check':a['check']}
+        for t in body['tasks'] for a in (t.get('actions') or [
+            {'title':t['title'],'instruction':t['firstStep'],'check':t['acceptance']}])]
+    total_steps = len(steps)
     steps = steps[:8]
     target_dir = DATA / 'videos'
     target_dir.mkdir(exist_ok=True)
     name = body['id'] + '-v' + str(body['version']) + '.mp4'
     target = target_dir / name
     if target.exists():
-        return {'url': '/api/agent/video/' + name, 'format': 'mp4', 'kind': 'caption-walkthrough'}
+        return {'url': '/api/agent/video/' + name, 'format': 'mp4', 'kind': 'caption-walkthrough', 'stepCount':len(steps),'totalSteps':total_steps}
 
     def wrapped(text, draw, current_font, width, max_lines):
         lines, current = [], ''
@@ -77,4 +81,4 @@ def render(identifier):
         if not stage.is_file() or stage.stat().st_size < 1000:
             raise ValueError('未得到有效的视频文件')
         os.replace(stage, target)
-    return {'url': '/api/agent/video/' + name, 'format': 'mp4', 'seconds': len(steps) * 7, 'kind': 'caption-walkthrough'}
+    return {'url': '/api/agent/video/' + name, 'format': 'mp4', 'seconds': len(steps) * 7, 'kind': 'caption-walkthrough', 'stepCount':len(steps),'totalSteps':total_steps}

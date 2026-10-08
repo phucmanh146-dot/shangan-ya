@@ -117,6 +117,32 @@ def download_text(url, limit=3_000_000):
         return raw.decode(response.headers.get_content_charset() or 'utf-8', 'replace')
 
 
+def search_live(query, n=5):
+    key = os.getenv('TAVILY_API_KEY', '').strip()
+    if not key:
+        return rescue.search_web(query, n)
+    endpoint = 'https://api.tavily.com/search'
+    rescue.validate_url(endpoint)
+    body = {'query':str(query)[:350],'max_results':min(8,max(1,n)), 'search_depth':'basic',
+            'include_answer':False,'include_raw_content':False}
+    req = Request(endpoint, data=dump(body).encode('utf-8'),
+                  headers={'Authorization':'Bearer '+key,'Content-Type':'application/json'})
+    # Do not forward a search-service credential to a redirected domain.
+    try:
+        with build_opener(rescue.NoRedirect()).open(req, timeout=20) as response:
+            raw = response.read(2_000_001)
+            if len(raw) > 2_000_000:
+                raise ValueError('检索响应超过读取上限')
+            result = json.loads(raw)
+        rows = [{'title':str(x.get('title',''))[:300], 'url':str(x.get('url',''))[:2048],
+                 'snippet':str(x.get('content',''))[:1800]} for x in result.get('results', [])[:n] if x.get('url')]
+        if not rows:
+            raise ValueError('检索服务没有返回结果')
+        return {'provider':'Tavily','query':query,'results':rows}
+    except Exception as exc:
+        raise rescue.RescueError('Tavily 检索未完成，请检查搜索服务额度、配置与网络。', 'SEARCH_UNAVAILABLE', 503) from exc
+
+
 def read_url(url):
     """Read public text; official SPA charter is extracted from its same-origin bundle."""
     rescue.validate_url(url)
@@ -180,7 +206,7 @@ class Evidence:
     def search(self, query):
         event(self.run_id, 'search', '联网检索：' + query)
         try:
-            result = rescue.search_web(query, 5)
+            result = search_live(query, 5)
             added = []
             for x in result['results']:
                 try:
@@ -206,10 +232,10 @@ SYSTEM = '''你是上岸鸭的学习与竞赛导航 Agent。把用户的宏观�
 1. {"action":"search","query":"针对卡点的具体检索词"}
 2. {"action":"read","sourceId":"S1"}
 3. {"action":"finish","title":"路线标题","summary":"直接解释选择这条路线的原因和取舍", "assumptions":["明确的假设"],"tasks":[
-{"id":"T1","title":"具体动作","minutes":30,"dependsOn":[],"deliverable":"要留下的成果","acceptance":"怎样验证通过","firstStep":"5分钟内能开始的第一步","sourceIds":["S1"],"priority":2}],
+{"id":"T1","phase":"所属阶段成果","title":"具体任务","minutes":30,"dependsOn":[],"deliverable":"要留下的成果","acceptance":"怎样验证通过","firstStep":"5分钟内能开始的第一步","sourceIds":["S1"],"priority":2,"actions":[{"title":"动作名称","instruction":"在什么页面/材料上具体做什么","minutes":5,"result":"该动作留下什么","check":"该动作的成功标志"}]}],
 "diagnosis":"如有卡点，区分观察到的证据与推测", "tutorialSteps":[{"title":"动作","instruction":"明确点击或操作步骤","check":"成功标志","timestamp":0}]}
 联网证据只用真实给出的 S 编号，不编造链接、比赛要求和检索结果。未读到的正文不可声称已读。
-每次最多创建 4 至 12 个任务；依赖必须指向本次路线中的编号。工时是估计，优先小步完成，超过120分钟的任务尽量拆分。
+每次创建 4 至 8 个任务；依赖必须指向本次路线中的编号。每个任务再拆成 1 至 8 个 actions，第一动作不超过5分钟，其他动作不超过25分钟。所有动作minutes之和必须等于任务minutes。每个动作写清操作位置、操作、留下的成果和完成标志，不能只写“学习/掌握/了解”。优先小步完成，超过120分钟的任务尽量拆分。路线和日期是建议，用户会自己勾选每天做哪些任务。
 比赛必须区分当届章程与历届案例。获奖介绍仅用于提炼产品设计，不据此杜撰评分标准或保证获奖。
 任务是依据资料为该用户设计的练习，不要复制长段原文。用户没有给日期，不给任务编造deadline。
 卡点救援应先指出第一步，再给失败分支；视频只分析送来的采样帧，不能声称看了全部画面或听到了音频。
@@ -243,7 +269,22 @@ def validate_answer(obj, evidence):
         item = {k: str(t.get(k, ''))[:1200] for k in ('id', 'title', 'deliverable', 'acceptance', 'firstStep')}
         if any(not item[k].strip() for k in ('deliverable', 'acceptance', 'firstStep')):
             raise ValueError('每个任务都需要成果、验收标准和第一步')
+        actions = t.get('actions', [])
+        if not isinstance(actions, list) or not 1 <= len(actions) <= 8:
+            raise ValueError('每个任务还需拆成 1 至 8 个具体操作动作')
+        clean_actions = []
+        for n, action in enumerate(actions):
+            if not isinstance(action, dict) or type(action.get('minutes')) is not int or not 1 <= action['minutes'] <= (5 if n == 0 else 25):
+                raise ValueError('第一动作需在5分钟内，其余单个动作需在25分钟内')
+            value = {k: str(action.get(k, '')).strip()[:700] for k in ('title', 'instruction', 'result', 'check')}
+            if not all(value.values()):
+                raise ValueError('每个动作都需有名称、具体操作、成果和完成标准')
+            value.update(id=item['id'] + '-A' + str(n + 1), minutes=action['minutes'], status='todo')
+            clean_actions.append(value)
+        if sum(a['minutes'] for a in clean_actions) != t.get('minutes'):
+            raise ValueError('动作分钟数合计必须等于任务预计分钟数')
         item.update(minutes=t.get('minutes'), dependsOn=t.get('dependsOn', []), sourceIds=refs,
+                    actions=clean_actions, phase=str(t.get('phase', '实践阶段'))[:200],
                     status='todo', priority=max(0, min(3, int(t.get('priority', 1)))))
         clean.append(item)
     validate_tasks(clean)
@@ -446,8 +487,59 @@ def complete_task(data):
     if not evidence:
         raise ValueError('请记录验收成果或链接')
     task.update(status='done', completedAt=now(), evidence=evidence)
+    for action in task.get('actions', []):
+        if action.get('status') != 'done':
+            action.update(status='done', completedAt=now(), evidence='随任务整体验收：' + evidence)
     current.update(schedule(current['tasks'], current['settings']))
     return save_route(current, '完成任务：' + task['title'], expected)
+
+
+def daily_plan(data):
+    from agent_day import make_day
+    current = route(str(data.get('routeId', '')))
+    expected = int(data.get('version', 0))
+    if current['version'] != expected:
+        raise ValueError('路线已更新，请刷新后再选今天的任务')
+    result = make_day(current, data)
+    if data.get('apply') is True:
+        current.setdefault('dailyPlans', {})[result['date']] = dict(result, confirmedAt=now())
+        save_route(current, '用户选择并确认日程：' + result['date'], expected)
+    return dict(result, routeId=current['id'], routeVersion=current['version'])
+
+
+def complete_action(data):
+    current = route(str(data.get('routeId', '')))
+    expected = int(data.get('version', 0))
+    if current['version'] != expected:
+        raise ValueError('路线已更新，请刷新后重试')
+    task = next((t for t in current['tasks'] if t['id'] == data.get('taskId')), None)
+    if task is None:
+        raise ValueError('任务不存在')
+    completed = {t['id'] for t in current['tasks'] if t.get('status') == 'done'}
+    if not set(task.get('dependsOn', [])) <= completed:
+        raise ValueError('请先完成前置任务')
+    actions = task.get('actions', [])
+    action = next((a for a in actions if a['id'] == data.get('actionId')), None)
+    if action is None:
+        raise ValueError('动作不存在')
+    if action.get('status') == 'done':
+        return current
+    if any(a.get('status') != 'done' for a in actions[:actions.index(action)]):
+        raise ValueError('请先完成这个任务的前面动作')
+    evidence = str(data.get('evidence', '')).strip()[:2000]
+    actual = int(data.get('actualMinutes') or 0)
+    if not evidence or not 1 <= actual <= 1440:
+        raise ValueError('请填写完成证据和合理的实际用时')
+    action.update(status='done', completedAt=now(), evidence=evidence, actualMinutes=actual)
+    if all(a.get('status') == 'done' for a in actions):
+        task.update(status='done', completedAt=now(), evidence=evidence)
+    current.update(schedule(current['tasks'], current['settings']))
+    history = [a for t in current['tasks'] for a in t.get('actions', []) if a.get('actualMinutes')]
+    if history:
+        current['timeInsight'] = {'samples':len(history), 'averageActualMinutes':round(sum(a['actualMinutes'] for a in history)/len(history),1),
+                                  'actualToEstimated':round(sum(a['actualMinutes'] for a in history)/sum(a['minutes'] for a in history),2),
+                                  'note':'根据自己记录的实际用时统计，样本较少时只作参考；不会自动塞入更多任务。'}
+    return save_route(current, '完成动作：' + action['title'], expected)
 
 
 def undo(data):

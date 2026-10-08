@@ -100,7 +100,7 @@ def schedule(tasks, settings):
             continue
         earliest = max([start.isoformat()] + [finishes[x] for x in deps])
         latest = min(end.isoformat(), t.get('deadline') or end.isoformat())
-        need = t['minutes']
+        need = sum(a['minutes'] for a in t['actions'] if a.get('status') != 'done') if t.get('actions') else t['minutes']
         for key in remaining:
             if earliest <= key <= latest and remaining[key] > 0:
                 allocated = min(remaining[key], need)
@@ -116,7 +116,7 @@ def schedule(tasks, settings):
             conflicts.append({'taskId': t['id'], 'title': t['title'], 'reason': '截止前可用时间不足', 'minutes': need})
         else:
             completed.add(t['id'])
-            finishes[t['id']] = t['sessions'][-1]['date']
+            finishes[t['id']] = t['sessions'][-1]['date'] if t['sessions'] else earliest
         ordered.append(t)
     days = []
     for key, budget in capacities.items():
@@ -126,6 +126,6 @@ def schedule(tasks, settings):
         if sessions or key in unavailable:
             days.append({'date': key, 'capacity': budget, 'used': sum(s['minutes'] for s in sessions), 'sessions': sessions})
     return {'tasks': result, 'days': days, 'conflicts': conflicts,
-            'totalMinutes': sum(t['minutes'] for t in result if t.get('status') != 'done'),
+            'totalMinutes': sum(sum(a['minutes'] for a in t['actions'] if a.get('status') != 'done') if t.get('actions') else t['minutes'] for t in result if t.get('status') != 'done'),
             'unscheduledMinutes': sum(t.get('unscheduledMinutes', 0) for t in result if t.get('status') != 'done'),
             'settings': settings}

@@ -1,6 +1,7 @@
 """Run standalone or alongside the existing 上岸鸭 V9 files on loopback."""
 import argparse
 import json
+import os
 import mimetypes
 import re
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -60,6 +61,8 @@ class Handler(LegacyHandler):
             if path == '/api/agent/health':
                 import shutil, importlib.util
                 return self.send_json({'ok': True, 'version': 'learning-agent-1', 'ai': rescue.public_config(),
+                                       'search':{'provider':'Tavily' if os.getenv('TAVILY_API_KEY') else 'public-fallback',
+                                                 'verified':False, 'note':'有配置不代表检索已成功；请查看每次执行记录。'},
                                        'capabilities': {'liveSearch': True, 'sourceReading': True, 'persistedRoutes': True,
                                                         'replan': True, 'videoRenderer': bool(shutil.which('ffmpeg') and importlib.util.find_spec('PIL'))}})
             if path == '/api/agent/state':
@@ -116,6 +119,10 @@ class Handler(LegacyHandler):
                 return self.send_json(agent.replan(data, save=data.get('apply') is True))
             if path == '/api/agent/complete':
                 return self.send_json(agent.complete_task(data))
+            if path == '/api/agent/day':
+                return self.send_json(agent.daily_plan(data))
+            if path == '/api/agent/action':
+                return self.send_json(agent.complete_action(data))
             if path == '/api/agent/undo':
                 return self.send_json(agent.undo(data))
             if path == '/api/agent/tutorial':

@@ -13,3 +13,6 @@ start-rescue.ps1
 联网救援使用说明.md
 workspace_store.py
 test-output/
+learning-agent-install-result.json
+.learning-agent-server.pid
+backup-learning-agent-*/
