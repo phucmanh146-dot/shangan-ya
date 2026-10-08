@@ -20,8 +20,8 @@ def validate_tasks(tasks):
         ids.add(t['id'])
         if not str(t.get('title', '')).strip():
             raise ValueError('任务标题不能为空')
-        if type(t.get('minutes')) is not int or not 5 <= t['minutes'] <= 1440:
-            raise ValueError('单个任务预计用时应为 5 至 1440 分钟')
+        if type(t.get('minutes')) is not int or not 1 <= t['minutes'] <= 1440:
+            raise ValueError('单个任务预计用时应为 1 至 1440 分钟')
         if t.get('deadline'):
             day(t['deadline'])
         if not isinstance(t.get('dependsOn', []), list):

@@ -26,6 +26,78 @@ def tasks():
 SETTINGS = {'startDate': '2026-10-08', 'deadline': '2026-10-12', 'dailyMinutes': 60}
 
 
+def help_answer():
+    return {'action': 'finish', 'title': '测试：运行按钮未响应', 'answer': '先核对当前页面的提示，再重试一次。',
+            'observed': [{'text': '画面有一条报错提示', 'frameIndex': 1}],
+            'possibleCauses': ['可能有未填写字段，需核对'], 'missingInfo': [], 'sourceIds': [],
+            'success': '提交后出现结果或明确的错误信息',
+            'steps': [{'title': '记录提示', 'instruction': '在当前页面复制报错原文', 'minutes': 3,
+                       'result': '报错文本', 'check': '能够读出完整提示', 'onFailure': '放大提示区域并补截图', 'frameIndex': 1}]}
+
+
+class RescueTests(unittest.TestCase):
+    def setUp(self):
+        self.ev = agent.Evidence('rescue-test')
+        # Transport fixture only, not a claim that the mock understood an image.
+        self.frames = [{'image': 'data:image/jpeg;base64,/9j/2Q==', 'timestamp': 12.5}]
+
+    def test_rescue_uses_supplied_frame_time_and_one_task(self):
+        result = agent.validate_rescue(help_answer(), self.ev, self.frames)
+        self.assertEqual(result['help']['observed'][0]['timestamp'], 12.5)
+        self.assertEqual(len(result['tasks']), 1)
+        self.assertEqual(result['tasks'][0]['actions'][0]['onFailure'], '放大提示区域并补截图')
+
+    def test_fabricated_frame_or_source_is_rejected(self):
+        answer = help_answer(); answer['observed'][0]['frameIndex'] = 2
+        with self.assertRaisesRegex(ValueError, '真实画面'):
+            agent.validate_rescue(answer, self.ev, self.frames)
+        answer = help_answer(); answer['sourceIds'] = ['S99']
+        with self.assertRaisesRegex(ValueError, '来源'):
+            agent.validate_rescue(answer, self.ev, self.frames)
+
+    def test_missing_failure_branch_is_rejected(self):
+        answer = help_answer(); del answer['steps'][0]['onFailure']
+        with self.assertRaisesRegex(ValueError, '失败后的下一步'):
+            agent.validate_rescue(answer, self.ev, self.frames)
+
+    def test_visual_answer_survives_search_failure(self):
+        answers = ['画面1有报错提示，文字不够清晰。', json.dumps({'action': 'search', 'query': '界面报错 官方文档'}), json.dumps(help_answer())]
+        with patch.object(agent, 'search_live', side_effect=RuntimeError('offline')), \
+             patch.object(agent, 'read_url') as read, \
+             patch.object(agent.rescue, 'public_config', return_value={'configured': True}), \
+             patch.object(agent.rescue, 'config_snapshot', return_value={'model': 'mock-vision'}), \
+             patch.object(agent.rescue, 'complete', side_effect=answers) as model:
+            result = agent.run_agent('rescue-test', {'goal': '截图里的报错怎么处理', 'mode': 'rescue', 'mediaKind': 'video', 'frames': self.frames, 'settings': SETTINGS})
+            self.assertEqual(model.call_args_list[0].args[0][1]['content'][-1]['image_url']['url'], self.frames[0]['image'])
+            read.assert_not_called()  # No unrelated learning-roadmap seed retrieval.
+        self.assertFalse(result['hasWebEvidence'])
+        self.assertEqual(result['frameCount'], 1)
+        self.assertEqual(result['tasks'][0]['status'], 'todo')
+        self.assertEqual(agent.route(result['id'])['help']['answer'], help_answer()['answer'])
+        self.assertNotIn('data:image/jpeg', agent.dump(result))
+
+    def test_followup_receives_previous_steps_without_requiring_new_image(self):
+        previous = agent.validate_rescue(help_answer(), self.ev, self.frames)
+        previous = agent.save_route(dict(previous, id='c'*32, mode='rescue', goal='之前的报错'), 'test')
+        answer = help_answer(); answer['observed'][0]['frameIndex'] = None; answer['steps'][0]['frameIndex'] = None
+        with patch.object(agent.rescue, 'public_config', return_value={'configured': True}), \
+             patch.object(agent.rescue, 'config_snapshot', return_value={'model': 'mock-vision'}), \
+             patch.object(agent.rescue, 'complete', return_value=json.dumps(answer)) as model:
+            result = agent.run_agent('followup-test', {'mode': 'rescue', 'goal': '做完第一步仍然报错', 'settings': SETTINGS, 'previousRouteId': previous['id']})
+            context = json.loads(model.call_args.args[0][1]['content'])
+        self.assertEqual(context['previousHelp']['goal'], '之前的报错')
+        self.assertEqual(context['previousHelp']['steps'][0]['actions'][0]['title'], '记录提示')
+        self.assertEqual(result['previousRouteId'], previous['id'])
+        self.assertIsNone(result['help']['observed'][0]['timestamp'])
+
+    def test_vision_configuration_failure_is_explicit(self):
+        with patch.object(agent.rescue, 'public_config', return_value={'configured': False}), \
+             patch.object(agent.rescue, 'complete') as model:
+            with self.assertRaisesRegex(agent.rescue.RescueError, '支持图片输入'):
+                agent.run_agent('config-test', {'goal': '分析截图', 'mode': 'rescue', 'frames': self.frames, 'settings': SETTINGS})
+            model.assert_not_called()
+
+
 class PlanningTests(unittest.TestCase):
     def test_capacity_and_dependency_order(self):
         result = schedule(tasks(), SETTINGS)

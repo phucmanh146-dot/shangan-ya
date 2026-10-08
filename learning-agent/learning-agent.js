@@ -2,6 +2,7 @@
 const $ = id => document.getElementById(id);
 let activeRoute = null, activeRun = null, pendingChange = null, completionTask = null, completionAction = null, pendingDay = null, running = false;
 let routes = [], config = {};
+let previewURL = null, previousHelpId = null;
 const localDate = () => { const d = new Date(); return [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-'); };
 function el(tag, text, cls) { const node = document.createElement(tag); if(text != null) node.textContent = text; if(cls) node.className = cls; return node; }
 function clear(node) { node.replaceChildren(); }
@@ -36,7 +37,8 @@ function sourceCards(parent, sources) {
 function renderRoute(route) {
   activeRoute=route; $('route-panel').hidden=false; $('empty-state').hidden=true; $('research-panel').hidden=true;
   $('route-title').textContent=route.title; $('route-meta').textContent=`已保存 · 版本 ${route.version} · ${route.tasks.filter(x=>x.status==='done').length}/${route.tasks.length} 已完成`;
-  $('route-summary').textContent=route.summary; clear($('assumptions'));
+  $('route-summary').textContent=route.summary; $('route-summary').hidden=Boolean(route.help); clear($('assumptions'));
+  renderHelp(route);
   for(const assumption of route.assumptions || []) $('assumptions').append(el('div','假设：'+assumption,'assumption'));
   if(route.timeInsight) $('assumptions').append(el('div',`实际用时记录 ${route.timeInsight.samples} 次，实际 / 预计约 ${route.timeInsight.actualToEstimated} 倍。下一次选任务时可以据此留余量。`,'assumption'));
   if(route.diagnosis) $('assumptions').append(el('p',route.diagnosis,'summary-text'));
@@ -48,7 +50,7 @@ function renderRoute(route) {
     title.append(el('span',`${task.phase || '实践阶段'} · 任务 ${String(index+1).padStart(2,'0')} · ${task.id}`,'task-index'),el('h3',task.title)); top.append(title,el('span',task.status==='done'?'已完成':`约 ${task.minutes} 分钟`,'tag')); card.append(top);
     const deliverable=el('p',null,'task-description'); deliverable.append(el('strong','留下什么：'),document.createTextNode(task.deliverable)); card.append(deliverable);
     const acceptance=el('p',null,'task-description'); acceptance.append(el('strong','如何验收：'),document.createTextNode(task.acceptance)); card.append(acceptance,el('div','现在先做：'+task.firstStep,'first-step'));
-    if(task.actions?.length) { const list=el('ol',null,'micro-actions'); for(const action of task.actions) { const item=el('li'); item.append(el('strong',`${action.title} · ${action.minutes} 分钟`),el('p',action.instruction),el('p',`留下：${action.result} ｜ 验收：${action.check}`,'hint')); if(action.status==='done')item.append(el('span',`✓ 已完成${action.actualMinutes?' · 实际 '+action.actualMinutes+' 分钟':''}`,'tag')); else {const button=el('button','这一步完成了');button.type='button';button.onclick=()=>openCompletion(task,action);item.append(button);} list.append(item); } card.append(list); }
+    if(task.actions?.length) { const list=el('ol',null,'micro-actions'); for(const action of task.actions) { const item=el('li'); item.append(el('strong',`${action.title} · ${action.minutes} 分钟`),el('p',action.instruction),el('p',`留下：${action.result} ｜ 验收：${action.check}`,'hint')); if(action.frameIndex) item.append(el('p',frameLabel(action,route),'hint')); if(action.onFailure) item.append(el('p','如果没有成功：'+action.onFailure,'failure-branch')); if(action.status==='done')item.append(el('span',`✓ 已完成${action.actualMinutes?' · 实际 '+action.actualMinutes+' 分钟':''}`,'tag')); else {const button=el('button','这一步完成了');button.type='button';button.onclick=()=>openCompletion(task,action);item.append(button);} list.append(item); } card.append(list); }
     const bottom=el('div',null,'task-bottom'), info=[]; if(task.dependsOn?.length) info.push('前置 '+task.dependsOn.join('、')); if(task.sourceIds?.length) info.push('来源 '+task.sourceIds.join('、')); if(task.sessions?.length) info.push(task.sessions[0].date+' 起'); bottom.append(el('span',info.join(' · ')));
     if(task.status !== 'done') { const button=el('button','整体任务验收'); button.onclick=()=>openCompletion(task,null); bottom.append(button); } else if(task.evidence) card.append(el('p','完成证据：'+task.evidence,'hint'));
     card.append(bottom); $('tasks').append(card);
@@ -59,15 +61,41 @@ function renderRoute(route) {
   sourceCards($('sources'),route.sources);
   renderDayChoices();
   $('tutorial-video').hidden=true; $('tutorial-video').removeAttribute('src'); $('download-video').hidden=true; $('video-status').textContent=''; $('make-video').disabled=false; $('undo').disabled=route.version<2;
+  if(route.help) document.querySelector('[data-tab="tasks"]').click();
+}
+function frameLabel(item,route) { return item.frameIndex ? (route.mediaKind==='video'?`录屏第 ${item.timestamp} 秒 · 画面 ${item.frameIndex}`:`上传画面 ${item.frameIndex}`) : '根据你的描述'; }
+function renderHelp(route) {
+  const root=$('help-answer'); clear(root); root.hidden=!route.help; if(!route.help)return;
+  const help=route.help; root.append(el('span','先解决眼前这个问题','eyebrow'),el('h3','先这样做'),el('p',help.answer,'direct-answer'));
+  root.append(el('h4','目前能确认的现象'));const facts=el('ul');for(const fact of help.observed)facts.append(el('li',`${frameLabel(fact,route)}：${fact.text}`));root.append(facts);
+  if(help.possibleCauses.length){root.append(el('h4','可能原因 · 还需验证'));const causes=el('ul');for(const cause of help.possibleCauses)causes.append(el('li',cause));root.append(causes);}
+  root.append(el('p','解决标志：'+help.success,'first-step'));
+  if(help.missingInfo.length){root.append(el('h4','请补充这些信息'));const missing=el('ul');for(const item of help.missingInfo)missing.append(el('li',item));root.append(missing);}
+  if(route.frameCount)root.append(el('p',route.mediaKind==='video'?`本次只分析了 ${route.frameCount} 张采样画面，没有分析声音。`:`本次分析了 ${route.frameCount} 张上传画面。`,'hint'));
+  if(!route.hasWebEvidence)root.append(el('p','本次未取得可用网络资料，解答依据是你的描述和已提供画面；未核实的原因请按步骤验证。','hint'));
+  const followup=el('button','还没解决，继续补图追问');followup.type='button';followup.onclick=()=>openRescue(route);root.append(followup);
 }
 function renderEvents(run) { clear($('events')); for(const e of run.events) { const node=el('li',e.message); $('events').append(node); } $('events').scrollTop=$('events').scrollHeight; $('run-state').textContent={queued:'排队中',running:'执行中',completed:'已完成',failed:'需要处理',interrupted:'已中断'}[run.status] || run.status; }
-function busy(value) { running=value; $('start').disabled=value; $('research').disabled=value; $('start').textContent=value?'正在检索与规划…':'检索资料，生成可执行路线 ↗'; }
+function busy(value) { running=value; $('start').disabled=value; $('research').disabled=value; $('open-rescue').disabled=value; const rescue=$('mode').value==='rescue';$('start').textContent=value?(rescue?'正在分析问题并解答…':'正在检索与规划…'):(rescue?'分析图片 / 视频，给我解答 ↗':'检索资料，生成可执行路线 ↗'); }
+function updateMode() { const rescue=$('mode').value==='rescue';$('planning-settings').hidden=rescue;$('daily').disabled=rescue;$('deadline').disabled=rescue;$('research').hidden=rescue;$('input-title').textContent=rescue?'告诉我，你卡在哪一步':'告诉我，你想走到哪里';if(!rescue){previousHelpId=null;showFollowup();}busy(running); }
+function showFollowup(title='') { $('followup-context').hidden=!previousHelpId;$('clear-followup').hidden=!previousHelpId;$('followup-context').textContent=previousHelpId?'继续解答：'+title+'。会结合上次步骤和你这次补充的信息。':''; }
+function clearMedia() { $('media').value='';$('video-focus').value='';showMedia(); }
+function openRescue(previous=null) { if(running)return;$('mode').value='rescue';$('goal').value='';$('goal').placeholder=previous?'做到第几步仍没解决？实际出现了什么？可以附新截图或录屏。':'例如：点击运行后出现这个报错，我希望程序正常启动。请告诉我怎么处理。';$('level').value='';$('deadline').value='';$('urls').value='';clearMedia();previousHelpId=previous?.id||null;updateMode();showFollowup(previous?.title);$('goal').focus();$('goal-form').scrollIntoView({behavior:'smooth',block:'start'}); }
+function showMedia() {
+  if(previewURL)URL.revokeObjectURL(previewURL);previewURL=null;clear($('media-preview'));
+  const file=$('media').files[0],isVideo=file?.type.startsWith('video/');$('video-focus-field').hidden=!isVideo;$('clear-media').hidden=!file;if(!file)return;
+  if(file.size>100*1024*1024){$('media-preview').append(el('p','文件超过 100 MB，请截取短片段或关键截图。','error'));return;}
+  if(!file.type.startsWith('image/')&&!isVideo){$('media-preview').append(el('p','请选择图片或视频。','error'));return;}
+  previewURL=URL.createObjectURL(file);const media=document.createElement(isVideo?'video':'img');media.src=previewURL;
+  if(isVideo){media.controls=true;media.preload='metadata';}else media.alt='本次待分析截图';
+  $('media-preview').append(media,el('p',file.name+' · 待提交分析','hint'));
+}
 async function poll(identifier) {
   activeRun=identifier;
   try { const run=await api('/api/agent/run?id='+encodeURIComponent(identifier)); if(activeRun!==identifier) return; renderEvents(run);
     if(['queued','running'].includes(run.status)) return setTimeout(()=>poll(identifier),1500);
     busy(false);
-    if(run.status==='completed') { if(run.result?.mode==='research-only') { $('research-panel').hidden=false; sourceCards($('research-sources'),run.result.sources); } else { await refreshState(run.result.id); } }
+    if(run.status==='completed') { if(run.result?.mode==='research-only') { $('research-panel').hidden=false; sourceCards($('research-sources'),run.result.sources); } else { await refreshState(run.result.id); if(run.result.help)$('help-answer').scrollIntoView({behavior:'smooth',block:'start'}); } }
     else { $('form-error').textContent=run.error || '执行未完成'; if(run.result?.sources) { $('research-panel').hidden=false; sourceCards($('research-sources'),run.result.sources); } }
   } catch(error) { busy(false); $('form-error').textContent=error.message+' 已提交的后台任务不会因此重复执行，刷新后可恢复。'; }
 }
@@ -80,22 +108,27 @@ async function mediaFrames() {
     if(!file.type.startsWith('video/')) throw new Error('请选择截图或视频文件。');
     const video=document.createElement('video');video.muted=true;video.preload='auto';const ready=once(video,'loadeddata');video.src=objectURL;await ready;
     if(!Number.isFinite(video.duration)||video.duration<=0) throw new Error('无法读取视频时长。');
-    const frames=[];for(let i=0;i<6;i++) { const point=Math.min(video.duration*.999,video.duration*i/5);if(Math.abs(video.currentTime-point)>.001){const seek=once(video,'seeked');video.currentTime=point;await seek;} frames.push({timestamp:Math.round(point*10)/10,image:jpeg(video)}); }
+    const end=Math.max(0,video.duration-Math.min(.01,video.duration*.01)), focus=$('video-focus').value.trim();let points;
+    if(focus!==''){const second=Number(focus);if(!Number.isFinite(second)||second<0||second>=video.duration)throw new Error(`重点秒数需在 0 至 ${video.duration.toFixed(1)} 秒之间，且小于视频时长。`);points=[0,Math.max(0,second-.5),Math.min(end,second),Math.min(end,second+.5),video.duration/2,end];}
+    else points=Array.from({length:6},(_,i)=>Math.min(end,video.duration*i/5));
+    const frames=[];for(const point of [...new Set(points)].sort((a,b)=>a-b)) { if(Math.abs(video.currentTime-point)>.001){const seek=once(video,'seeked');video.currentTime=point;await seek;} frames.push({timestamp:Math.round(point*1000)/1000,image:jpeg(video)}); }
     video.removeAttribute('src');video.load();return frames;
   } finally { URL.revokeObjectURL(objectURL); }
 }
 async function start(researchOnly=false) {
   if(running||!$('goal-form').reportValidity())return;busy(true);$('form-error').textContent='';clear($('events'));$('events').append(el('li','准备输入与时间约束…'));
-  try { const frames=researchOnly?[]:await mediaFrames(); const input={goal:$('goal').value,level:$('level').value,mode:$('mode').value,frames,researchOnly,
-    urls:$('urls').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),settings:{startDate:localDate(),dailyMinutes:Number($('daily').value),deadline:$('deadline').value||''}};
+  try { const frames=researchOnly?[]:await mediaFrames(); const rescue=$('mode').value==='rescue';const input={goal:$('goal').value,level:$('level').value,mode:$('mode').value,frames,researchOnly,
+    mediaKind:frames.length?($('media').files[0].type.startsWith('video/')?'video':'image'):'',previousRouteId:rescue?previousHelpId:null,
+    urls:$('urls').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),settings:{startDate:localDate(),dailyMinutes:rescue?60:Number($('daily').value),deadline:rescue?'':$('deadline').value||''}};
     const run=await api('/api/agent/run',input);poll(run.runId);
   } catch(error) {busy(false);$('form-error').textContent=error.message;}
 }
 $('goal-form').addEventListener('submit',event=>{event.preventDefault();start();});$('research').onclick=()=>start(true);
-$('mode').onchange=()=>{if($('mode').value!=='competition')$('deadline').value='';};
+$('mode').onchange=()=>{if($('mode').value!=='competition')$('deadline').value='';updateMode();};
+$('open-rescue').onclick=()=>openRescue();$('media').onchange=()=>{$('video-focus').value='';showMedia();};$('clear-media').onclick=clearMedia;$('clear-followup').onclick=()=>{previousHelpId=null;showFollowup();};
 document.querySelectorAll('[data-close]').forEach(button=>button.onclick=()=>$(button.dataset.close).close());
 document.querySelectorAll('[data-tab]').forEach(button=>button.onclick=()=>{document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b===button));document.querySelectorAll('.tab-panel').forEach(p=>p.hidden=p.id!==button.dataset.tab);});
-document.querySelectorAll('[data-example]').forEach(button=>button.onclick=()=>{const pm=button.dataset.example==='pm';$('mode').value=pm?'learning':'rescue';$('goal').value=pm?'我想成为 AI 产品经理，已经有一些产品基础，但不清楚 Agent 应该学什么。请用上岸鸭作为实战项目，给我一条能产出作品的学习路线。':'我正在开发上岸鸭，但遇到了报错。请根据我上传的截图或录屏，定位卡点，给出可操作步骤和验证方法。';$('deadline').value='';$('goal').focus();});
+document.querySelectorAll('[data-example]').forEach(button=>button.onclick=()=>{if(running)return;const pm=button.dataset.example==='pm';if(!pm){openRescue();return;}$('mode').value='learning';$('goal').value='我想成为 AI 产品经理，已经有一些产品基础，但不清楚 Agent 应该学什么。请用上岸鸭作为实战项目，给我一条能产出作品的学习路线。';$('deadline').value='';updateMode();$('goal').focus();});
 $('open-config').onclick=()=>{$('ai-base').value=config.base||'';$('ai-model').value=config.model||'';$('ai-protocol').value=config.protocol||'chat';$('ai-key').value='';$('config-message').textContent='';$('config-dialog').showModal();};
 $('config-form').onsubmit=async event=>{event.preventDefault();const button=event.submitter;button.disabled=true;$('config-message').textContent='正在测试真实模型请求…';try{config=await api('/api/ai-config',{base:$('ai-base').value,model:$('ai-model').value,protocol:$('ai-protocol').value,key:$('ai-key').value,keepKey:true,verify:true});$('ai-key').value='';$('config-message').textContent='模型已返回真实响应，连接成功。';await health();}catch(error){$('config-message').textContent=error.message;}finally{button.disabled=false;}};
 $('open-replan').onclick=()=>{if(!activeRoute)return;$('replan-daily').value=activeRoute.settings.dailyMinutes||90;$('unavailable').value=(activeRoute.settings.unavailableDates||[]).join(',');$('new-title').value='';$('change-reason').value='';$('new-deadline').value='';clear($('replan-preview'));$('apply-replan').disabled=true;$('replan-error').textContent='';pendingChange=null;$('replan-dialog').showModal();};
@@ -113,4 +146,4 @@ $('day-date').onchange=()=>{if(activeRoute)renderDayChoices();};
 $('day-form').addEventListener('input',()=>{pendingDay=null;$('save-day').disabled=true;});
 $('day-form').onsubmit=async event=>{event.preventDefault();if(!activeRoute)return;$('day-error').textContent='';try{const windows=$('day-windows').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).map(x=>{const parts=x.split(/\s*[-–—]\s*/);if(parts.length!==2)throw new Error('时间段请写成 19:00-20:00，每行一段。');return {start:parts[0],end:parts[1]};});const payload={routeId:activeRoute.id,version:activeRoute.version,date:$('day-date').value,windows,bufferMinutes:Number($('day-buffer').value),selectedTaskIds:[...$('day-choices').querySelectorAll('input:checked')].map(x=>x.value)};const plan=await api('/api/agent/day',payload);renderDay(plan);pendingDay=payload;$('save-day').disabled=plan.rows.length===0;}catch(error){$('day-error').textContent=error.message;}};
 $('save-day').onclick=async()=>{if(!pendingDay)return;$('save-day').disabled=true;try{await api('/api/agent/day',{...pendingDay,apply:true});await refreshState(activeRoute.id);}catch(error){$('day-error').textContent=error.message;$('save-day').disabled=false;}};
-(async()=>{await health();try{const state=await refreshState();if(routes.length)renderRoute(routes[0]);const running=state.runs.find(r=>['queued','running'].includes(r.status));if(running){busy(true);poll(running.id);}else if(state.runs[0]){const last=await api('/api/agent/run?id='+state.runs[0].id);renderEvents(last);}}catch(error){$('form-error').textContent=error.message;}})();
+(async()=>{await health();try{const state=await refreshState();if(routes.length){renderRoute(routes[0]);if(routes[0].help){$('mode').value='rescue';$('goal').value='';$('goal').placeholder='描述你卡住的地方，或点击已保存解答中的“继续补图追问”。';$('deadline').value='';updateMode();}}const running=state.runs.find(r=>['queued','running'].includes(r.status));if(running){busy(true);poll(running.id);}else if(state.runs[0]){const last=await api('/api/agent/run?id='+state.runs[0].id);renderEvents(last);}}catch(error){$('form-error').textContent=error.message;}})();
