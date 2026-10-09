@@ -1,20 +1,58 @@
-# B 行动与排程：首轮可运行交付
+# B 行动与排程：独立模块交付
 
-启动：`python learning_agent_server.py --port 8901`，访问 `http://127.0.0.1:8901/planner.html`。
-载入演示 → 生成任务卡 → 勾选任务 → 编辑可用时段 → 预览排程 → 导出 JSON。
-页面草案不持久化，刷新前导出；正式采纳、撤销、版本保存属于队长模块。
+## 启动和使用
 
-接口：
-- POST `/api/agent/planner/generate`：`{diagnosis, context:{deadline}}`
-- POST `/api/agent/planner/replan`：`{diagnosis, plan, settings, expected_plan_version}`
-- Python 调用 `action_planner.generate(diagnosis, context)` 可作为队长 `PLANNER` 的适配函数；尚未合并或端到端接线。
+`python learning_agent_server.py --port 8901`
 
-已覆盖：B1 有来源及验收条件才生成任务；B2 已验证能力跳过学习，未验证走学习→练习→作品；B3 估时范围与依赖循环检查；B4 截止、容量缺口及调整选项；B5 用户选任务再排；B6 临时占用、锁定冲突、保留未受影响安排和版本检查。
+打开 `http://127.0.0.1:8901/planner.html`。
+可先手工录入目标、成员、来源及验收标准，或导入 A 的诊断 JSON。演示数据明确标记，不是比赛规则。
+生成任务 → 编辑任务定义 → 勾选本轮要做的任务 → 为每名成员添加空档、临时占用或整天排满 → 预览排程 → 导出交接包。
 
-输入扩展：gap.acceptance_criteria 必填；gap.estimate_minutes_range、steps、depends_on_gap_ids 可选。成员 verified_capabilities 是已验证能力名称列表，不能把自述直接放进去。默认估时只是显式假设。
+页面显示已验收任务数 / 总任务数、待验收数量、日程、容量不足、变更理由及条件性截止倒推。它不是作品评分或获奖概率。
 
-局限：当前为确定性规则草案，没有真实模型/搜索调用；不是 B 全部验收完成。共同负责人任务尚不支持联合排程；不自动缩减产物范围；学习步骤仍需结合 A 的具体资料细化；实际用时通过 remaining_minutes 人工修正，尚无统计校准模型；前置未验收保持阻塞，尚不做跨里程碑预测排程。页面为 JSON 导入与勾选式首版，暂无计划包导入及编辑任务卡 UI。
+## 可独立使用的能力
 
-`b_capacity.py` 复用队长工作区现有周期排程计算器，独立命名避免覆盖队长文件；后续联调应收敛为共享模块。
+- B1：没有来源、负责人、产物或验收条件的缺口停在待补充区。有效任务可反查 gap/source。
+- B2：已验证能力跳过学习，其余走必要学习 → 小练习 → 当前作品；挂接 A 给出的同能力资料。没有资料时不会假装已检索。
+- B3：估时范围和假设可编辑，依赖循环拒绝；记录累计实际用时和剩余估计，后续按剩余时间排程。剩余为零进入待验收，不是已完成。
+- B4：按截止、个人容量和缓冲给出风险与调整选项；新增从截止反向分配容量的里程碑预测。预测假设可拆分且前置及时验收，独立于真正可执行日程。
+- B5：用户勾选后才安排；支持多人共同任务取共同空档，分别占用每个人容量；支持拆分与连续块。
+- B6：临时占用、满日、降低每日上限（如疲劳）、用时超出后重新预览；尽量保留不受影响时段。保留完成、待验收、历史与锁定安排；保护安排与新占用冲突时拒绝并解释。
+- 草案操作：可编辑标题、负责人、步骤、产物、验收、估时、截止和依赖。修改任务会使其及下游原安排失效；受保护下游不允许直接覆盖。
+- 草案恢复：当前浏览器 localStorage 自动保存，刷新可恢复；本次打开页面内可撤销最近 10 次草案修改；导入导出完整诊断+计划+时间设置包。
 
-验证：`python -m unittest test_action_planner test_agent`（36 项通过）；`node --check planner.js`。新增测试涵盖 30/90 分钟容量差异、来源缺失、技能路径、前置阻塞、临时占用、锁定冲突、版本冲突、循环依赖及完成状态保护。浏览器交互尚未验收。
+浏览器草案不代表队长正式采纳；请导出备份。正式项目数据库、跨设备并发、采用/撤销及验收权仍属于队长，B 不写队长的正式执行状态。
+
+## 后端接口
+
+POST `/api/agent/planner/` 下：
+
+| 路径 | 请求 |
+|---|---|
+| `generate` | `{diagnosis, context:{deadline}}` |
+| `validate` | `{diagnosis, plan}` |
+| `edit` | `{diagnosis, plan, task_id, patch, expected_plan_version}` |
+| `feedback` | `{diagnosis, plan, task_id, actual_minutes, remaining_minutes, expected_plan_version}` |
+| `replan` | `{diagnosis, plan, settings, expected_plan_version}` |
+
+`settings.members` 按 member_id 对应 `{windows, busy, full_dates, daily_limit, buffer_minutes}`。顶层为 `period_start,period_end,selected_task_ids,chunk_minutes,allow_split`，可附 `remaining_minutes`。
+时区目前为 Asia/Shanghai；跨午夜空档拆为两天。共同任务是同时参与，不是自动分摊工作。
+
+保留前版单成员 settings 兼容。Python `action_planner.generate(diagnosis, context)` 可接队长 PLANNER；未修改队长分支或完成端到端接线。
+
+## A 交接字段
+
+沿用 docs/p1-contract.md。gap.acceptance_criteria 必填；steps、estimate_minutes_range、estimate_basis、depends_on_gap_ids 可选。member_profiles[].verified_capabilities 是已验证能力名称列表，不能把自述直接充当验证。
+缺少这些内容会显示限制，不补造比赛要求。诊断版本变化时旧计划拒绝继续提交。
+
+## 验证与剩余边界
+
+`python -m unittest test_action_planner test_b_independent test_planner_http test_agent`：58 项通过（含旧模块 27 项）。
+`node --check planner.js`：通过。
+真实 HTTP 验证了生成、编辑、用时反馈、无效导入拒绝及页面资源访问。
+
+浏览器自动化脚本为 test_planner_ui.cjs：刷新恢复、编辑、撤销、导入导出、联合排程、待验收与移动宽度。当前执行环境浏览器下载失败，已有测试浏览器文件损坏；远程电脑离线，**本轮未通过浏览器交互验收**。
+
+当前是规则规划模块，不是已完成真实模型调用。学习路线骨架和默认估时仍是可编辑假设；高质量的领域步骤取决于 A 的具体诊断、资料和后续模型接入。尚待 A/队长真实包契约联调、正式状态保存接线和真实用户验收。不能把本交付说成整个 Agent 已全部完成。
+
+`b_capacity.py` 复用队长现有计算器、独立命名；`b_joint_schedule.py` 为新增共同排程与条件性倒推。联调后应与公共层收敛，避免两份日历逻辑长期分叉。

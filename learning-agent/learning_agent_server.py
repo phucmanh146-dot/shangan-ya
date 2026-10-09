@@ -113,6 +113,16 @@ class Handler(LegacyHandler):
             data = json.loads(self.rfile.read(size))
             if not isinstance(data, dict):
                 raise ValueError('请求必须为 JSON 对象')
+            if path == '/api/agent/planner/validate':
+                import action_planner
+                action_planner.validate(data['plan'], data['diagnosis'])
+                return self.send_json(data['plan'])
+            if path == '/api/agent/planner/edit':
+                import action_planner
+                return self.send_json(action_planner.edit(data['diagnosis'],data['plan'],data['task_id'],data['patch'],data['expected_plan_version']))
+            if path == '/api/agent/planner/feedback':
+                import action_planner
+                return self.send_json(action_planner.feedback(data['diagnosis'],data['plan'],data['task_id'],data['actual_minutes'],data['remaining_minutes'],data['expected_plan_version']))
             if path == '/api/agent/planner/generate':
                 import action_planner
                 return self.send_json(action_planner.generate(data['diagnosis'], data.get('context', {})))
