@@ -3,7 +3,10 @@ const $=id=>document.getElementById(id);
 let project=null, action=null;
 const labels={candidate:'待选择',scheduled:'已排期',in_progress:'进行中',pending_review:'待验收',completed:'已验收',blocked:'卡住'};
 function el(tag,text){const node=document.createElement(tag);node.textContent=text;return node;}
-function showJSON(id,value){$(id).replaceChildren(el('pre',JSON.stringify(value,null,2)));}
+function showJSON(id,value){const d=el('details','');d.append(el('summary','查看完整交接数据'),el('pre',JSON.stringify(value,null,2)));$(id).append(d);}
+function diagnosisView(){const box=$('diagnosis');box.replaceChildren();const d=project.diagnosis;if(!d){box.append(el('p','等待 A 的诊断'));return;}box.append(el('p','诊断版本 '+d.diagnosis_version));for(const g of d.gaps)box.append(el('h3',g.target_result),el('p','现状：'+g.current_evidence),el('p','优先原因：'+g.priority_reason),el('p','核验状态：'+g.verification_status));for(const u of d.unknowns)box.append(el('p','待确认：'+u));for(const source of d.sources){box.append(el('p','来源：'+source.title));if(source.url&&/^https?:\/\//i.test(source.url)){const a=el('a','打开原文 ↗');a.href=source.url;a.target='_blank';a.rel='noopener noreferrer';box.append(a);}}showJSON('diagnosis',d);}
+function proposalView(){const box=$('proposal');box.replaceChildren();const p=project.proposal;if(!p){box.append(el('p',project.plan?'已采用计划 v'+project.plan.plan_version+'，任务见下方。':'等待 B 的计划'));return;}box.append(el('p',p.reason),el('p',`新增 ${p.diff.added.length} 项 · 修改 ${p.diff.changed.length} 项 · 移除 ${p.diff.removed.length} 项`));for(const t of p.plan.tasks)box.append(el('h3',t.title),el('p','第一步：'+t.steps[0]),el('p','交付：'+t.deliverable),el('p','预计 '+t.estimate_minutes_range.join('–')+' 分钟'));for(const note of p.plan.unscheduled)box.append(el('p','未排入日程：'+(typeof note==='string'?note:JSON.stringify(note))));showJSON('proposal',p);}
+
 async function request(path,data){const response=await fetch('/api/agent/team'+path,data?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}:{});const value=await response.json();if(!response.ok)throw new Error(value.error||'服务不可用');return value;}
 function context(){return {project_id:project.project_id,expected_version:project.version};}
 async function load(id){project=await request('?id='+encodeURIComponent(id));localStorage.setItem('team-project',id);render();}
@@ -15,7 +18,7 @@ function render(){
  $('meta').textContent=`${project.mode==='demo'?'Demo · 示例数据':'真实项目 · 外部交付'} / 版本 ${project.version} / 真实模型与搜索尚未经总控联调验收`;
  $('demo').hidden=project.mode!=='demo'||!!project.diagnosis;
  $('stale').textContent=project.plan_stale?'诊断已更新，现有计划已过期。请 B 更新后再执行。':'';
- showJSON('diagnosis',project.diagnosis||'等待 A 的诊断');showJSON('proposal',project.proposal||'等待 B 的计划');
+ diagnosisView();proposalView();
  $('apply').disabled=!project.proposal;
  $('tasks').replaceChildren();
  for(const t of project.plan?.tasks||[]){
@@ -27,7 +30,7 @@ function render(){
   $('tasks').append(box);
  }
  if(!project.plan)$('tasks').append(el('p','采用计划后显示任务。'));
- $('feedback').textContent=JSON.stringify(project.feedback,null,2);
+ $('feedback').replaceChildren(...project.feedback.map(f=>el('p',`${f.task_id} · ${f.action} · ${f.note}${f.evidence?' / 证据：'+f.evidence:''}`)));
  $('history').replaceChildren(...(project.history||[]).map(h=>el('p',`v${h.version} · ${h.action} · ${h.created}`)));
 }
 function openFeedback(task,kind,label){action={task_id:task.task_id,action:kind,expected_plan_version:project.plan.plan_version,expected_version:project.version};$('feedback-form').reset();$('feedback-title').textContent=label+' · '+task.title;$('submit-fields').hidden=kind!=='submit';$('review-fields').hidden=!['approve','reject'].includes(kind);$('reviewer').replaceChildren(...project.diagnosis.member_profiles.map(m=>{const option=el('option',m.name||m.member_id);option.value=m.member_id;return option;}));$('dialog-error').textContent='';$('feedback-dialog').showModal();}
