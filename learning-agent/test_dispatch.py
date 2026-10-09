@@ -1,6 +1,8 @@
 import copy
 import threading
 import unittest
+import json
+from urllib.request import Request, urlopen
 from unittest.mock import patch
 import test_team
 import team_orchestrator as team
@@ -98,6 +100,35 @@ class DispatchTests(unittest.TestCase):
         with patch.object(team, 'demo_researcher', side_effect=AssertionError('不可重复 A')):
             self.p = dispatch.dispatch(self.ctx())
         self.assertEqual(self.p['dispatch']['status'], 'succeeded')
+
+    def test_http_dispatch_brief_and_resume(self):
+        from learning_agent_server import Handler, ThreadingHTTPServer
+        server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        base = f'http://127.0.0.1:{server.server_port}/api/agent/team'
+        def post(route, extra=None):
+            request = Request(base + '/' + route,
+                              data=json.dumps({**self.ctx(), **(extra or {})}).encode(),
+                              headers={'Content-Type': 'application/json'})
+            with urlopen(request) as response:
+                return json.load(response)
+        try:
+            self.p = post('dispatch')
+            self.assertEqual(self.p['dispatch_status']['stage'], 'confirm')
+            self.p = post('brief', {'content': '补充验收要求'})
+            self.assertEqual(self.p['dispatch_status']['stage'], 'A')
+            self.assertIsNone(self.p['proposal'])
+            self.p = post('dispatch')
+            with urlopen(base + '?id=' + self.p['project_id']) as response:
+                saved = json.load(response)
+            self.assertEqual(saved['diagnosis']['diagnosis_version'], 2)
+            self.assertEqual(saved['dispatch']['status'], 'succeeded')
+            self.assertIsNone(saved['plan'])
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join()
 
 
 if __name__ == '__main__':
