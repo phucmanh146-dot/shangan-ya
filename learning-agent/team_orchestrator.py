@@ -218,6 +218,8 @@ def apply(data):
         raise Conflict('预览已失效，请重新生成')
     validate_plan(proposal['plan'],p['diagnosis'])
     protected(p['plan'],proposal['plan'])
+    p['undo_plan'] = copy.deepcopy(p['plan'])
+    p['undo_at_version'] = p['version'] + 1
     p['plan'],p['proposal'] = proposal['plan'],None
     return commit(p,p['version'],'用户采用计划')
 
@@ -304,3 +306,26 @@ def demo(data):
                 'learning_paths':[],'time_blocks':[],'dependencies':[],'unscheduled':['T1：尚未提供可用时段'],
                 'assumptions':['人工构造的 Demo 任务，未进行智能排期']}
     return run_handoff(data,researcher,planner)
+
+
+def period_replan(data):
+    p = current(data)
+    if not p['plan'] or p['plan_stale']:
+        raise Conflict('请先采用基于最新诊断的计划')
+    if integer(data,'expected_plan_version',1) != p['plan']['plan_version']:
+        raise Conflict('计划版本已变化，请刷新')
+    from period_planner import compute
+    constraints = copy.deepcopy(required(data,'constraints',dict))
+    plan = compute(p,constraints)
+    return propose({**data,'plan':plan,'reason':required(data,'reason')})
+
+
+def undo_plan(data):
+    p = current(data)
+    if not p.get('undo_plan') or p.get('undo_at_version') != p['version']:
+        raise Conflict('没有可直接撤销的安排，或采用后已有新进度；请重新预览调整，避免覆盖成果')
+    previous = copy.deepcopy(p['undo_plan'])
+    previous['plan_version'] = p['plan']['plan_version'] + 1
+    validate_plan(previous,p['diagnosis'])
+    p['plan'],p['proposal'],p['undo_plan'] = previous,None,None
+    return commit(p,p['version'],'撤销上次计划采用；保留版本历史')

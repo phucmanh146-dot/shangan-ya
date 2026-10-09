@@ -119,7 +119,8 @@ class Handler(LegacyHandler):
             if path.startswith('/api/agent/team/'):
                 operation = path.rsplit('/',1)[-1]
                 handlers = {'create':team.create,'diagnosis':team.diagnosis,'propose':team.propose,
-                            'apply':team.apply,'feedback':team.feedback,'demo':team.demo}
+                            'apply':team.apply,'feedback':team.feedback,'demo':team.demo,
+                            'period-replan':team.period_replan,'undo-plan':team.undo_plan}
                 if operation not in handlers:
                     return self.send_json({'error':'团队接口不存在'},404)
                 return self.send_json(handlers[operation](data))

@@ -1,6 +1,6 @@
 'use strict';
 const $=id=>document.getElementById(id);
-let project=null, action=null;
+let project=null, action=null, periodProject=null;
 const labels={candidate:'待选择',scheduled:'已排期',in_progress:'进行中',pending_review:'待验收',completed:'已验收',blocked:'卡住'};
 function el(tag,text){const node=document.createElement(tag);node.textContent=text;return node;}
 function showJSON(id,value){const d=el('details','');d.append(el('summary','查看完整交接数据'),el('pre',JSON.stringify(value,null,2)));$(id).append(d);}
@@ -18,7 +18,7 @@ function render(){
  $('meta').textContent=`${project.mode==='demo'?'Demo · 示例数据':'真实项目 · 外部交付'} / 版本 ${project.version} / 真实模型与搜索尚未经总控联调验收`;
  $('demo').hidden=project.mode!=='demo'||!!project.diagnosis;
  $('stale').textContent=project.plan_stale?'诊断已更新，现有计划已过期。请 B 更新后再执行。':'';
- diagnosisView();proposalView();
+ diagnosisView();proposalView();periodView();
  $('apply').disabled=!project.proposal;
  $('tasks').replaceChildren();
  for(const t of project.plan?.tasks||[]){
@@ -35,10 +35,65 @@ function render(){
 }
 function openFeedback(task,kind,label){action={task_id:task.task_id,action:kind,expected_plan_version:project.plan.plan_version,expected_version:project.version};$('feedback-form').reset();$('feedback-title').textContent=label+' · '+task.title;$('submit-fields').hidden=kind!=='submit';$('review-fields').hidden=!['approve','reject'].includes(kind);$('reviewer').replaceChildren(...project.diagnosis.member_profiles.map(m=>{const option=el('option',m.name||m.member_id);option.value=m.member_id;return option;}));$('dialog-error').textContent='';$('feedback-dialog').showModal();}
 $('create').onsubmit=e=>{e.preventDefault();safe(async()=>{project=await request('/create',{goal:$('goal').value,mode:$('mode').value});await refresh();});};
-$('projects').onchange=()=>safe(()=>load($('projects').value));$('refresh').onclick=()=>safe(refresh);
+$('projects').onchange=()=>safe(()=>load($('projects').value));$('refresh').onclick=()=>
+function localDay(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
+function periodTasks(){const member=$('period-member').value;const saved=(project.proposal?.plan||project.plan)?.replanning_context||{};$('period-tasks').replaceChildren();for(const t of project.plan?.tasks||[]){if(!t.owner_ids.includes(member)||t.owner_ids.length!==1||['completed','pending_review'].includes(t.status))continue;const row=el('div','');const check=document.createElement('input');check.type='checkbox';check.value=t.task_id;check.className='period-choice';check.checked=(saved.selected_task_ids||[]).includes(t.task_id);const label=el('label','');label.append(check,document.createTextNode(' '+t.title+' · '+labels[t.status]));const remaining=document.createElement('input');remaining.type='number';remaining.min='1';remaining.max='100000';remaining.placeholder='剩余分钟';remaining.setAttribute('aria-label',t.title+'剩余分钟');remaining.dataset.remaining=t.task_id;remaining.value=saved.remaining_minutes?.[t.task_id]??(t.status==='in_progress'?'':t.estimate_minutes_range[1]);row.append(label,remaining);$('period-tasks').append(row);}}
+function windowLines(rows){return (rows||[]).map(x=>`${x.date} ${x.start} ${x.end}`).join('\n');}
+function periodView(){const enabled=!!project.plan&&!project.plan_stale;$('period-preview').disabled=!enabled;$('period-panel').hidden=!project.plan;
+ if(periodProject!==project.project_id){periodProject=project.project_id;const c=project.plan?.replanning_context||{};$('period-member').replaceChildren(...(project.diagnosis?.member_profiles||[]).map(m=>{const o=el('option',m.name||m.member_id);o.value=m.member_id;return o;}));if(c.member_id)$('period-member').value=c.member_id;$('period-start').value=c.period_start||localDay();$('period-end').value=c.period_end||'';$('period-windows').value=windowLines(c.windows);$('period-busy').value=windowLines(c.busy);$('full-dates').value=(c.full_dates||[]).join(',');$('daily-limit').value=c.daily_limit??60;$('period-buffer').value=c.buffer_minutes??10;$('period-chunk').value=c.chunk_minutes??25;$('allow-split').checked=c.allow_split===true;}
+ // Members may arrive after the project is first created.
+ if(!$('period-member').options.length&&project.diagnosis){periodProject=null;return periodView();}
+ periodTasks();$('undo-period').disabled=!project.undo_plan||project.undo_at_version!==project.version;
+ const proposal=project.proposal, plan=proposal?.plan||project.plan, summary=plan?.schedule_summary;
+ $('apply-period').disabled=!proposal||!proposal.plan.schedule_summary;
+ const box=$('period-result');box.replaceChildren();if(!summary)return;
+ box.append(el('h3',proposal?'时间调整预览（尚未采用）':'已采用的周期安排'),el('p',`本轮待安排 ${summary.needed_minutes} 分钟 / 可用 ${summary.available_minutes} 分钟 / 未排入 ${summary.unallocated_minutes} 分钟`),el('p',summary.fits?'按当前估时与空档，所选任务能排入周期；实际完成仍需验收。':'当前条件下不能全部排入，请处理下面的时间缺口或阻塞。'));
+ for(const d of summary.daily)box.append(el('p',`${d.date}：可新安排 ${d.available_minutes} 分钟，保留 ${d.preserved_minutes} 分钟${d.full?' · 已排满':''}`));
+ for(const x of summary.unallocated)box.append(el('p',`${x.task_id} 尚有 ${x.minutes} 分钟：${x.reason}`));
+ for(const x of summary.options)box.append(el('p','可选处理：'+x));
+ for(const x of summary.assumptions)box.append(el('p',x));
+ const spans=(title,blocks)=>{box.append(el('h3',title));for(const b of blocks.filter(b=>b.member_id===summary.member_id))box.append(el('p',`${b.task_id} · ${b.start} → ${b.end}${b.locked?' · 锁定':''}`));};
+ if(proposal){box.append(el('p','调整原因：'+proposal.reason));spans('原安排',proposal.diff.time_blocks_before);spans('新安排',proposal.diff.time_blocks_after);}else spans('当前日程',plan.time_blocks);
+}
+function parseWindows(id){return $(id).value.split(/\n/).map(x=>x.trim()).filter(Boolean).map(line=>{const bits=line.split(/\s+/);if(bits.length!==3)throw new Error('每行填写：日期 开始时刻 结束时刻');return {date:bits[0],start:bits[1],end:bits[2]};});}
+$('period-member').onchange=periodTasks;
+$('today-full').onclick=()=>{const dates=new Set($('full-dates').value.split(/[,，\s]+/).filter(Boolean));dates.add(localDay());$('full-dates').value=[...dates].join(',');};
+$('period-form').onsubmit=async e=>{e.preventDefault();$('period-error').textContent='';try{const selected=[...document.querySelectorAll('.period-choice:checked')].map(x=>x.value);const remaining={};for(const input of document.querySelectorAll('[data-remaining]'))if(selected.includes(input.dataset.remaining)&&input.value)remaining[input.dataset.remaining]=Number(input.value);
+ await mutate('period-replan',{expected_plan_version:project.plan.plan_version,reason:$('period-reason').value,constraints:{member_id:$('period-member').value,period_start:$('period-start').value,period_end:$('period-end').value,windows:parseWindows('period-windows'),busy:parseWindows('period-busy'),full_dates:$('full-dates').value.split(/[,，\s]+/).filter(Boolean),daily_limit:Number($('daily-limit').value),buffer_minutes:Number($('period-buffer').value),chunk_minutes:Number($('period-chunk').value),allow_split:$('allow-split').checked,selected_task_ids:selected,remaining_minutes:remaining}});
+ }catch(error){$('period-error').textContent=error.message;}};
+$('apply-period').onclick=()=>safe(()=>mutate('apply',{proposal_id:project.proposal.id}));$('undo-period').onclick=()=>safe(()=>mutate('undo-plan',{}));
+safe(refresh);
+
 $('demo').onclick=()=>safe(()=>mutate('demo',{}));$('apply').onclick=()=>safe(()=>mutate('apply',{proposal_id:project.proposal.id}));
 $('diagnosis-form').onsubmit=e=>{e.preventDefault();safe(()=>mutate('diagnosis',{diagnosis:JSON.parse($('diagnosis-json').value)}));};
 $('plan-form').onsubmit=e=>{e.preventDefault();safe(()=>mutate('propose',{plan:JSON.parse($('plan-json').value),reason:$('reason').value}));};
 $('cancel').onclick=()=>$('feedback-dialog').close();
 $('feedback-form').onsubmit=async e=>{e.preventDefault();try{await mutate('feedback',{...action,note:$('note').value,artifact_id:$('artifact-id').value,artifact_version:Number($('artifact-version').value),actual_minutes:Number($('minutes').value),evidence:$('evidence').value,reviewer_id:$('reviewer').value});$('feedback-dialog').close();}catch(error){$('dialog-error').textContent=error.message;}};
+
+function localDay(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
+function periodTasks(){const member=$('period-member').value;const saved=(project.proposal?.plan||project.plan)?.replanning_context||{};$('period-tasks').replaceChildren();for(const t of project.plan?.tasks||[]){if(!t.owner_ids.includes(member)||t.owner_ids.length!==1||['completed','pending_review'].includes(t.status))continue;const row=el('div','');const check=document.createElement('input');check.type='checkbox';check.value=t.task_id;check.className='period-choice';check.checked=(saved.selected_task_ids||[]).includes(t.task_id);const label=el('label','');label.append(check,document.createTextNode(' '+t.title+' · '+labels[t.status]));const remaining=document.createElement('input');remaining.type='number';remaining.min='1';remaining.max='100000';remaining.placeholder='剩余分钟';remaining.setAttribute('aria-label',t.title+'剩余分钟');remaining.dataset.remaining=t.task_id;remaining.value=saved.remaining_minutes?.[t.task_id]??(t.status==='in_progress'?'':t.estimate_minutes_range[1]);row.append(label,remaining);$('period-tasks').append(row);}}
+function windowLines(rows){return (rows||[]).map(x=>`${x.date} ${x.start} ${x.end}`).join('\n');}
+function periodView(){const enabled=!!project.plan&&!project.plan_stale;$('period-preview').disabled=!enabled;$('period-panel').hidden=!project.plan;
+ if(periodProject!==project.project_id){periodProject=project.project_id;const c=project.plan?.replanning_context||{};$('period-member').replaceChildren(...(project.diagnosis?.member_profiles||[]).map(m=>{const o=el('option',m.name||m.member_id);o.value=m.member_id;return o;}));if(c.member_id)$('period-member').value=c.member_id;$('period-start').value=c.period_start||localDay();$('period-end').value=c.period_end||'';$('period-windows').value=windowLines(c.windows);$('period-busy').value=windowLines(c.busy);$('full-dates').value=(c.full_dates||[]).join(',');$('daily-limit').value=c.daily_limit??60;$('period-buffer').value=c.buffer_minutes??10;$('period-chunk').value=c.chunk_minutes??25;$('allow-split').checked=c.allow_split===true;}
+ // Members may arrive after the project is first created.
+ if(!$('period-member').options.length&&project.diagnosis){periodProject=null;return periodView();}
+ periodTasks();$('undo-period').disabled=!project.undo_plan||project.undo_at_version!==project.version;
+ const proposal=project.proposal, plan=proposal?.plan||project.plan, summary=plan?.schedule_summary;
+ $('apply-period').disabled=!proposal||!proposal.plan.schedule_summary;
+ const box=$('period-result');box.replaceChildren();if(!summary)return;
+ box.append(el('h3',proposal?'时间调整预览（尚未采用）':'已采用的周期安排'),el('p',`本轮待安排 ${summary.needed_minutes} 分钟 / 可用 ${summary.available_minutes} 分钟 / 未排入 ${summary.unallocated_minutes} 分钟`),el('p',summary.fits?'按当前估时与空档，所选任务能排入周期；实际完成仍需验收。':'当前条件下不能全部排入，请处理下面的时间缺口或阻塞。'));
+ for(const d of summary.daily)box.append(el('p',`${d.date}：可新安排 ${d.available_minutes} 分钟，保留 ${d.preserved_minutes} 分钟${d.full?' · 已排满':''}`));
+ for(const x of summary.unallocated)box.append(el('p',`${x.task_id} 尚有 ${x.minutes} 分钟：${x.reason}`));
+ for(const x of summary.options)box.append(el('p','可选处理：'+x));
+ for(const x of summary.assumptions)box.append(el('p',x));
+ const spans=(title,blocks)=>{box.append(el('h3',title));for(const b of blocks.filter(b=>b.member_id===summary.member_id))box.append(el('p',`${b.task_id} · ${b.start} → ${b.end}${b.locked?' · 锁定':''}`));};
+ if(proposal){box.append(el('p','调整原因：'+proposal.reason));spans('原安排',proposal.diff.time_blocks_before);spans('新安排',proposal.diff.time_blocks_after);}else spans('当前日程',plan.time_blocks);
+}
+function parseWindows(id){return $(id).value.split(/\n/).map(x=>x.trim()).filter(Boolean).map(line=>{const bits=line.split(/\s+/);if(bits.length!==3)throw new Error('每行填写：日期 开始时刻 结束时刻');return {date:bits[0],start:bits[1],end:bits[2]};});}
+$('period-member').onchange=periodTasks;
+$('today-full').onclick=()=>{const dates=new Set($('full-dates').value.split(/[,，\s]+/).filter(Boolean));dates.add(localDay());$('full-dates').value=[...dates].join(',');};
+$('period-form').onsubmit=async e=>{e.preventDefault();$('period-error').textContent='';try{const selected=[...document.querySelectorAll('.period-choice:checked')].map(x=>x.value);const remaining={};for(const input of document.querySelectorAll('[data-remaining]'))if(selected.includes(input.dataset.remaining)&&input.value)remaining[input.dataset.remaining]=Number(input.value);
+ await mutate('period-replan',{expected_plan_version:project.plan.plan_version,reason:$('period-reason').value,constraints:{member_id:$('period-member').value,period_start:$('period-start').value,period_end:$('period-end').value,windows:parseWindows('period-windows'),busy:parseWindows('period-busy'),full_dates:$('full-dates').value.split(/[,，\s]+/).filter(Boolean),daily_limit:Number($('daily-limit').value),buffer_minutes:Number($('period-buffer').value),chunk_minutes:Number($('period-chunk').value),allow_split:$('allow-split').checked,selected_task_ids:selected,remaining_minutes:remaining}});
+ }catch(error){$('period-error').textContent=error.message;}};
+$('apply-period').onclick=()=>safe(()=>mutate('apply',{proposal_id:project.proposal.id}));$('undo-period').onclick=()=>safe(()=>mutate('undo-plan',{}));
 safe(refresh);
