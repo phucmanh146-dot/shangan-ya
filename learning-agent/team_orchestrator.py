@@ -1,11 +1,18 @@
 """Captain-owned P1 handoff, durable versions and evidence review.
 A/B implementations plug into run_handoff; demo fixtures never imply live AI.
 """
+from contextlib import contextmanager, closing
 import copy
 import json
 import uuid
 from datetime import datetime
 import learning_agent as agent
+
+@contextmanager
+def connection():
+    with closing(agent.connection()) as c:
+        with c:
+            yield c
 
 class Conflict(ValueError):
     pass
@@ -44,7 +51,7 @@ def view(project):
     return value
 
 def state(identifier=None):
-    with agent.connection() as c:
+    with connection() as c:
         init(c)
         if identifier:
             row = c.execute('SELECT body FROM team_projects WHERE id=?', (identifier,)).fetchone()
@@ -56,7 +63,7 @@ def state(identifier=None):
         return {'projects': [view(json.loads(x['body'])) for x in c.execute('SELECT body FROM team_projects ORDER BY rowid DESC LIMIT 100')]}
 
 def commit(project, expected, action):
-    with agent.WRITE_LOCK, agent.connection() as c:
+    with agent.WRITE_LOCK, connection() as c:
         init(c)
         c.execute('BEGIN IMMEDIATE')
         row = c.execute('SELECT version FROM team_projects WHERE id=?', (project['project_id'],)).fetchone()
