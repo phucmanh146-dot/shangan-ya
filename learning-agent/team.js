@@ -18,7 +18,7 @@ function render(){
  $('meta').textContent=`${project.mode==='demo'?'Demo · 示例数据':'真实项目 · 外部交付'} / 版本 ${project.version} / 真实模型与搜索尚未经总控联调验收`;
  $('demo').hidden=project.mode!=='demo'||!!project.diagnosis;
  $('stale').textContent=project.plan_stale?'诊断已更新，现有计划已过期。请 B 更新后再执行。':'';
- diagnosisView();proposalView();periodView();
+ diagnosisView();proposalView();periodView();dispatchView();
  $('apply').disabled=!project.proposal;
  $('tasks').replaceChildren();
  for(const t of project.plan?.tasks||[]){
@@ -39,6 +39,18 @@ $('projects').onchange=()=>safe(()=>load($('projects').value));$('refresh').oncl
 $('demo').onclick=()=>safe(()=>mutate('demo',{}));$('apply').onclick=()=>safe(()=>mutate('apply',{proposal_id:project.proposal.id}));
 $('diagnosis-form').onsubmit=e=>{e.preventDefault();safe(()=>mutate('diagnosis',{diagnosis:JSON.parse($('diagnosis-json').value)}));};
 $('plan-form').onsubmit=e=>{e.preventDefault();safe(()=>mutate('propose',{plan:JSON.parse($('plan-json').value),reason:$('reason').value}));};
+function dispatchView(){
+ const d=project.dispatch_status, box=$('dispatch-status');box.replaceChildren();if(!d)return;
+ box.append(el('h3',d.active?'正在调用 '+d.last_run.stage:d.label),el('p',`A：${d.providers.A?'已接入':'待接入'} / B：${d.providers.B?'已接入':'待接入'}${project.mode==='demo'?'（示例适配器）':''}`));
+ box.append(el('p',`进行中 ${d.counts.in_progress} · 卡住 ${d.counts.blocked} · 待验收 ${d.counts.pending_review} · 已验收 ${d.counts.completed}`));
+ if(d.last_run.status==='failed')box.append(el('p',d.last_run.message+'（'+d.last_run.error_code+'）'));
+ if(d.interrupted)box.append(el('p','上次运行因服务重启中断；可从已保存的阶段继续。'));
+ for(const q of d.questions)box.append(el('p','待确认：'+(typeof q==='string'?q:JSON.stringify(q))));
+ $('dispatch-run').disabled=!d.can_dispatch;$('dispatch-run').textContent=d.active?'正在运行，请稍后刷新':`继续总调度${['A','B'].includes(d.stage)?'：交给 '+d.stage:''}`;
+ $('brief-history').replaceChildren(...(project.brief_history||[]).map(x=>el('p','已补充：'+x.content)));
+}
+$('dispatch-run').onclick=()=>safe(async()=>{const id=project.project_id;$('dispatch-run').disabled=true;$('message').textContent='正在运行总调度，计划生成后需要你确认';try{await request('/dispatch',context());}finally{await load(id);}if(project.dispatch?.status==='succeeded')$('message').textContent='计划已生成，请核对后采用';else $('message').textContent=project.dispatch?.message||'请查看总调度状态';});
+$('brief-form').onsubmit=e=>{e.preventDefault();safe(async()=>{await mutate('brief',{content:$('brief-content').value});$('brief-content').value='';});};
 $('cancel').onclick=()=>$('feedback-dialog').close();
 $('feedback-form').onsubmit=async e=>{e.preventDefault();try{await mutate('feedback',{...action,note:$('note').value,artifact_id:$('artifact-id').value,artifact_version:Number($('artifact-version').value),actual_minutes:Number($('minutes').value),evidence:$('evidence').value,reviewer_id:$('reviewer').value});$('feedback-dialog').close();}catch(error){$('dialog-error').textContent=error.message;}};
 

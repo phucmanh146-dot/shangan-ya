@@ -11,6 +11,7 @@ from urllib.parse import urlparse, parse_qs
 import learning_agent as agent
 import rescue_service as rescue
 import team_orchestrator as team
+import team_dispatch as dispatch
 
 ROOT = Path(__file__).resolve().parent
 try:
@@ -120,7 +121,8 @@ class Handler(LegacyHandler):
                 operation = path.rsplit('/',1)[-1]
                 handlers = {'create':team.create,'diagnosis':team.diagnosis,'propose':team.propose,
                             'apply':team.apply,'feedback':team.feedback,'demo':team.demo,
-                            'period-replan':team.period_replan,'undo-plan':team.undo_plan}
+                            'period-replan':team.period_replan,'undo-plan':team.undo_plan,
+                            'dispatch':dispatch.dispatch,'brief':dispatch.brief}
                 if operation not in handlers:
                     return self.send_json({'error':'团队接口不存在'},404)
                 return self.send_json(handlers[operation](data))

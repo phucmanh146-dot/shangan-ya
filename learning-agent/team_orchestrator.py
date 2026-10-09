@@ -47,7 +47,9 @@ def init(c):
 
 def view(project):
     value = copy.deepcopy(project)
-    value['plan_stale'] = bool(value['plan'] and value['plan']['based_on_diagnosis_version'] != value['diagnosis']['diagnosis_version'])
+    value['plan_stale'] = bool(value['plan'] and (value.get('diagnosis_needs_refresh') or value['plan']['based_on_diagnosis_version'] != value['diagnosis']['diagnosis_version']))
+    from team_dispatch import dashboard
+    value['dispatch_status'] = dashboard(value)
     return value
 
 def state(identifier=None):
@@ -73,6 +75,7 @@ def commit(project, expected, action):
         project = copy.deepcopy(project)
         project.pop('history', None)
         project.pop('plan_stale', None)
+        project.pop('dispatch_status', None)
         project['version'] = current + 1
         project['updated_at'] = agent.now()
         body = agent.dump(project)
@@ -123,6 +126,7 @@ def diagnosis(data):
     if p['diagnosis'] and d['diagnosis_version'] <= p['diagnosis']['diagnosis_version']:
         raise Conflict('诊断版本必须递增')
     p['diagnosis'], p['proposal'] = d, None
+    p['diagnosis_needs_refresh'] = False
     return commit(p,p['version'],'接收 A 的诊断；原计划保留并检查是否过期')
 
 def validate_plan(plan, d):
@@ -196,8 +200,8 @@ def protected(old, new):
 
 def propose(data):
     p = current(data)
-    if not p['diagnosis']:
-        raise ValueError('先接收 A 的诊断')
+    if not p['diagnosis'] or p.get('diagnosis_needs_refresh'):
+        raise ValueError('先接收基于最新补充信息的 A 诊断')
     plan = copy.deepcopy(required(data,'plan',dict))
     validate_plan(plan,p['diagnosis'])
     if p['plan'] and plan['plan_version']<=p['plan']['plan_version']:
@@ -291,21 +295,23 @@ def demo(data):
     p=current(data)
     if p['mode']!='demo' or p['diagnosis']:
         raise ValueError('仅空的 Demo 项目可运行示例；真实项目请接入队友接口')
-    def researcher(context):
-        return {'diagnosis_version':1,'requirements':[context['goal']], 'sources':[{'source_id':'input','kind':'user_material','title':'本次目标'}],
-                'artifact_status':[],'member_profiles':[{'member_id':'captain','name':'队长'},{'member_id':'A','name':'诊断研究'},{'member_id':'B','name':'行动排程'}],
-                'gaps':[{'gap_id':'G1','current_evidence':'Demo：尚未提供试用记录','target_result':'一份可复核的流程记录','gap_type':'evidence',
-                         'related_member_ids':['captain'],'required_capabilities':['记录与验收'],'source_refs':['input'],'priority_reason':'先验证交接','verification_status':'demo_fixture'}],
-                'resource_candidates':[],'unknowns':['Demo 没有调用真实模型或搜索；实际差距待 A 判断']}
-    def planner(d, context):
-        return {'plan_version':1,'based_on_diagnosis_version':d['diagnosis_version'],
-                'tasks':[{'task_id':'T1','title':'验证一次三人交接','gap_ids':[d['gaps'][0]['gap_id']],'owner_ids':['captain'],
-                          'steps':['核对诊断与来源','记录一次操作结果','提交证据并请成员验收'],'deliverable':'操作记录',
-                          'acceptance_criteria':['记录目标、步骤、结果和卡点'],'estimate_minutes_range':[5,15],
-                          'depends_on':[],'deadline':'待成员确认','source_refs':['input'],'status':'candidate'}],
-                'learning_paths':[],'time_blocks':[],'dependencies':[],'unscheduled':['T1：尚未提供可用时段'],
-                'assumptions':['人工构造的 Demo 任务，未进行智能排期']}
-    return run_handoff(data,researcher,planner)
+    return run_handoff(data,demo_researcher,demo_planner)
+
+def demo_researcher(context):
+    return {'diagnosis_version':(context.get('diagnosis') or {}).get('diagnosis_version',0)+1,'requirements':[context['goal']], 'sources':[{'source_id':'input','kind':'user_material','title':'本次目标'}],
+            'artifact_status':[],'member_profiles':[{'member_id':'captain','name':'队长'},{'member_id':'A','name':'诊断研究'},{'member_id':'B','name':'行动排程'}],
+            'gaps':[{'gap_id':'G1','current_evidence':'Demo：尚未提供试用记录','target_result':'一份可复核的流程记录','gap_type':'evidence',
+                     'related_member_ids':['captain'],'required_capabilities':['记录与验收'],'source_refs':['input'],'priority_reason':'先验证交接','verification_status':'demo_fixture'}],
+            'resource_candidates':[],'unknowns':['Demo 没有调用真实模型或搜索；实际差距待 A 判断']}
+
+def demo_planner(d, context):
+    return {'plan_version':(context.get('plan') or {}).get('plan_version',0)+1,'based_on_diagnosis_version':d['diagnosis_version'],
+            'tasks':[{'task_id':'T1','title':'验证一次三人交接','gap_ids':[d['gaps'][0]['gap_id']],'owner_ids':['captain'],
+                      'steps':['核对诊断与来源','记录一次操作结果','提交证据并请成员验收'],'deliverable':'操作记录',
+                      'acceptance_criteria':['记录目标、步骤、结果和卡点'],'estimate_minutes_range':[5,15],
+                      'depends_on':[],'deadline':'待成员确认','source_refs':['input'],'status':'candidate'}],
+            'learning_paths':[],'time_blocks':[],'dependencies':[],'unscheduled':['T1：尚未提供可用时段'],
+            'assumptions':['人工构造的 Demo 任务，未进行智能排期']}
 
 
 def period_replan(data):
