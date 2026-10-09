@@ -10,6 +10,8 @@ from urllib.parse import urlparse, parse_qs
 
 import learning_agent as agent
 import rescue_service as rescue
+import team_orchestrator as team
+import team_dispatch as dispatch
 
 ROOT = Path(__file__).resolve().parent
 try:
@@ -65,6 +67,8 @@ class Handler(LegacyHandler):
                                                  'verified':False, 'note':'有配置不代表检索已成功；请查看每次执行记录。'},
                                        'capabilities': {'liveSearch': True, 'sourceReading': True, 'persistedRoutes': True,
                                                         'replan': True, 'videoRenderer': bool(shutil.which('ffmpeg') and importlib.util.find_spec('PIL'))}})
+            if path == '/api/agent/team':
+                return self.send_json(team.state(parse_qs(parsed.query).get('id', [None])[0]))
             if path == '/api/agent/state':
                 return self.send_json(agent.state())
             if path == '/api/agent/run':
@@ -90,7 +94,7 @@ class Handler(LegacyHandler):
             if path.startswith('/api/agent/'):
                 return self.send_json({'error': '接口不存在'}, 404)
             if LegacyHandler is SimpleHTTPRequestHandler:
-                if self.path.split('?')[0] not in ('/learning-agent.html', '/learning-agent.js', '/learning-agent.css', '/learning-agent-entry.js'):
+                if self.path.split('?')[0] not in ('/learning-agent.html', '/learning-agent.js', '/learning-agent.css', '/learning-agent-entry.js', '/team.html', '/team.js'):
                     return self.send_json({'error': '文件不可读取'}, 404)
             return super().do_GET()
         except ValueError as exc:
@@ -113,6 +117,15 @@ class Handler(LegacyHandler):
             data = json.loads(self.rfile.read(size))
             if not isinstance(data, dict):
                 raise ValueError('请求必须为 JSON 对象')
+            if path.startswith('/api/agent/team/'):
+                operation = path.rsplit('/',1)[-1]
+                handlers = {'create':team.create,'diagnosis':team.diagnosis,'propose':team.propose,
+                            'apply':team.apply,'feedback':team.feedback,'demo':team.demo,
+                            'period-replan':team.period_replan,'undo-plan':team.undo_plan,
+                            'dispatch':dispatch.dispatch,'brief':dispatch.brief}
+                if operation not in handlers:
+                    return self.send_json({'error':'团队接口不存在'},404)
+                return self.send_json(handlers[operation](data))
             if path == '/api/agent/run':
                 return self.send_json(agent.submit(data), 202)
             if path == '/api/agent/replan':
@@ -139,6 +152,8 @@ class Handler(LegacyHandler):
                     raise ValueError('本机模型网关暂时不可用，请在 AI 连接中设置服务')
                 return self.send_json(value)
             return self.send_json({'error': '接口不存在'}, 404)
+        except team.Conflict as exc:
+            return self.send_json({'error':str(exc)},409)
         except rescue.RescueError as exc:
             return self.send_json({'error': str(exc), 'code': exc.code, **exc.extra}, exc.status)
         except (ValueError, TypeError, KeyError, UnicodeError) as exc:
