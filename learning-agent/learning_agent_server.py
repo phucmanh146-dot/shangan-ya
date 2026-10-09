@@ -90,7 +90,7 @@ class Handler(LegacyHandler):
             if path.startswith('/api/agent/'):
                 return self.send_json({'error': '接口不存在'}, 404)
             if LegacyHandler is SimpleHTTPRequestHandler:
-                if self.path.split('?')[0] not in ('/learning-agent.html', '/learning-agent.js', '/learning-agent.css', '/learning-agent-entry.js'):
+                if self.path.split('?')[0] not in ('/planner.html', '/planner.js', '/learning-agent.html', '/learning-agent.js', '/learning-agent.css', '/learning-agent-entry.js'):
                     return self.send_json({'error': '文件不可读取'}, 404)
             return super().do_GET()
         except ValueError as exc:
@@ -113,6 +113,12 @@ class Handler(LegacyHandler):
             data = json.loads(self.rfile.read(size))
             if not isinstance(data, dict):
                 raise ValueError('请求必须为 JSON 对象')
+            if path == '/api/agent/planner/generate':
+                import action_planner
+                return self.send_json(action_planner.generate(data['diagnosis'], data.get('context', {})))
+            if path == '/api/agent/planner/replan':
+                import action_planner
+                return self.send_json(action_planner.replan(data['diagnosis'], data['plan'], data['settings'], data['expected_plan_version']))
             if path == '/api/agent/run':
                 return self.send_json(agent.submit(data), 202)
             if path == '/api/agent/replan':
