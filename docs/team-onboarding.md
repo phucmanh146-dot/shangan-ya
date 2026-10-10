@@ -1,3 +1,5 @@
+> 最新开发任务见 [三人开发任务 v2](team-tasks-v2.md)，其职责与验收要求优先于本指南旧版第 5–6 节。本轮提问者为 B，文中第二人称队长称呼仅为历史教程角色。
+
 # 队长与两位队友：一步一步把 Agent 接起来
 
 仓库：[phucmanh146-dot/shangan-ya](https://github.com/phucmanh146-dot/shangan-ya)
