@@ -78,6 +78,16 @@ def compute(diagnosis, plan, settings, now=None):
         raw=tasks[key]['deadline']
         if raw=='待成员确认':return datetime.combine(end,time.max,c.TZ)
         return datetime.combine(c.day(raw),time.max,c.TZ) if len(raw)==10 else c.stamp(raw)
+    def released(key):
+        t=tasks[key];wait=t.get('wait_after_dependencies_minutes',0)
+        if not wait:return now
+        ends=[]
+        for dep in t['depends_on']:
+            completed=tasks[dep].get('completed_at')
+            if not completed:
+                reasons[key]='等待时间需要前置成果的验收时间 completed_at';return datetime.combine(end,time.max,c.TZ)
+            ends.append(c.stamp(completed))
+        return max([now]+[x+timedelta(minutes=wait) for x in ends])
     def place(key,a,n):
         used=set(range(a,a+n));day_index=a//1440
         for who in tasks[key]['owner_ids']:
@@ -89,7 +99,7 @@ def compute(diagnosis, plan, settings, now=None):
         x,y=c.stamp(a),c.stamp(b);ns=ticks(x,y);n=len(ns)
         if not ns:continue
         i=min(ns);owners=tasks[key]['owner_ids']
-        if key not in reasons and n<=needs[key] and y<=due(key) and all(ns<=calendars[w] and budgets[w,i//1440]>=n for w in owners):place(key,i,n)
+        if key not in reasons and x>=released(key) and n<=needs[key] and y<=due(key) and all(ns<=calendars[w] and budgets[w,i//1440]>=n for w in owners):place(key,i,n)
     for key in sorted(needs,key=lambda k:(due(k),chosen.index(k))):
         if key in reasons:continue
         t=tasks[key]
@@ -97,7 +107,8 @@ def compute(diagnosis, plan, settings, now=None):
         while needs[key]>0:
             common=set.intersection(*(calendars[w] for w in t['owner_ids']))
             limit=int((due(key)-origin).total_seconds()//60)
-            candidates=sorted(n for n in common if n<limit and all(budgets[w,n//1440]>0 for w in t['owner_ids']))
+            earliest=int((released(key)-origin).total_seconds()//60)
+            candidates=sorted(n for n in common if earliest<=n<limit and all(budgets[w,n//1440]>0 for w in t['owner_ids']))
             found=None
             for a in candidates:
                 cap=min(budgets[w,a//1440] for w in t['owner_ids'])
@@ -126,7 +137,7 @@ def compute(diagnosis, plan, settings, now=None):
         ready=[k for k in waiting if not any(k in tasks[d]['depends_on'] for d in waiting)]
         if not ready:raise ValueError('依赖循环')
         for key in sorted(ready,key=lambda k:(due(k),k),reverse=True):
-            t=tasks[key];finish=min([int((due(key)-origin).total_seconds()//60)]+[v['first_tick'] for k,v in forecasts.items() if key in tasks[k]['depends_on']])
+            t=tasks[key];finish=min([int((due(key)-origin).total_seconds()//60)]+[v['first_tick']-tasks[k].get('wait_after_dependencies_minutes',0) for k,v in forecasts.items() if key in tasks[k]['depends_on']])
             common=set.intersection(*(forecast_free[w] for w in t['owner_ids']))
             total=t.get('remaining_minutes',t['estimate_minutes_range'][1])
             existing={(b['start'],b['end']) for b in kept if b['task_id']==key and c.stamp(b['end'])>now}

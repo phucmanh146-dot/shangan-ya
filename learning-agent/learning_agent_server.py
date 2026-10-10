@@ -90,7 +90,7 @@ class Handler(LegacyHandler):
             if path.startswith('/api/agent/'):
                 return self.send_json({'error': '接口不存在'}, 404)
             if LegacyHandler is SimpleHTTPRequestHandler:
-                if self.path.split('?')[0] not in ('/planner.html', '/planner.js', '/learning-agent.html', '/learning-agent.js', '/learning-agent.css', '/learning-agent-entry.js'):
+                if self.path.split('?')[0] not in ('/planner.html', '/planner.js', '/planner-refinements.js', '/learning-agent.html', '/learning-agent.js', '/learning-agent.css', '/learning-agent-entry.js'):
                     return self.send_json({'error': '文件不可读取'}, 404)
             return super().do_GET()
         except ValueError as exc:
@@ -113,6 +113,16 @@ class Handler(LegacyHandler):
             data = json.loads(self.rfile.read(size))
             if not isinstance(data, dict):
                 raise ValueError('请求必须为 JSON 对象')
+            if path.startswith('/api/agent/planner/') and path.rsplit('/',1)[-1] in ('split','lock','calibrate','reconcile','alternatives'):
+                import b_refinements as b
+                op=path.rsplit('/',1)[-1]
+                d,p,v=data['diagnosis'],data['plan'],data['expected_plan_version']
+                if op=='split':value=b.split(d,p,data['task_id'],v,data.get('wait_minutes',0))
+                elif op=='lock':value=b.lock(d,p,data['task_id'],data['locked'],v)
+                elif op=='calibrate':value=b.calibrate(d,p,v)
+                elif op=='reconcile':value=b.reconcile(d,data['new_diagnosis'],p,data.get('context',{}),v)
+                else:value=b.alternatives(d,p,data['settings'],v,data.get('optional_ids'),data.get('extension_days',0))
+                return self.send_json(value)
             if path == '/api/agent/planner/validate':
                 import action_planner
                 action_planner.validate(data['plan'], data['diagnosis'])

@@ -64,11 +64,22 @@ def generate(diagnosis, context):
             t['depends_on']=[x for x in t['depends_on'] if x in ids]
             t['status']='blocked'
             pending.append({'task_id':t['task_id'],'reason':'前置缺口尚未形成有效任务：'+', '.join(external)})
-    plan={'schema_version':'0.1','provider':'deterministic-action-planner','plan_version':1,
+    plan={'generation_context':deepcopy(context),'schema_version':'0.1','provider':'deterministic-action-planner','plan_version':1,
           'based_on_diagnosis_version':version,'tasks':tasks,'learning_paths':paths,'time_blocks':[],
           'dependencies':[{'task_id':t['task_id'],'depends_on':t['depends_on']} for t in tasks],
           'unscheduled':pending,'assumptions':assumptions,
           'milestones':[{'task_id':t['task_id'],'deadline':t['deadline'],'deliverable':t['deliverable']} for t in tasks if t['kind']=='production']}
+    # Make each learning action refer to the concrete target and supplied material locator.
+    for path in paths:
+        for resource in path['resources']:
+            label=resource.get('title') or resource.get('url') or 'A 提供的资料'
+            locator=resource.get('section') or resource.get('locator') or '需确认相关章节'
+            for task in tasks:
+                if task['task_id']==path['task_ids'][0]:
+                    task['steps']=['打开 '+label+'；定位 '+str(locator),'摘出能解决当前缺口的一项方法，并写出应用步骤']
+                if task['task_id']==path['task_ids'][1]:
+                    task['steps']=[resource.get('exercise') or '选当前作品中的一个最小片段，应用该方法，保留操作前后证据']
+        path['route_options']=[{'resource':r.get('title') or r.get('url'),'section':r.get('section') or r.get('locator'),'estimated_learning_minutes':r.get('estimated_learning_minutes'),'conditions':r.get('conditions','适用条件待确认')} for r in path['resources']]
     validate(plan,diagnosis)
     return plan
 
@@ -124,6 +135,9 @@ def validate(plan, diagnosis):
 def replan(diagnosis, plan, settings, expected_plan_version, now=None):
     validate(plan,diagnosis)
     if expected_plan_version!=plan['plan_version']: raise ValueError('计划版本已变化，请刷新')
+    if 'members' in settings:
+        from b_refinements import expand
+        settings=expand(settings)
     draft=deepcopy(plan)
     tasks={t['task_id']:t for t in draft['tasks']}
     for t in tasks.values():
@@ -139,7 +153,7 @@ def replan(diagnosis, plan, settings, expected_plan_version, now=None):
         if t['status'] in ('candidate','scheduled'):
             t['status']='scheduled' if t['task_id'] in allocated else 'candidate'
     result['changes']=[{'task_id':key,'before':[b for b in plan['time_blocks'] if b['task_id']==key],
-        'after':[b for b in result['time_blocks'] if b['task_id']==key],'reason':'按当前空档、占用、上限、截止及前置验收状态调整'}
+        'after':[b for b in result['time_blocks'] if b['task_id']==key],'reason':('；'.join(x['reason'] for x in result['unscheduled'] if isinstance(x,dict) and x.get('task_id')==key) or '按成员当前空档、占用与每日上限重新安排；下方列出前后时段')}
         for key in tasks if [b for b in plan['time_blocks'] if b['task_id']==key]!=[b for b in result['time_blocks'] if b['task_id']==key]]
     validate(result,diagnosis)
     return result
