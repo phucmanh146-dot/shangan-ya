@@ -75,3 +75,51 @@ A 复核新证据与相关差距；B 重算受影响安排，返回前后差异�
 4. 前置任务未完成、来源未核实、模型失败均显示相应状态。
 5. 成果验收改变差距状态，并保留所用证据版本。
 6. Demo 只验证数据传递；Live 另以真实模型与搜索记录验收。
+
+## 7. 精细指导扩展：队长接收层已支持，真实生成仍待 A/B
+
+2026-10-11 队长分支开始校验、保存并展示以下可选字段。旧 v0.1 数据仍可使用；没有 `micro_steps` 的任务会显示“待 B 补充精细指导”。字段齐全只代表格式与引用关系合格，不代表定位、数据或建议已经核实。
+
+### A 的材料与差距
+
+| 字段 | 格式与约束 |
+| --- | --- |
+| `Diagnosis.artifact_versions` | 可选列表；每项含非空 `artifact_id`、正整数 `artifact_version`、非空 `title`；同一材料同一版本不能重复 |
+| `gap.current_artifact` | 可选对象 `{artifact_id, artifact_version}`；必须在上述材料列表中登记 |
+| `gap.current_locator` / `target_locator` | 可选非空文字，例如文档章节、表格行列、代码文件与函数；缺少位置时省略并在 unknowns 说明，不能虚构 |
+| `gap.reason` / `applicability` / `verification_method` | 可选非空文字，分别解释差距原因、参考适用条件和核验方法 |
+
+总控没有读取这些材料文件，因此材料列表是 A 的声明，不是自动验真。实际文件版本、页码、数据口径及引用内容由 A 核实。
+
+### B 的细步骤
+
+`task.micro_steps` 是可选的非空对象列表；一旦提供，每项必须包含：
+
+| 字段 | 内容 |
+| --- | --- |
+| `step_id` | 本任务内唯一的非空标识 |
+| `input_version` | 对象 `{artifact_id, artifact_version}`，必须引用 A 已登记的材料版本 |
+| `target_locator` | 具体操作位置，非空文字 |
+| `action` / `reason` | 做什么、为什么这样做，非空文字 |
+| `expected_change` / `output` | 做完有什么变化、留下什么产物，非空文字 |
+| `self_check` / `failure_next` | 怎样自检、卡住后怎样推进，非空文字 |
+| `capability_basis` | 操作所需能力与成员现有证据；未知需写明待确认，不能假定成员已具备 |
+| `source_refs` | 可选的非空来源 ID 列表，必须存在于 Diagnosis.sources；省略时页面展示任务的来源 |
+
+`steps`、`acceptance_criteria`、依赖、DDL 等原字段继续保留。材料名加版本能定位引用对象；总控尚不能证明 B 的动作真实可执行、估时准确或参考方法适合本任务。
+
+### 人工逐项验收
+
+精细任务的 `POST /feedback` 在 `action=approve` 时必须附 `criterion_results`，顺序和数量与该任务 `acceptance_criteria` 一致：
+
+```json
+{
+  "criterion_results": [
+    {"criterion": "对应的验收条件原文", "passed": true, "evidence": "实际看到的成果位置、数字或验证记录"}
+  ]
+}
+```
+
+每项必须有非空证据和布尔通过状态；任一未通过就不能写成 completed，使用 reject 退回修改。记录与已提交成果版本一起保存。旧任务的旧 API 调用仍兼容；新版页面统一引导逐项核对。成员选择仍是本机记录，不是身份认证；这里不是 A 的自动成果复核。
+
+`change_impacts`、`reference_breakdown`、`capability_evidence` 等更完整的研究输出及差距自动关闭，仍需 A/B 的实现和共同联调，本次不声称已接通。

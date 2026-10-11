@@ -18,6 +18,8 @@ class Conflict(ValueError):
     pass
 
 def required(obj, key, kind=str):
+    if not isinstance(obj, dict):
+        raise ValueError('交接条目必须为 JSON 对象')
     value = obj.get(key)
     if not isinstance(value, kind) or (kind is str and not value.strip()):
         raise ValueError(f'{key} 缺失或格式错误')
@@ -97,6 +99,41 @@ def create(data):
                    'mode':mode, 'timezone':'Asia/Shanghai', 'diagnosis':None, 'plan':None,
                    'proposal':None, 'feedback':[], 'live_verified':False}, 0, '创建项目')
 
+def artifact_catalog(d):
+    """Optional version catalog. These are declared references, not file inspection."""
+    if 'artifact_versions' not in d:
+        return set()
+    catalog = set()
+    for row in required(d, 'artifact_versions', list):
+        key = (required(row, 'artifact_id'), integer(row, 'artifact_version', 1))
+        required(row, 'title')
+        if key in catalog:
+            raise ValueError('材料版本重复')
+        catalog.add(key)
+    return catalog
+
+def validate_artifact_ref(value, catalog):
+    key = (required(value, 'artifact_id'), integer(value, 'artifact_version', 1))
+    if key not in catalog:
+        raise ValueError('引用了未登记的材料版本；请 A 补齐 artifact_versions')
+
+def validate_micro_steps(t, d):
+    if 'micro_steps' not in t:
+        return  # Existing v0.1 plans stay usable and visibly lack fine guidance.
+    rows = required(t, 'micro_steps', list)
+    if not rows:
+        raise ValueError('micro_steps 不能为空；尚未提供时请省略此字段')
+    unique(rows, 'step_id')
+    catalog = artifact_catalog(d)
+    sources = {x['source_id'] for x in d['sources']}
+    for row in rows:
+        validate_artifact_ref(required(row, 'input_version', dict), catalog)
+        for key in ('target_locator', 'action', 'reason', 'expected_change', 'output',
+                    'self_check', 'failure_next', 'capability_basis'):
+            required(row, key)
+        if 'source_refs' in row and not set(strings(row, 'source_refs', True)).issubset(sources):
+            raise ValueError('细步骤引用了不存在的来源')
+
 def validate_diagnosis(d):
     integer(d, 'diagnosis_version', 1)
     for key in ('requirements','sources','artifact_status','member_profiles','gaps','resource_candidates','unknowns'):
@@ -107,6 +144,7 @@ def validate_diagnosis(d):
             raise ValueError('来源 kind 必须说明官方、用户材料、参考或建议')
         required(source,'title')
     members = unique(d['member_profiles'],'member_id')
+    catalog = artifact_catalog(d)
     unique(d['gaps'],'gap_id')
     for gap in d['gaps']:
         for key in ('current_evidence','target_result','gap_type','priority_reason','verification_status'):
@@ -118,6 +156,11 @@ def validate_diagnosis(d):
             raise ValueError('差距引用了不存在的来源')
         if not gap['source_refs'] and gap['verification_status'] == 'verified':
             raise ValueError('没有来源的差距不能标为已核验')
+        for key in ('current_locator', 'target_locator', 'reason', 'applicability', 'verification_method'):
+            if key in gap:
+                required(gap, key)
+        if 'current_artifact' in gap:
+            validate_artifact_ref(required(gap, 'current_artifact', dict), catalog)
 
 def diagnosis(data):
     p = current(data)
@@ -152,6 +195,7 @@ def validate_plan(plan, d):
             raise ValueError('估时必须是有效分钟范围')
         if t.get('status') not in ('candidate','scheduled','in_progress','pending_review','completed','blocked'):
             raise ValueError('任务状态无效')
+        validate_micro_steps(t, d)
         deps[t['task_id']] = t['depends_on']
     visited = set()
     def visit(key, path):
@@ -227,6 +271,19 @@ def apply(data):
     p['plan'],p['proposal'] = proposal['plan'],None
     return commit(p,p['version'],'用户采用计划')
 
+def validate_criterion_results(data, task):
+    rows = required(data, 'criterion_results', list)
+    criteria = task['acceptance_criteria']
+    if len(rows) != len(criteria):
+        raise ValueError('验收必须逐条对应任务的验收条件')
+    for row, criterion in zip(rows, criteria):
+        if required(row, 'criterion') != criterion or type(row.get('passed')) is not bool:
+            raise ValueError('验收条件或通过状态无效，请刷新后重新核对')
+        required(row, 'evidence')
+    if not all(row['passed'] for row in rows):
+        raise ValueError('有验收条件未通过，请退回修改；不能标记完成')
+    return copy.deepcopy(rows)
+
 def feedback(data):
     p = current(data)
     if not p['plan'] or p['plan_stale']:
@@ -264,6 +321,8 @@ def feedback(data):
         if record['reviewer_id'] not in {m['member_id'] for m in p['diagnosis']['member_profiles']}:
             raise ValueError('验收成员不在项目中')
         record['evidence']=t['submission']['evidence']
+        if action == 'approve' and (t.get('micro_steps') or 'criterion_results' in data):
+            record['criterion_results'] = validate_criterion_results(data, t)
         t['status']='completed' if action=='approve' else 'in_progress'
         t['review']=copy.deepcopy(record)
     elif action=='block':
