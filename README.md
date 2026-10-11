@@ -4,6 +4,8 @@
 
 [个人介绍](docs/profile.md) · [队长一步一步操作](docs/team-onboarding.md) · [三人交接约定](docs/p1-contract.md) · [作品主页](https://shanganya-focus-hanyi.phucmanh146.chatgpt.site/) · [Skill 页面](https://shanganya-focus-hanyi.phucmanh146.chatgpt.site/skill)
 
+**本轮任务入口（2026-10-11）：**[扣子获奖案例与三人任务增补](docs/coze-benchmark-tasks.md) · [参赛范围与每日容量 v4](docs/award-benchmark-v4.md)。增补沿用 v2/v3 的细步骤方向，明确试做、动作产物、新成果复核和交接验收；属于待开发/待验证要求，不代表扣子已接入或完整 Agent 已完成。
+
 ## 项目依据与归属
 
 本项目由我们三人协作推进，用户本人担任队长。以用户所说的“她设计的 PRD”为需求依据，延续其中的产品设计，并参考上岸鸭的产品思路。PRD 原设计者的姓名、署名和原文版本需依据原始文件确认；这里不代填作者，也不把原 PRD 改写为队长独立创作。
