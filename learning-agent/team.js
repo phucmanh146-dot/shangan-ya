@@ -61,6 +61,7 @@ function render(){
   const basis=el('details','');basis.append(el('summary','查看这项任务的差距依据'));for(const id of t.gap_ids){const g=project.diagnosis.gaps.find(x=>x.gap_id===id);if(g){basis.append(el('h4',g.gap_id));gapView(basis,g);}}box.append(basis);
   if(t.submission){fact(box,'已提交成果',t.submission.artifact_id+' · v'+t.submission.artifact_version);fact(box,'成果证据',t.submission.evidence);fact(box,'实际投入',t.submission.actual_minutes+' 分钟');}
   if(t.review){fact(box,'人工验收意见',t.review.note);for(const r of t.review.criterion_results||[])fact(box,'已核对 '+r.criterion,r.evidence);}
+  if(t.external_review){const packet=t.external_review.packet;fact(box,'A 的成果复核',packet.note);for(const r of packet.criterion_results)fact(box,(r.passed?'通过：':'未通过：')+r.criterion,r.evidence);for(const g of packet.gap_results)fact(box,'差距复核 '+g.gap_id+' · '+g.status,g.evidence+(g.remaining_issue?'；仍需：'+g.remaining_issue:''));}
   const details=el('details','');details.append(el('summary','查看完整任务、来源与证据'),el('pre',JSON.stringify(t,null,2)));box.append(details);
   const choices=t.status==='pending_review'?[['approve','验收通过'],['reject','退回修改']]:t.status==='completed'?[]:t.status==='in_progress'?[['submit','提交成果'],['block','遇到卡点']]:[['start','开始任务'],['block','遇到卡点']];
   choices.push(['change','临时安排反馈']);if(!t.locked)choices.push(['lock','锁定任务']);
@@ -70,6 +71,7 @@ function render(){
  if(!project.plan)$('tasks').append(el('p','采用计划后显示任务。'));
  $('feedback').replaceChildren(...project.feedback.map(f=>el('p',`${f.task_id} · ${f.action} · ${f.note}${f.evidence?' / 证据：'+f.evidence:''}`)));
  $('history').replaceChildren(...(project.history||[]).map(h=>el('p',`v${h.version} · ${h.action} · ${h.created}`)));
+ if(typeof handoffView==='function')handoffView();
 }
 function openFeedback(task,kind,label){
  action={task_id:task.task_id,action:kind,expected_plan_version:project.plan.plan_version,expected_version:project.version};$('feedback-form').reset();$('feedback-title').textContent=label+' · '+task.title;$('submit-fields').hidden=kind!=='submit';$('review-fields').hidden=!['approve','reject'].includes(kind);

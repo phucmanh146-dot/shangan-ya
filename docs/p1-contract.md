@@ -1,6 +1,6 @@
 # P1 三人交接约定 v0.1
 
-这是依据协作手册整理的交接约定。队长已实现独立总控接收层、版本保存与成果验收，见 [队长交付与 API](captain-delivery.md)。原学习路线未自动迁移到新格式；A/B 的真实模块仍待连接。
+这是依据协作手册整理的交接约定。队长已实现总控接收、版本保存与成果验收，见 [队长交付与 API](captain-delivery.md)。B 的实际规则规划已接线，A 的生成/复核模块仍待交付；原学习路线未自动迁移到新格式。
 
 ## 1. 共用上下文
 
@@ -17,7 +17,7 @@
 
 包含 `diagnosis_version`、`requirements`、`sources`、`artifact_status`、`member_profiles`、`gaps`、`resource_candidates`、`unknowns`。
 
-每个 gap 至少有 `gap_id`、`current_evidence`、`target_result`、`gap_type`、`related_member_ids`、`required_capabilities`、`source_refs`、`priority_reason` 和 `verification_status`。
+每个 gap 至少有 `gap_id`、`current_evidence`、`target_result`、`gap_type`、`related_member_ids`、`required_capabilities`、`source_refs`、`priority_reason` 和 `verification_status`。实际调用 B 还要求非空 `acceptance_criteria` 文字列表、有效来源和负责人、1–100 条实际 gap；空报告模板不能生成计划。成员可提供 `verified_capabilities` 文字列表；缺少已验证能力不会跳过所需学习。
 
 来源区分官方要求、用户材料、参考案例和 Agent 建议。未知不能被空字符串悄悄覆盖；缺少来源的结论写明待核验。
 
@@ -123,3 +123,30 @@ A 复核新证据与相关差距；B 重算受影响安排，返回前后差异�
 每项必须有非空证据和布尔通过状态；任一未通过就不能写成 completed，使用 reject 退回修改。记录与已提交成果版本一起保存。旧任务的旧 API 调用仍兼容；新版页面统一引导逐项核对。成员选择仍是本机记录，不是身份认证；这里不是 A 的自动成果复核。
 
 `change_impacts`、`reference_breakdown`、`capability_evidence` 等更完整的研究输出及差距自动关闭，仍需 A/B 的实现和共同联调，本次不声称已接通。
+
+## 8. 实际 B 规划接线与 A 复核交付
+
+所有写入均包含 `project_id`、`expected_version`；版本冲突返回 409，失败不覆盖正式计划或成果。`POST /handoff-check` 附 Diagnosis，只检查交付条件；`POST /generate-b` 调用 B 已交付的规则生成/增量处理，返回计划预览；`POST /apply` 仍需成员确认。`--with-b-planner` 将同一函数绑定总调度，A 没有配置时仍停在待交付阶段。
+
+`GET /handoff?id=项目ID` 导出项目/诊断/计划版本、当前 Diagnosis、待验收任务及 submission、反馈。A 需核实实际新成果，返回以下完整对象交给 `POST /review-receive` 的 `review` 字段：
+
+| 字段 | 约束 |
+| --- | --- |
+| `review_id` / `task_id` / `reviewer_id` | 非空；task 须待验收，reviewer 须属于 Diagnosis 的成员；相同编号相同包幂等，不同内容拒收 |
+| `plan_version` / `diagnosis_version` | 正整数，与当前有效计划/诊断一致 |
+| `artifact_id` / `artifact_version` | 与该任务已提交的新成果完全一致 |
+| `method` / `note` | method 为 manual/model/rules，note 非空；声明 model 不代表总控已验证模型 |
+| `criterion_results` | 数量、顺序、criterion 原文对应任务条件；passed 为布尔，evidence 非空 |
+| `gap_results` | gap_id 与当前任务逐项对应且不重复；status 为 closed/remaining/unknown；每项 evidence 非空，非 closed 时还需 remaining_issue |
+
+验收条件未全部通过，不能把 gap 声明为 closed。保存复核不改变任务状态或原 Diagnosis；`content_independently_verified=false`。人工批准仍需逐条件填写证据，A 已报未通过的条件不能直接跳过；任务通过不自动关闭 gap，学习/练习完成时差距可以仍然存在。
+
+服务端 `REVIEWER(project_snapshot, review_request)` 返回同一 review 对象，`POST /review-run` 传 `task_id` 触发。当前 A 真实函数未配置，调用会明确拒绝；没有任意客户端代码/URL绑定入口。复核期间项目版本变化时旧回调不能覆盖新状态。
+
+## 9. 求助与具体动作关联
+
+`POST /rescue-start` 附 `expected_plan_version`、`task_id`、`gap_id`、`action_id`、非空 `note`（最多 2500 字），以及可选 `frames`、`mediaKind`、`urls`。任务须尚需执行且计划有效；gap 须属于任务；action 使用 `micro_steps.step_id`，旧 steps 使用本计划版本内的 `step:1`、`step:2` 等标识。
+
+使用现有求助引擎与 AI 连接；未配置返回 CONFIG_REQUIRED/409，不生成执行记录。同一动作同一计划已有求助运行时拒绝重复。保存 incident_id、run_id、关联 ID 与诊断/计划版本；`POST /rescue-sync` 只接收本项目的 incident_id，读取服务端实际执行结果，不接受客户端伪造结果。
+
+前端图片压缩后提交；30 分钟以内录屏取起始/中间/末尾三张画面，不处理音频。媒体解码期间任务或版本变化就拒绝绑定。原始画面不写入执行日志或项目 SQLite；解答与反馈保存，但不自动修改任务、差距或计划。之后诊断/计划变化时，即使已保存的解答也标为旧版本，待成员核对。

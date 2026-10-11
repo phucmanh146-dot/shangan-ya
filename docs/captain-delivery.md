@@ -1,5 +1,9 @@
 # 队长交付：关系、边界与总控接口
 
+## 当前补齐：2026-10-11
+
+已接入 B 在 `59a1eaf` 交付的实际规则规划代码，补齐 A→B 字段检查、待复核交付包导出、A 复核结果的版本校验与保存，以及截图/录屏求助到具体 gap/task/action 的关联。结果不会自动认定完成；任务通过与差距关闭分开。88 项后端检查和 48 项真实浏览器流程检查通过，人工测试数据不代表真实模型质量。具体运行、A 的 DOCX 交付边界和剩余事项见 [本轮接线交付](captain-handoff-2026-10-11.md)。以下保留此前开发记录，以此补齐状态为准。
+
 ## 历史依据
 
 本轮依据 2026-10-09 用户上传的历史长截图，以及已合并的 [PR #2](https://github.com/phucmanh146-dot/shangan-ya/pull/2)、`docs/team-onboarding.md` 和 `docs/p1-contract.md`。历史搜索服务本轮未返回可用结果；不据此补写不存在的队友身份。
@@ -26,7 +30,7 @@
 - 新计划不得替换已开始/已完成/待验收/锁定任务或删除锁定时段。
 - 反馈及每个项目版本均保存；原学习路线数据库记录不改写。
 
-这是总控接收层和执行闭环，不是 A/B 智能算法的替代实现。原学习与图片视频求助仍在原页面；总控卡点记录与视觉结果还需人工关联，不声称已自动回流。
+这是总控接收层和执行闭环。原学习与图片视频求助继续保留；本轮增加任务内求助入口，结果自动保留动作关联，内容仍需成员核对。
 
 ## 运行
 
@@ -53,7 +57,7 @@ Demo 是人工构造的完整交接样例；没有真实模型、联网搜索或
 
 `team_orchestrator.run_handoff(data, researcher, planner)` 为服务端 Python 接口：researcher 接收项目快照，返回 Diagnosis；总控校验保存，再把诊断和项目快照传给 planner，返回 Plan 进入预览。B 失败时 A 的诊断仍保留，可以修复 B 后单独提交计划。Demo 已实际使用该调用链。
 
-A/B 的真实模块尚未交付并连接，因此 HTTP 界面提供 JSON 交付入口，不声称已经自动调用真实 A/B。live 是数据用途标识，live_verified 固定为 false，不能由客户端输入改成已验收。
+A 的真实生成与复核模块尚未连接；B 的规则规划器已可调用，JSON 入口继续兼容。live 是数据用途标识，live_verified 固定为 false，不能由客户端输入改成已验收。
 
 具体字段补充：sources 每项用 source_id、kind（official/user_material/reference/suggestion）、title；成员用 member_id；task 增加 title；steps、acceptance_criteria 为文字列表；time_blocks 用 task_id、member_id、start/end（带时区 ISO 时间）、可选 locked。顶层 dependencies 保留 B 原始说明，实际校验以 tasks[].depends_on 为准。
 
@@ -63,11 +67,11 @@ A/B 的真实模块尚未交付并连接，因此 HTTP 界面提供 JSON 交付�
 
 执行 `python -m unittest -q test_agent.py test_team.py`：36 项通过（原有 27 项、新增 9 项）。覆盖真实本机 HTTP、SQLite、并发写入、无来源/循环/时段冲突、待验收/退回、版本冲突、计划过期与 Demo/Live 区分。
 
-待队友交付后的联调项：真实诊断与搜索证据、30/90 分钟真实排程差异、原学习路线状态迁移、视觉求助与任务关联、A 复核后的差距关闭。这些尚不能标为三人完整 Agent 已完成。
+待三人联调项：真实诊断与搜索证据、30/90 分钟真实排程差异、原学习路线状态迁移、视觉模型质量、A 复核后的差距关闭。求助与任务关联已在本轮补齐，但完整 Agent 仍未验收。
 
 在用户 Windows 电脑 Python 3.13 上复验 9 项总控测试通过；使用本机 Chrome 的 9 项浏览器检查通过（创建、自动示例交接、预览与采用、执行、待验收、刷新恢复、证据验收、API 状态、移动端不溢出），页面脚本错误为 0。Windows 复验发现 SQLite 连接未显式释放，已修复并复验通过。截图保存在本机 test-output/team-desktop.png。
 
-本轮 C5 周期排程与撤销新增内容，见 [周期调整](period-adjustment.md)；此前“团队计划撤销待实现”的状态由本轮实现取代。真实 A/B 和视觉关联仍待联调。
+本轮 C5 周期排程与撤销新增内容，见 [周期调整](period-adjustment.md)；此前“团队计划撤销待实现”的状态由本轮实现取代。真实 A、模型质量与三方集成仍待联调。
 
 ## 2026-10-11：参照最高奖作品的具体改动
 

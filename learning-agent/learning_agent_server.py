@@ -12,6 +12,8 @@ import learning_agent as agent
 import rescue_service as rescue
 import team_orchestrator as team
 import team_dispatch as dispatch
+import team_handoff as handoff
+import team_rescue
 
 ROOT = Path(__file__).resolve().parent
 try:
@@ -69,6 +71,11 @@ class Handler(LegacyHandler):
                                                         'replan': True, 'videoRenderer': bool(shutil.which('ffmpeg') and importlib.util.find_spec('PIL'))}})
             if path == '/api/agent/team':
                 return self.send_json(team.state(parse_qs(parsed.query).get('id', [None])[0]))
+            if path == '/api/agent/team/handoff':
+                identifier = parse_qs(parsed.query).get('id', [''])[0]
+                if not identifier:
+                    raise ValueError('请提供待复核项目的 id')
+                return self.send_json(handoff.review_request(team.state(identifier)))
             if path == '/api/agent/state':
                 return self.send_json(agent.state())
             if path == '/api/agent/run':
@@ -94,7 +101,7 @@ class Handler(LegacyHandler):
             if path.startswith('/api/agent/'):
                 return self.send_json({'error': '接口不存在'}, 404)
             if LegacyHandler is SimpleHTTPRequestHandler:
-                if self.path.split('?')[0] not in ('/learning-agent.html', '/learning-agent.js', '/learning-agent.css', '/learning-agent-entry.js', '/team.html', '/team.js'):
+                if self.path.split('?')[0] not in ('/learning-agent.html', '/learning-agent.js', '/learning-agent.css', '/learning-agent-entry.js', '/team.html', '/team.js', '/team-handoff.js'):
                     return self.send_json({'error': '文件不可读取'}, 404)
             return super().do_GET()
         except ValueError as exc:
@@ -122,7 +129,10 @@ class Handler(LegacyHandler):
                 handlers = {'create':team.create,'diagnosis':team.diagnosis,'propose':team.propose,
                             'apply':team.apply,'feedback':team.feedback,'demo':team.demo,
                             'period-replan':team.period_replan,'undo-plan':team.undo_plan,
-                            'dispatch':dispatch.dispatch,'brief':dispatch.brief}
+                            'dispatch':dispatch.dispatch,'brief':dispatch.brief,
+                            'handoff-check':handoff.check,'generate-b':handoff.generate,
+                            'review-receive':handoff.receive_review,'review-run':handoff.invoke_review,
+                            'rescue-start':team_rescue.start,'rescue-sync':team_rescue.sync}
                 if operation not in handlers:
                     return self.send_json({'error':'团队接口不存在'},404)
                 return self.send_json(handlers[operation](data))
@@ -165,7 +175,10 @@ class Handler(LegacyHandler):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=8901)
+    parser.add_argument('--with-b-planner', action='store_true', help='Bind the delivered deterministic B planner; A remains independently configured')
     args = parser.parse_args()
+    if args.with_b_planner:
+        dispatch.PLANNER = handoff.planner
     server = ThreadingHTTPServer(('127.0.0.1', args.port), Handler)
     print(f'上岸鸭学习导航 Agent: http://127.0.0.1:{args.port}/learning-agent.html', flush=True)
     server.serve_forever()

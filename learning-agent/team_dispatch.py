@@ -7,6 +7,7 @@ BOOT_ID = uuid.uuid4().hex
 # Integration bootstrap may bind trusted callables; browser input cannot bind code/URLs.
 RESEARCHER = None
 PLANNER = None
+REVIEWER = None
 
 
 def providers(p):
@@ -40,6 +41,7 @@ def dashboard(p):
     questions = (p.get('diagnosis') or {}).get('unknowns', [])
     return {'stage': stage, 'label': label, 'active': active, 'interrupted': interrupted,
             'providers': {'A': bool(a), 'B': bool(b), 'mode': p['mode']},
+            'review_provider': p['mode'] == 'live' and REVIEWER is not None,
             'counts': counts, 'questions': questions, 'last_run': run,
             'can_dispatch': not active and stage in ('A', 'B') and bool(a if stage == 'A' else b),
             'note': 'Demo 只验证交接；接入配置不等于真实模型与搜索验收通过。'}

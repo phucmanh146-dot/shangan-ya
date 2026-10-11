@@ -50,6 +50,10 @@ def init(c):
 def view(project):
     value = copy.deepcopy(project)
     value['plan_stale'] = bool(value['plan'] and (value.get('diagnosis_needs_refresh') or value['plan']['based_on_diagnosis_version'] != value['diagnosis']['diagnosis_version']))
+    for rescue in value.get('rescue_requests', []):
+        rescue['stale'] = bool(value['plan_stale'] or not value['plan'] or
+                               value['plan']['plan_version'] != rescue['plan_version'] or
+                               value['diagnosis']['diagnosis_version'] != rescue['diagnosis_version'])
     from team_dispatch import dashboard
     value['dispatch_status'] = dashboard(value)
     return value
@@ -168,6 +172,8 @@ def diagnosis(data):
     validate_diagnosis(d)
     if p['diagnosis'] and d['diagnosis_version'] <= p['diagnosis']['diagnosis_version']:
         raise Conflict('诊断版本必须递增')
+    if p['plan'] and not p.get('plan_diagnosis') and p['diagnosis'] and p['plan']['based_on_diagnosis_version'] == p['diagnosis']['diagnosis_version']:
+        p['plan_diagnosis'] = copy.deepcopy(p['diagnosis'])
     p['diagnosis'], p['proposal'] = d, None
     p['diagnosis_needs_refresh'] = False
     return commit(p,p['version'],'接收 A 的诊断；原计划保留并检查是否过期')
@@ -269,6 +275,7 @@ def apply(data):
     p['undo_plan'] = copy.deepcopy(p['plan'])
     p['undo_at_version'] = p['version'] + 1
     p['plan'],p['proposal'] = proposal['plan'],None
+    p['plan_diagnosis'] = copy.deepcopy(p['diagnosis'])
     return commit(p,p['version'],'用户采用计划')
 
 def validate_criterion_results(data, task):
@@ -302,6 +309,8 @@ def feedback(data):
             raise ValueError('当前状态不能开始')
         if any(x['task_id'] in t['depends_on'] and x['status']!='completed' for x in p['plan']['tasks']):
             raise ValueError('前置任务尚未验收完成')
+        if t.get('external_dependencies'):
+            raise ValueError('外部前置成果尚未交付，不能开始任务')
         t['status']='in_progress'
     elif action=='submit':
         if t['status']!='in_progress':
@@ -311,6 +320,7 @@ def feedback(data):
         record['actual_minutes']=integer(data,'actual_minutes')
         record['evidence']=required(data,'evidence')
         t['submission']=copy.deepcopy(record)
+        t.pop('external_review', None)
         t['status']='pending_review'
     elif action in ('approve','reject'):
         if t['status']!='pending_review' or not t.get('submission'):
@@ -321,7 +331,12 @@ def feedback(data):
         if record['reviewer_id'] not in {m['member_id'] for m in p['diagnosis']['member_profiles']}:
             raise ValueError('验收成员不在项目中')
         record['evidence']=t['submission']['evidence']
-        if action == 'approve' and (t.get('micro_steps') or 'criterion_results' in data):
+        packet = (t.get('external_review') or {}).get('packet')
+        if action == 'approve' and packet and not all(r['passed'] for r in packet['criterion_results']):
+            raise ValueError('A 复核仍有验收条件未通过，请退回修改或接收更新后的复核')
+        # Finishing a task (especially learning) is distinct from closing a gap.
+        # Keep A's remaining/unknown gap evidence even after this task passes.
+        if action == 'approve' and (packet or t.get('micro_steps') or 'criterion_results' in data):
             record['criterion_results'] = validate_criterion_results(data, t)
         t['status']='completed' if action=='approve' else 'in_progress'
         t['review']=copy.deepcopy(record)
