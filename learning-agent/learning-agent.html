@@ -4,18 +4,19 @@
 <body>
 <header><a class="brand" href="learning-agent.html"><span class="duck">鸭</span><span>上岸鸭 <small>学习导航 Agent</small></span></a><div class="header-actions"><a class="quiet" href="team.html">三人协作总控</a><span id="connection" class="pill">正在连接后端</span><button id="open-config" class="quiet">AI 连接</button><a class="quiet" href="http://127.0.0.1:8879/index.html">回到工作台 ↗</a></div></header>
 <main>
-<section class="intro"><div><span class="eyebrow">从「不知道怎么做」到下一步</span><h1>迷茫的时候，<br>先找到一条走得通的路。</h1><p>查清资料，拆出任务。卡住了继续问，有变动就重新安排。</p></div><div class="intro-note"><span>本次参赛方向</span><strong>教育场景 · 自适应学习陪跑</strong><p>参照历届作品的资料聚合与任务闭环，把学习建议落实为可验收的行动。</p><a href="https://www.ai-race.com.cn/" target="_blank" rel="noopener noreferrer">查看比赛官网 ↗</a></div></section>
+<section class="intro"><div><span class="eyebrow">从「不知道怎么做」到下一步</span><h1>迷茫的时候，<br>先找到一条走得通的路。</h1><p>查清资料，拆出任务。卡住了继续问，有变动就重新安排。</p></div><div class="intro-note"><span>竞赛任务规划</span><strong>从现有作品，到可验收的成果</strong><p>先核对你参加的赛事和当前材料，再按目标、能力证据与实际空档安排下一步。</p><details><summary>看一个案例（全部为假设）</summary><p>假设参加挑战杯，领到“完善项目报告”的任务。现状：需求段落没有访谈依据。下一步：先核对访谈记录中的一条结论，补到对应段落，保存修改前后版本，再检查证据是否支持结论。赛事、要求和时间均需换成你的真实输入。</p></details></div></section>
 <div class="workspace">
 <aside>
 <button id="open-rescue" class="rescue-entry" type="button"><strong>卡住了？上传图片或视频</strong><span>看懂问题 → 告诉你下一步怎么做 ↗</span></button>
 <section class="card input-card"><div class="section-label"><span class="step-dot">01</span><h2 id="input-title">告诉我，你想走到哪里</h2></div>
-<form id="goal-form"><label for="mode">这次需要什么帮助</label><select id="mode"><option value="competition">准备 AI 应用创新大赛</option><option value="learning">AI 产品经理 / Agent 学习</option><option value="rescue">遇到卡点，帮我拆步骤</option></select>
-<label for="goal">目标或现在卡住的地方</label><textarea id="goal" rows="5" required placeholder="例如：我想做 AI 产品经理，但不知道 Agent 怎么学。请围绕上岸鸭参赛作品，安排一条能边学边做的路线。">参加全国人工智能应用创新大赛：把上岸鸭做成能联网查资料、安排学习路线、处理卡点和突发任务的 Agent。请给出从可用原型到参赛演示的具体路线。</textarea>
+<form id="goal-form"><label for="mode">这次需要什么帮助</label><select id="mode"><option value="competition">竞赛任务规划</option><option value="learning">AI 产品经理 / Agent 学习</option><option value="rescue">遇到卡点，帮我拆步骤</option></select>
+<div id="competition-field"><label for="competition-name">实际赛事名称、届次与赛道</label><input id="competition-name" maxlength="200" required placeholder="按你的正式通知填写；未确认的届次或赛道注明待核对"><p class="hint">挑战杯等名称仅是例子。请提供本次适用通知，不能直接套用其他比赛要求。</p></div>
+<label for="goal">目标或现在卡住的地方</label><textarea id="goal" rows="5" required placeholder="写明领到的任务、现有成果、想达到的效果、分工和已知限制。例如：完善项目报告，当前需求段落缺证据，希望每个结论可追溯。"></textarea>
 <label for="level">已有基础 / 已经试过什么</label><input id="level" placeholder="例如：会写需求文档，Python 刚入门，已有上岸鸭网页">
-<div class="form-row" id="planning-settings"><div><label for="daily">每天可用（分钟）</label><input id="daily" type="number" min="15" max="720" value="90" required></div><div><label for="deadline">目标截止日期</label><input id="deadline" type="date" value="2026-10-20"></div></div>
+<div class="form-row" id="planning-settings"><div><label for="daily">每天可用（分钟）</label><input id="daily" type="number" min="15" max="720" value="90" required></div><div><label for="deadline">目标截止日期（未确认可留空）</label><input id="deadline" type="date"></div></div>
 <div class="media-upload"><label for="media">上传卡住的图片 / 视频（可选）</label><input id="media" type="file" accept="image/*,video/*" aria-describedby="media-hint"><p class="hint" id="media-hint">点击开始后才交给已连接模型分析。视频最多取 6 张画面，不含声音；短暂报错可指定秒数或补截图。</p><div id="media-preview"></div><div id="video-focus-field" hidden><label for="video-focus">重点看第几秒（可选）</label><input id="video-focus" type="number" min="0" step="0.001" placeholder="例如：12.5"><p class="hint">会优先截取这个时刻及前后画面。原视频不上传。</p></div><button id="clear-media" class="quiet" type="button" hidden>移除附件</button></div>
 <p id="followup-context" class="hint" hidden></p><button id="clear-followup" class="quiet" type="button" hidden>改问一个新问题</button>
-<details><summary>添加相关资料链接</summary><label for="urls">资料链接（每行一条，最多三条）</label><textarea id="urls" rows="2" placeholder="https://github.com/…"></textarea></details>
+<details><summary>添加相关资料链接</summary><label for="urls">资料链接（每行一条，最多三条）</label><textarea id="urls" rows="2" placeholder="本届适用的官方通知、当前作品或参考材料链接"></textarea></details>
 <button id="start" class="primary wide" type="submit">检索资料，生成可执行路线 <span>↗</span></button><button id="research" class="quiet wide" type="button">只检索资料</button><p id="form-error" class="error" role="alert"></p></form></section>
 <section class="card compact"><div class="section-label"><span class="step-dot">↺</span><h2>路线与卡点记录</h2></div><div id="saved-routes" class="saved-routes"><p class="hint">读取中…</p></div></section>
 </aside>

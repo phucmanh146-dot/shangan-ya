@@ -69,8 +69,8 @@ def get_run(identifier):
 
 def state():
     with connection() as c:
-        routes = [json.loads(row['body']) for row in c.execute('SELECT body FROM routes ORDER BY updated DESC LIMIT 30')]
-        runs = [dict(row) for row in c.execute('SELECT id,kind,status,error,created FROM runs ORDER BY created DESC LIMIT 20')]
+        routes = [json.loads(row['body']) for row in c.execute('SELECT body FROM routes ORDER BY updated DESC, rowid DESC LIMIT 30')]
+        runs = [dict(row) for row in c.execute('SELECT id,kind,status,error,created FROM runs ORDER BY created DESC, rowid DESC LIMIT 20')]
     return {'routes': routes, 'runs': runs}
 
 
@@ -96,11 +96,8 @@ def save_route(body, reason, expected=None):
 
 
 SEEDS = {
-    'competition': [
-        ('当届比赛官网与章程', 'https://www.ai-race.com.cn/'),
-        ('2026年第二届赛事通知 · 电子科技大学', 'https://www.mba.uestc.edu.cn/info/1013/8471.htm'),
-        ('2025一等奖 Coco AI · 团队公开介绍', 'https://infinilabs.cn/blog/2025/coco-ai-won-first-prize-at-the-2025-AI-innovation-competition/'),
-        ('2025获奖案例 · 北京理工大学', 'https://smen.bit.edu.cn/zhxw/8256cd984e014a369d1973691b85baaa.htm')],
+    # A named example must never become another competition's official rules.
+    'competition': [],
     'learning': [
         ('Agent中文学习路线 · 用户指定', 'https://github.com/WenyuChiou/awesome-agentic-ai-zh/blob/main/README.md'),
         ('Hello Agents · Datawhale', 'https://github.com/datawhalechina/hello-agents')]
@@ -237,6 +234,9 @@ SYSTEM = '''你是上岸鸭的学习与竞赛导航 Agent。把用户的宏观�
 联网证据只用真实给出的 S 编号，不编造链接、比赛要求和检索结果。未读到的正文不可声称已读。
 每次创建 4 至 8 个任务；依赖必须指向本次路线中的编号。每个任务再拆成 1 至 8 个 actions，第一动作不超过5分钟，其他动作不超过25分钟。所有动作minutes之和必须等于任务minutes。每个动作写清操作位置、操作、留下的成果和完成标志，不能只写“学习/掌握/了解”。优先小步完成，超过120分钟的任务尽量拆分。路线和日期是建议，用户会自己勾选每天做哪些任务。
 比赛必须区分当届章程与历届案例。获奖介绍仅用于提炼产品设计，不据此杜撰评分标准或保证获奖。
+竞赛名称、届次、赛道由 competitionName 和本次正式材料确定；核对通知是否适用，不能用其他赛事代替。示例条件不是官方规则。
+先比较用户当前成果、目标交付与能力证据，再指出具体改哪里、怎么改、留下什么、怎样检查；PPT只是可能的交付物之一。
+没有核实的评分、截止、能力和材料位置写入 assumptions，先安排核对或最小试做，不能假定已经确认或达到目标。
 任务是依据资料为该用户设计的练习，不要复制长段原文。用户没有给日期，不给任务编造deadline。
 卡点救援应先指出第一步，再给失败分支；视频只分析送来的采样帧，不能声称看了全部画面或听到了音频。
 当模型/网络/资料不足时明确说明，不宣称操作或验收已经完成。最终任务全部待完成。
@@ -372,7 +372,17 @@ def validate_rescue(obj, evidence, frames):
     return result
 
 
+def competition_name(data):
+    if data.get('mode', 'learning') != 'competition':
+        return ''
+    value = data.get('competitionName', '')
+    if not isinstance(value, str) or not 1 <= len(value.strip()) <= 200:
+        raise ValueError('请填写实际赛事名称（最多 200 字）；已知时补充届次、年份和赛道，不使用示例代替')
+    return value.strip()
+
+
 def run_agent(run_id, data):
+    name = competition_name(data)
     evidence = Evidence(run_id)
     goal = data['goal']
     mode = data.get('mode', 'learning')
@@ -398,11 +408,11 @@ def run_agent(run_id, data):
     with ThreadPoolExecutor(max_workers=4) as pool:
         list(pool.map(evidence.read, [x['id'] for x in evidence.rows]))
     if mode != 'rescue' or data.get('researchOnly'):
-        evidence.search(('全国人工智能应用创新大赛 2026 AI Agent 教育 学习规划' if mode == 'competition' else goal[:200]) + (' 官方文档' if mode != 'competition' else ''))
+        evidence.search(name + ' 官方通知 参赛规则 提交要求' if mode == 'competition' else goal[:200] + ' 官方文档')
     if not any(x.get('text') or x.get('snippet') for x in evidence.rows) and (mode != 'rescue' or data.get('researchOnly')):
         raise rescue.RescueError('未取得可用网络资料。请稍后重试或提供可访问链接。', 'NO_EVIDENCE', 503)
     if data.get('researchOnly'):
-        return {'sources': evidence.public(), 'researchedAt': now(), 'mode': 'research-only'}
+        return {'sources': evidence.public(), 'researchedAt': now(), 'mode': 'research-only', 'competitionName': name}
     if not rescue.public_config()['configured']:
         raise rescue.RescueError('尚未配置模型。请在 AI 连接中接入已有模型后重试。', 'CONFIG_REQUIRED', 409,
                                  sources=evidence.public())
@@ -411,7 +421,7 @@ def run_agent(run_id, data):
         previous = route(data['previousRouteId'])
         previous_help = {'goal': previous['goal'], 'answer': previous.get('help', {}).get('answer', previous.get('summary', '')),
                          'steps': previous['tasks'], 'observations': previous.get('observations', '')}
-    context = {'goal': goal, 'mode': mode, 'currentLevel': data.get('level', ''), 'settings': data['settings'],
+    context = {'goal': goal, 'mode': mode, 'competitionName': name, 'currentLevel': data.get('level', ''), 'settings': data['settings'],
                'previousAttempt': data.get('previousAttempt', data.get('level', '')), 'observations': observations,
                'frames': [{'frameIndex': i, 'timestamp': f['timestamp']} for i, f in enumerate(frame_items, 1)],
                'previousHelp': previous_help,
@@ -430,7 +440,7 @@ def run_agent(run_id, data):
             if action == 'finish':
                 result = validate_rescue(obj, evidence, frame_items) if mode == 'rescue' else validate_answer(obj, evidence)
                 planned = schedule(result['tasks'], data['settings'])
-                result.update(planned, id=uuid.uuid4().hex, goal=goal, mode=mode, sources=evidence.public(),
+                result.update(planned, id=uuid.uuid4().hex, goal=goal, mode=mode, competitionName=name, sources=evidence.public(),
                               createdAt=now(), model=cfg['model'], observations=observations,
                               mediaKind=data.get('mediaKind', ''), frameCount=len(frame_items),
                               previousRouteId=data.get('previousRouteId'),
@@ -460,6 +470,7 @@ def run_agent(run_id, data):
 
 
 def prepare_input(data):
+    name = competition_name(data)
     goal = str(data.get('goal', '')).strip()
     if not 2 <= len(goal) <= 6000:
         raise ValueError('请用 2 至 6000 字描述目标或卡点')
@@ -495,7 +506,7 @@ def prepare_input(data):
         raise ValueError('最多提供三个资料链接')
     for url in urls:
         rescue.validate_url(str(url))
-    return dict(data, goal=goal, frames=frames, settings=settings)
+    return dict(data, goal=goal, competitionName=name, frames=frames, settings=settings)
 
 
 def submit(data):

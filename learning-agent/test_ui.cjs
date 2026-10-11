@@ -36,7 +36,7 @@ async function startServer(){server=spawn(process.env.PYTHON||'python',['learnin
   await page.getByRole('button',{name:'生成日程预览',exact:true}).click();await page.locator('.day-table tbody tr').nth(5).waitFor();
   assert.equal(await page.locator('.day-table tbody tr').count(),6);
   await page.getByRole('button',{name:'采用今天的日程',exact:true}).click();await page.getByRole('heading',{name:'2026-10-08 · 已采用日程'}).waitFor();
-  await page.reload();await page.getByRole('button',{name:'我选今天做什么',exact:true}).click();await page.getByRole('heading',{name:'2026-10-08 · 已采用日程'}).waitFor();
+  await page.reload();await page.getByRole('heading',{name:'测试夹具：上岸鸭学习路线'}).waitFor();await page.getByRole('button',{name:'我选今天做什么',exact:true}).click();await page.locator('#day-date').fill('2026-10-08');await page.locator('#day-date').dispatchEvent('change');await page.getByRole('heading',{name:'2026-10-08 · 已采用日程'}).waitFor();
   fs.mkdirSync(path.join(__dirname,'test-output'),{recursive:true});await page.screenshot({path:path.join(__dirname,'test-output/desktop.png'),fullPage:true});
   await page.getByRole('button',{name:'逐步行动',exact:true}).click();await page.getByRole('button',{name:'这一步完成了',exact:true}).first().click();
   await page.locator('#completion-evidence').fill('测试：已写下明确查询');await page.locator('#completion-actual').fill('7');await page.getByRole('button',{name:'验收完成',exact:true}).click();await page.getByText('✓ 已完成 · 实际 7 分钟').waitFor();
