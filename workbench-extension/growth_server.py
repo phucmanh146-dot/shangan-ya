@@ -4,6 +4,9 @@ import importlib.util
 import json
 import secrets
 from urllib.parse import parse_qs, urlparse, unquote
+from growth_paths import prepare_temporary_directory
+
+prepare_temporary_directory()
 
 import local_server as legacy
 import rescue_service as rescue
@@ -125,6 +128,19 @@ class Handler(legacy.Handler):
             if path == '/api/growth/ocr-frame':
                 from growth_ocr import read_frame
                 return self.send_json(read_frame(data.get('image')))
+            if path.startswith('/api/growth/wechat-float-'):
+                import growth_wechat_float as floating
+                action = path.rsplit('-', 1)[-1]
+                if action == 'start': return self.send_json(floating.start(data))
+                if action == 'poll': return self.send_json(floating.poll(data.get('id')))
+                if action == 'frame': return self.send_json(floating.submit_frame(data))
+                if action == 'stop': return self.send_json(floating.stop(data.get('id')))
+            if path == '/api/growth/wechat-group-list':
+                from growth_wechat import search_group_list
+                return self.send_json(search_group_list(data.get('query', '')))
+            if path == '/api/growth/wechat-group-messages':
+                from growth_wechat import read_group_messages
+                return self.send_json(read_group_messages(data.get('id'), data.get('keyword', '')))
             if path in ('/api/growth/wechat-groups', '/api/growth/wechat-messages'):
                 from sy_wechat_search import search_groups, read_messages
                 result = search_groups(data.get('query', '')) if path.endswith('groups') else read_messages(data.get('id'), data.get('keyword'))

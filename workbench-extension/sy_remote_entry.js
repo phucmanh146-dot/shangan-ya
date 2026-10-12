@@ -5,7 +5,7 @@
   button.id = 'syRemoteEntry'; button.type = 'button'; button.textContent = '远程桌面';
   button.style.cssText = 'position:fixed;right:22px;bottom:24px;z-index:9000;border:1px solid #b4cba1;border-radius:14px;padding:12px 20px;background:#ddebaf;color:#173d2a;font:600 15px system-ui;cursor:pointer';
   document.body.append(button);
-  let dialog, frame, status, retry, readyTimer, generation = 0;
+  let dialog, frame, status, retry, readyTimer, generation = 0, folded = false, fold, bar;
   const node = (tag, text) => { const el = document.createElement(tag); if (text) el.textContent = text; return el; };
   function stop() {
     generation++; clearTimeout(readyTimer);
@@ -13,8 +13,16 @@
     window.removeEventListener('message', receive);
     if (dialog) dialog.remove(); dialog = frame = null;
   }
+  function setFolded(value) {
+    if (!dialog) return; folded = value; dialog.dataset.minimized = String(value);
+    dialog.style.width = value ? '390px' : 'min(1100px,94vw)'; dialog.style.height = value ? '64px' : '88vh';
+    frame.style.visibility = value ? 'hidden' : 'visible'; status.hidden = value;
+    for (const child of bar.children) if (child !== fold && child.dataset.close !== 'true') child.hidden = value;
+    fold.textContent = value ? '返回消息列表' : '收起，继续操作微信';
+  }
   function receive(e) {
     if (!frame || e.origin !== origin || e.source !== frame.contentWindow) return;
+    if (e.data?.type === 'sy-remote-fold') { setFolded(e.data.collapsed === true); return; }
     if (e.data?.type === 'sy-remote-ready') {
       clearTimeout(readyTimer); status.textContent = '本机面板已连接。可直接输入微信关键词，或按需连接桌面画面。';
       if (window.SYRemoteRequest) { frame.contentWindow.postMessage({ type: 'sy-remote-request', ...window.SYRemoteRequest }, origin); window.SYRemoteRequest = null; }
@@ -45,16 +53,17 @@
     finally { if (dialog && current === generation) retry.disabled = false; }
   }
   button.onclick = () => {
-    if (dialog) { dialog.showModal(); return; }
-    dialog = node('dialog'); dialog.style.cssText = 'padding:16px;border:1px solid #688368;border-radius:20px;width:min(1100px,94vw);height:88vh;background:#153b2e;color:#eef3d5';
-    const bar = node('div'); bar.style.cssText = 'display:flex;gap:14px;align-items:center;flex-wrap:wrap';
+    if (dialog) { setFolded(false); return; }
+    dialog = node('dialog'); dialog.style.cssText = 'padding:16px;border:1px solid #688368;border-radius:20px;width:min(1100px,94vw);height:88vh;position:fixed;inset:16px 16px auto auto;margin:0;z-index:9001;overflow:hidden;background:#153b2e;color:#eef3d5';
+    bar = node('div'); bar.style.cssText = 'display:flex;gap:14px;align-items:center;flex-wrap:wrap';
     const link = node('a', '独立窗口打开'); link.href = origin + '/'; link.target = '_blank'; link.rel = 'noopener'; link.style.color = '#deedb8';
-    const close = node('button', '关闭并停止'); close.onclick = () => dialog.close();
+    const close = node('button', '关闭并停止'); close.dataset.close = 'true'; close.onclick = () => dialog.close();
     retry = node('button', '重新连接'); retry.onclick = connect;
-    bar.append(node('strong', '上岸鸭 · 本机远程窗口'), link, retry, close);
+    fold = node('button', '收起，继续操作微信'); fold.onclick = () => setFolded(!folded);
+    bar.append(node('strong', '上岸鸭 · 本机远程窗口'), link, retry, fold, close);
     status = node('p', '正在连接…'); status.setAttribute('role', 'status');
     frame = node('iframe'); frame.title = '本机远程桌面'; frame.allow = 'display-capture'; frame.hidden = true; frame.style.cssText = 'width:100%;height:calc(100% - 92px);border:0;border-radius:12px';
     dialog.append(bar, status, frame); document.body.append(dialog);
-    window.addEventListener('message', receive); dialog.addEventListener('close', stop); dialog.showModal(); connect();
+    window.addEventListener('message', receive); dialog.addEventListener('close', stop); dialog.show(); setFolded(false); connect();
   };
 })();

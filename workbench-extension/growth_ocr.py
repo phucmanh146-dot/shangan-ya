@@ -24,7 +24,7 @@ def read_frame(image):
         from PIL import Image
         raw = base64.b64decode(image.split(',', 1)[1], validate=True)
         with Image.open(io.BytesIO(raw)) as im:
-            if not (100 <= im.width <= 4096 and 100 <= im.height <= 4096 and im.width * im.height <= 10_000_000):
+            if not (16 <= im.width <= 4096 and 16 <= im.height <= 4096 and im.width * im.height <= 10_000_000):
                 raise ValueError('dimensions')
             im.load()
             out = io.BytesIO()
@@ -35,7 +35,9 @@ def read_frame(image):
     if not LOCK.acquire(blocking=False):
         raise RescueError('本机正在识别上一张画面，请稍后重试。', 'OCR_BUSY', 409)
     try:
-        with tempfile.TemporaryDirectory(prefix='shanganya-ocr-') as folder:
+        temporary_root = Path(__file__).resolve().parent / '.growth-tmp'
+        temporary_root.mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix='shanganya-ocr-', dir=temporary_root) as folder:
             path = Path(folder) / 'frame.png'
             path.write_bytes(raw)
             try:

@@ -54,6 +54,17 @@ class WeChatTests(unittest.TestCase):
         self.assertEqual(data['messages'],[{'text':'同学：RAG 先检索再回答'}])
         self.assertEqual(len(data['conversations']),1)
 
+    def test_group_row_must_be_within_group_section(self):
+        items = [Node('群聊','ListItem'), Node('学习群','ListItem'), Node('联系人','ListItem'), Node('学习群','ListItem')]
+        container = Node(typ='List',auto='search_list',children=items)
+        window = SimpleNamespace(descendants=lambda **kwargs:[container])
+        self.assertEqual(wx.group_controls(window, '学习群'), [items[1]])
+
+    def test_expired_group_cannot_trigger_wechat(self):
+        with patch.object(wx, 'connect_window') as connect:
+            with self.assertRaises(wx.RescueError): wx.read_group_messages('not-a-choice', 'RAG')
+            connect.assert_not_called()
+
     def test_contact_in_general_search_results_is_not_a_message(self):
         node = Node('RAG 联系人','ListItem',Node('搜索结果'))
         window = SimpleNamespace(descendants=lambda **kwargs:[node])

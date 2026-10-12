@@ -50,8 +50,8 @@ class Handler(BaseHTTPRequestHandler):
         if path=='/':
             raw=(Path(__file__).with_name('sy_remote_panel.html').read_text(encoding='utf-8').replace('__TOKEN__',TOKEN)).encode()
             return self.send(200,raw,'text/html; charset=utf-8')
-        if path=='/sy_wechat_share.js':
-            return self.send(200,Path(__file__).with_name('sy_wechat_share.js').read_bytes(),'text/javascript; charset=utf-8')
+        if path in ('/sy_wechat_share.js','/sy_wechat_select.js'):
+            return self.send(200,Path(__file__).with_name(path[1:]).read_bytes(),'text/javascript; charset=utf-8')
         self.send(404,{'error':'Not found'})
     def do_POST(self):
         if not self.valid_host() or self.headers.get('Origin')!=ORIGIN or not secrets.compare_digest(self.headers.get('X-SY-Token',''),TOKEN):
@@ -59,7 +59,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             n=int(self.headers.get('Content-Length','0'))
             route=urlsplit(self.path).path
-            limit=7_800_000 if route in ('/wechat-screen-start','/wechat-screen-read') else 5000
+            limit=7_800_000 if route in ('/wechat-screen-start','/wechat-screen-read','/wechat-float-frame','/wechat-crop-read') else 5000
             if not 0<n<limit or not self.headers.get('Content-Type','').startswith('application/json'):raise ValueError('请求格式不正确')
             data=json.loads(self.rfile.read(n))
             if not isinstance(data,dict):raise ValueError('请求格式不正确')
@@ -67,8 +67,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(200,wechat_request('wechat-search',{'keyword':data.get('keyword','')}))
             if urlsplit(self.path).path=='/wechat-stop':
                 return self.send(200,wechat_request('wechat-stop',{}))
+            if route in ('/wechat-float-start','/wechat-float-poll','/wechat-float-frame','/wechat-float-stop'):
+                return self.send(200,wechat_request(route[1:],{k:data.get(k) for k in ('id','width','height','image','displaySurface','windowLabel')}))
+            if route in ('/wechat-group-list','/wechat-group-messages'):
+                return self.send(200,wechat_request(route[1:],{k:data.get(k) for k in ('id','query','keyword')}))
+            if route=='/wechat-crop-read':
+                return self.send(200,wechat_request('ocr-frame',{'image':data.get('image')}))
             if route in ('/wechat-screen-start','/wechat-screen-read'):
-                return self.send(200,wechat_request(route[1:],{k:data.get(k) for k in ('keyword','image','displaySurface','windowLabel','searchId','manual')}))
+                return self.send(200,wechat_request(route[1:],{k:data.get(k) for k in ('keyword','image','displaySurface','windowLabel','searchId','manual','group')}))
             if urlsplit(self.path).path=='/assist-step':
                 from sy_wechat_assistant import plan_step,execute_step
                 with LOCK:

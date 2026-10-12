@@ -8,6 +8,7 @@ import threading
 import time
 from urllib.request import urlopen
 from rescue_service import RescueError
+from growth_paths import data_directory
 
 ROOT = Path(__file__).resolve().parent
 URL = 'http://127.0.0.1:8878'
@@ -34,7 +35,7 @@ def ensure_ready():
             check.settimeout(1)
             if check.connect_ex(('127.0.0.1', 8878)) == 0:
                 raise RescueError('8878端口被其他程序占用，未关闭其他程序。', 'REMOTE_PORT_BUSY', 409)
-        logs = Path.home() / '.shanganya-growth'
+        logs = data_directory()
         logs.mkdir(exist_ok=True)
         with (logs / 'remote.log').open('ab') as output:
             process = subprocess.Popen([sys.executable, str(bridge)], cwd=str(ROOT), stdout=output, stderr=output,

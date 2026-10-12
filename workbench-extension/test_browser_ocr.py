@@ -41,28 +41,56 @@ with sync_playwright() as p:
         assert frame.evaluate("typeof navigator.mediaDevices.getDisplayMedia === 'function' && document.featurePolicy.allowsFeature('display-capture')")
         assert panel.locator('#searchShared').is_disabled()
         checks.append('share-entry-and-iframe-permission-policy')
-        # Synthetic canvas stream tests UI flow without accessing any desktop.
+        # All share input and WeChat list replies below are synthetic fixtures.
+        pending_events = []
+        page.route('**/wechat-float-start', lambda route: route.fulfill(json={'id':'fixture-float','ok':True}))
+        page.route('**/wechat-float-poll', lambda route: route.fulfill(json={'events':[pending_events.pop(0)] if pending_events else []}))
+        page.route('**/wechat-float-stop', lambda route: route.fulfill(json={'ok':True}))
         frame.evaluate('''() => {
           const canvas = document.createElement('canvas'); canvas.width = 900; canvas.height = 600;
           const ctx = canvas.getContext('2d'); ctx.fillStyle = 'white'; ctx.fillRect(0,0,900,600);
-          ctx.fillStyle = 'black'; ctx.font = '40px sans-serif'; ctx.fillText('RAG fixture',80,80);
+          ctx.fillStyle = 'black'; ctx.font = '40px sans-serif'; ctx.fillText('RAG fixture',80,100);
+          ctx.fillText('OUTSIDE SENTINEL',80,480);
           const stream = canvas.captureStream(5), track = stream.getVideoTracks()[0];
           Object.defineProperty(track, 'label', {value:'window:123:0'});
           track.getSettings = () => ({displaySurface:'window'});
           navigator.mediaDevices.getDisplayMedia = async () => stream;
           window.ocrFixtureStream = stream;
         }''')
-        page.route('**/wechat-screen-start', lambda route: route.fulfill(json={'ok': True, 'searchId': 'fixture-only'}))
-        page.route('**/wechat-screen-read', lambda route: route.fulfill(json={'groups': [{'name': 'RAG测试群'}], 'messages': [{'text': 'RAG测试消息'}], 'conversations': [], 'keyword':'RAG', 'text':'RAG测试消息', 'note':'仅测试夹具'}))
         panel.locator('#shareWechat').click()
-        panel.locator('#keyword').fill('RAG')
-        panel.locator('#searchShared').click()
-        panel.get_by_text('RAG测试群', exact=True).wait_for(timeout=10000)
-        assert 'RAG测试消息' in panel.locator('#results').inner_text()
-        panel.locator('#stopShared').click()
-        assert frame.evaluate("ocrFixtureStream.getTracks().every(t => t.readyState === 'ended')")
-        assert panel.locator('#searchShared').is_disabled()
-        checks.append('mock-shared-keyword-list-and-stop-tracks')
+        page.wait_for_function("document.querySelector('dialog[data-minimized=true]')")
+        assert frame.evaluate("ocrFixtureStream.getVideoTracks()[0].readyState === 'live'")
+        page.get_by_text('返回消息列表',exact=True).click()
+        checks.append('collapse-keeps-sharing-live')
+        panel.locator('#cropShared').click()
+        canvas=panel.locator('#sharedCropCanvas');canvas.scroll_into_view_if_needed();box=canvas.bounding_box()
+        page.mouse.move(box['x']+40*box['width']/900,box['y']+40*box['height']/600)
+        page.mouse.down();page.mouse.move(box['x']+600*box['width']/900,box['y']+200*box['height']/600);page.mouse.up()
+        panel.locator('#confirmSharedCrop').click()
+        panel.locator('input[data-message-index="0"]').wait_for(timeout=35000)
+        crop_text=panel.locator('#results').inner_text()
+        assert 'RAG' in crop_text and 'OUTSIDE' not in crop_text
+        assert panel.locator('#importChosen').is_disabled()
+        checks.append('crop-only-visible-selection-with-no-default-import')
+        pending_events.append({'type':'stop'})
+        frame.wait_for_function("ocrFixtureStream.getTracks().every(t=>t.readyState==='ended')",timeout=8000)
+        checks.append('native-stop-event-ends-share')
+        page.route('**/wechat-group-list',lambda route:route.fulfill(json={'groups':[{'id':'group-fixture','name':'测试学习群'}],'messages':[],'conversations':[]}))
+        requests=[]
+        def group_messages(route):
+            requests.append(route.request.post_data_json)
+            route.fulfill(json={'groups':[],'messages':[{'text':'RAG 第一条资料','group':'测试学习群'},{'text':'RAG 第二条不选','group':'测试学习群'}],'conversations':[]})
+        page.route('**/wechat-group-messages',group_messages)
+        panel.locator('#groupQuery').fill('学习');panel.locator('#keyword').fill('RAG');panel.locator('#search').click()
+        panel.get_by_text('选择此群',exact=True).click()
+        panel.locator('input[data-message-index="1"]').wait_for()
+        assert requests==[{'id':'group-fixture','keyword':'RAG','session':None}]
+        panel.locator('input[data-message-index="0"]').check()
+        panel.locator('#importChosen').click()
+        page.locator('.growth-dialog [name=text]').wait_for()
+        imported=page.locator('.growth-dialog [name=text]').input_value()
+        assert '第一条资料' in imported and '第二条不选' not in imported
+        checks.append('select-group-then-import-only-checked-message')
         assert errors == [], errors
         print(json.dumps({'ok': True, 'checks': checks, 'realWeChatVerified': False}, ensure_ascii=True))
     finally:

@@ -192,7 +192,9 @@ def finish_search(data):
     if data.get('manual') is True:
         keyword = clean(data.get('keyword', ''))
         # Read-only fallback: no click, focus change, or keyboard input.
-        return parse_results(read_frame(data.get('image')), keyword)
+        doc = read_frame(data.get('image'))
+        if data.get('group'): return parse_group_results(doc, clean(data['group']), keyword)
+        return parse_results(doc, keyword)
     with LOCK:
         job = PENDING.get(str(data.get('searchId', '')))
     if not job or time.monotonic() > job['until']:
@@ -210,3 +212,24 @@ def finish_search(data):
 def cancel():
     with LOCK:
         PENDING.clear()
+
+
+def parse_group_results(doc, group, keyword):
+    """Require both the chosen chat title and its visible history-search query."""
+    source = rows(doc); width, height = doc['width'], doc['height']
+    titles = [r for r in source if compact(group) in compact(r['text']) and r['y'] < .14*height]
+    history = [r for r in source if '聊天记录' in compact(r['text']) and r['y'] < .25*height]
+    queries = [r for r in source if compact(r['text']) == compact(keyword) and r['y'] < .25*height]
+    if not titles or not history or len(queries) != 1:
+        raise RescueError('画面里未同时确认所选群名、聊天记录搜索区和本次关键词。请在该群搜索后再读，或直接框选需要的消息。', 'WECHAT_GROUP_SCREEN_UNCLEAR', 409)
+    query = queries[0]
+    messages = []
+    for row in source:
+        if row['y'] <= max(query['y']+query['height'], max(r['y']+r['height'] for r in history)): continue
+        if row['x'] < query['x']-80 or compact(keyword) not in compact(row['text']): continue
+        if re.search(r'\d+条(?:相关)?(?:聊天)?记录', compact(row['text'])): continue
+        if row['text'] not in [m['text'] for m in messages]: messages.append({'text':row['text'], 'group':group})
+    if not messages:
+        raise RescueError('当前所选群的搜索画面还没有可确认的匹配消息正文，请展开结果或框选。', 'NO_READABLE_MESSAGES', 422)
+    return {'groups':[], 'messages':messages[:50], 'conversations':[], 'group':group, 'keyword':keyword,
+            'source':'wechat-window-ocr', 'note':'仅所选群当前搜索画面的匹配文字，可能有识别错误；请核对并勾选。'}

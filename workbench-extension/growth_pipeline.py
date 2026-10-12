@@ -17,8 +17,9 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from growth_sources import links_in, read_url
 from growth_analysis import question_excerpt
+from growth_paths import data_directory
 
-DATA = Path(os.getenv('SHANGAN_GROWTH_DATA', str(Path.home() / '.shanganya-growth')))
+DATA = data_directory()
 DATA.mkdir(parents=True, exist_ok=True)
 DB = DATA / 'workflow.sqlite3'
 POOL = ThreadPoolExecutor(max_workers=2, thread_name_prefix='growth')

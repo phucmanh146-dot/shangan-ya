@@ -67,6 +67,12 @@ class SharedWindowTests(unittest.TestCase):
             self.assertEqual(result['groupCount'], 1)
             match.assert_not_called()
 
+    def test_selected_group_must_match_visible_chat_title(self):
+        doc = document([('测试学习群', 400, 20), ('聊天记录', 500, 70), ('RAG', 500, 110), ('RAG 资料链接', 500, 170), ('其他列 RAG', 80, 220)])
+        result = screen.parse_group_results(doc, '测试学习群', 'RAG')
+        self.assertEqual(result['messages'], [{'text':'RAG 资料链接','group':'测试学习群'}])
+        with self.assertRaises(screen.RescueError): screen.parse_group_results(doc, '另一个群', 'RAG')
+
     def test_expired_read_never_requests_ocr(self):
         screen.PENDING['expired'] = {'until': time.monotonic()-1, 'keyword': 'RAG', 'hwnd': 1}
         with patch.object(screen, 'read_frame') as read:

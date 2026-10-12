@@ -179,3 +179,64 @@ def search_messages(keyword):
         texts = [m['text'] for m in result['messages']]
         body = ('来源：电脑版微信；关键词：' + keyword + '\n仅包含当前可读取的匹配消息，不代表全部聊天历史。\n\n' + '\n\n'.join(texts))[:30000] if texts else ''
         return dict(result, text=body, count=len(texts), groupCount=len(result['groups']), keyword=keyword, source='wechat-accessibility', scope='当前可读取的关键词搜索结果')
+
+
+GROUP_CHOICES = {}
+
+
+def search_group_list(query):
+    import secrets
+    query = clean(query)
+    found = search_messages(query)
+    groups = []
+    GROUP_CHOICES.clear()
+    for group in found['groups']:
+        identifier = secrets.token_urlsafe(18)
+        GROUP_CHOICES[identifier] = {'name': group['name'], 'query': query, 'until': time.monotonic()+180}
+        groups.append(dict(group, id=identifier))
+    return {'groups': groups, 'messages': [], 'conversations': [], 'keyword': query,
+            'note': '先选择一个群，再按消息关键词读取该群的聊天记录。', 'source': 'wechat-accessibility'}
+
+
+def group_controls(window, group_name):
+    result = []
+    for container in window.descendants(control_type='List'):
+        if not container.is_visible() or not native(container): continue
+        if getattr(container.element_info, 'automation_id', '') != 'search_list' and name(container) not in GROUP_SCOPES | {'搜索结果', 'Search results'}: continue
+        scope = name(container)
+        for node in container.children(control_type='ListItem')[:120]:
+            label = name(node)
+            if label in SCOPES | GROUP_SCOPES | {'联系人', 'Contacts', '公众号', 'Public Accounts', '功能', '更多'}:
+                scope = label; continue
+            if scope in GROUP_SCOPES and label == group_name and node.is_visible() and native(node): result.append(node)
+    return result
+
+
+def read_group_messages(identifier, keyword):
+    keyword = clean(keyword)
+    chosen = GROUP_CHOICES.get(str(identifier))
+    if not chosen or time.monotonic() > chosen['until']:
+        raise RescueError('群列表已过期，请重新生成列表并选择。', 'GROUP_EXPIRED', 409)
+    with automation():
+        CANCEL.clear(); window = connect_window(); check_cancelled()
+        fill(open_search(window), chosen['query']); time.sleep(.8); check_cancelled()
+        candidates = group_controls(window, chosen['name'])
+        if len(candidates) != 1:
+            raise RescueError('无法唯一确认选中的群，请重新生成群列表。', 'GROUP_AMBIGUOUS', 409)
+        candidates[0].click_input(); time.sleep(.4); check_cancelled()
+        buttons = [n for n in window.descendants(control_type='Button') if n.is_visible() and native(n)
+            and name(n) in ('搜索聊天记录', '查找聊天记录', 'Search chat history')]
+        if len(buttons) != 1:
+            raise RescueError('已选中该群，但微信未开放聊天记录搜索控件。可在微信里搜索关键词，再使用浮动框选或“读取当前结果”。', 'HISTORY_UNAVAILABLE', 409)
+        buttons[0].click_input(); time.sleep(.3); check_cancelled()
+        edits = [n for n in window.descendants(control_type='Edit') if n.is_visible() and native(n)
+            and name(n) in ('搜索聊天记录', '搜索关键字', '搜索关键词', 'Search chat history')]
+        if len(edits) != 1:
+            raise RescueError('聊天记录搜索框无法唯一确认，请在微信搜索后框选。', 'HISTORY_UNAVAILABLE', 409)
+        fill(edits[0], keyword); time.sleep(.7); check_cancelled()
+        result = search_results(window, keyword)
+        if not result['messages']:
+            raise RescueError('尚未读到所选群的匹配消息正文，可展开搜索结果后框选。', 'NO_READABLE_MESSAGES', 422)
+        for message in result['messages']: message['group'] = chosen['name']
+        return dict(result, groups=[], group=chosen['name'], keyword=keyword,
+                    source='wechat-accessibility', note='仅所选群中当前可读取的匹配消息，请勾选需要的内容。')

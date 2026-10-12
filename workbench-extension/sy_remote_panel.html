@@ -1,18 +1,21 @@
 <!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>上岸鸭 · 本机远程窗口</title>
 <style>
-[hidden]{display:none!important}*{box-sizing:border-box}body{margin:0;padding:22px;background:#143a2e;color:#eef2df;font:15px/1.65 system-ui,"Microsoft YaHei",sans-serif}h1{font-size:23px;margin:0}h2{font-size:18px;margin:12px 0}p{margin:8px 0;color:#cee0d0}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0}button,input,textarea{font:inherit;border-radius:10px;border:1px solid #718773;padding:9px 13px}button{background:#e1edb7;color:#173c2c;cursor:pointer}button:disabled{opacity:.5;cursor:default}input[type=text],textarea{background:#f5f8ee;color:#173c2c}#keyword{flex:1;min-width:200px}textarea{width:100%;min-height:130px}#status{padding:12px;border:1px solid #6f886c;border-radius:12px;white-space:pre-wrap}details,article{background:#ffffff08;border:1px solid #688268;border-radius:12px;padding:12px;margin:12px 0}summary{cursor:pointer;font-weight:600}pre{white-space:pre-wrap;word-break:break-word;font:inherit;margin:8px 0}#viewport{margin-top:12px;min-height:130px;background:#0e281f;border-radius:12px;overflow:hidden}#screen,canvas{max-width:100%;height:auto;display:block}.empty{padding:36px;text-align:center;color:#b9cdb9}.small{font-size:13px;color:#bdcfbd}.stop{background:#f0c0ae}
+[hidden]{display:none!important}*{box-sizing:border-box}body{margin:0;padding:22px;background:#143a2e;color:#eef2df;font:15px/1.65 system-ui,"Microsoft YaHei",sans-serif}h1{font-size:23px;margin:0}h2{font-size:18px;margin:12px 0}p{margin:8px 0;color:#cee0d0}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0}button,input,textarea{font:inherit;border-radius:10px;border:1px solid #718773;padding:9px 13px}button{background:#e1edb7;color:#173c2c;cursor:pointer}button:disabled{opacity:.5;cursor:default}input[type=text],textarea{background:#f5f8ee;color:#173c2c}#keyword,#groupQuery{flex:1;min-width:200px}.message-choice{display:flex;gap:12px;align-items:flex-start;margin:12px 0;padding:12px;border:1px solid #708973;border-radius:10px}.message-choice input{margin-top:8px}.message-choice div{min-width:0;flex:1}textarea{width:100%;min-height:130px}#status{padding:12px;border:1px solid #6f886c;border-radius:12px;white-space:pre-wrap}details,article{background:#ffffff08;border:1px solid #688268;border-radius:12px;padding:12px;margin:12px 0}summary{cursor:pointer;font-weight:600}pre{white-space:pre-wrap;word-break:break-word;font:inherit;margin:8px 0}#viewport{margin-top:12px;min-height:130px;background:#0e281f;border-radius:12px;overflow:hidden}#screen,canvas{max-width:100%;height:auto;display:block}.empty{padding:36px;text-align:center;color:#b9cdb9}.small{font-size:13px;color:#bdcfbd}.stop{background:#f0c0ae}
 </style></head><body>
-<p class="small">上岸鸭 / 本机连接</p><h1>微信关键词与桌面资料</h1>
-<p>在已登录的电脑版微信里查找，把实际匹配的群聊和消息列在这里。</p>
+<p class="small">上岸鸭 / 本机连接</p><h1>微信框选与消息列表</h1>
+<p>自由操作微信，随时框选；也可以先选群，再勾选要带入的消息。</p>
 <div id="status" role="status">正在检测本机服务…</div>
-<form id="searchForm"><div class="row"><input id="keyword" type="text" maxlength="100" aria-label="微信搜索关键词" placeholder="输入关键词，例如：分享、feishu、爬楼"><button id="search" type="submit">打开微信，查群和消息</button><button id="cancel" type="button" class="stop" hidden>停止查找</button></div></form>
-<p class="small">关键词搜索不需要 AI 密钥。只显示当前可确认的搜索结果，不代表全部聊天历史。</p>
-<details id="shareDetails" open><summary>当前微信读不到控件？共享微信窗口读取</summary>
-<p>先让微信显示聊天列表，再选择单独的“微信”窗口。输入上方关键词后，点击“窗口搜索并生成列表”。文字识别在此电脑完成。如果浏览器无法核对窗口标识，可先在微信搜索，再点“读取当前搜索画面”。</p>
-<div class="row"><button id="shareWechat" type="button">① 选择微信窗口</button><button id="searchShared" type="button" disabled>② 窗口搜索并生成列表</button><button id="readShared" type="button" disabled>读取当前搜索画面</button><button id="refreshShared" type="button" disabled>刷新结果</button><button id="stopShared" type="button" class="stop" disabled>停止共享</button></div>
-<p id="shareState" class="small" role="status">尚未共享。浏览器会要求你亲自选择窗口；请选择微信聊天主窗口。</p>
-<video id="sharedPreview" muted playsinline hidden style="max-width:100%;max-height:280px;border-radius:10px"></video></details>
+<form id="searchForm"><div class="row"><input id="groupQuery" type="text" maxlength="100" aria-label="微信群聊名称" placeholder="群聊名称（选填，先列群再选择）"><input id="keyword" type="text" maxlength="100" aria-label="消息记录关键词" placeholder="消息关键词，例如：分享、feishu、爬楼"><button id="search" type="submit">生成列表</button><button id="cancel" type="button" class="stop" hidden>停止查找</button></div></form>
+<p id="selectedGroup" class="small"></p>
+<details id="shareDetails" open><summary>我自己操作微信 · 跟随窗口框选</summary>
+<p>选择微信窗口后，电脑上会出现小操作条。你可以照常进入群聊、滚动消息、移动微信；点击操作条的“框选”时，才暂停画面让你拉框。</p>
+<div class="row"><button id="shareWechat" type="button">选择微信窗口</button><button id="floatShared" type="button" disabled>跟随微信框选</button><button id="cropShared" type="button" disabled>在预览中框选</button><button id="stopShared" type="button" class="stop" disabled>停止共享</button></div>
+<p id="shareState" class="small" role="status">尚未共享。第一次需要在浏览器里选择微信聊天主窗口。</p>
+<video id="sharedPreview" muted playsinline hidden style="max-width:100%;max-height:340px;border-radius:10px"></video>
+<div id="sharedCropArea" hidden><p>拖动拉框，确认后只识别框内文字；Esc 取消。</p><canvas id="sharedCropCanvas" style="cursor:crosshair;touch-action:none"></canvas><div class="row"><button id="confirmSharedCrop" type="button">确认并识别</button><button id="cancelSharedCrop" type="button">取消框选，继续操作</button></div></div>
+<div class="row"><button id="searchShared" type="button" disabled>从共享窗口生成列表</button><button id="readShared" type="button" disabled>读取当前搜索画面</button><button id="refreshShared" type="button" disabled>刷新结果</button></div>
+<p class="small">群名与消息关键词分开输入。先从列表选群，再勾选消息；文字识别可能有错字，请核对。</p></details>
 <section id="results" aria-live="polite"></section>
 <details><summary>复制微信内容带入</summary><p>如果当前微信版本未提供可读搜索控件，可在微信中复制目标消息，再粘贴到这里。</p><textarea id="manual" aria-label="粘贴微信正文" placeholder="粘贴你实际复制的群名、消息与链接"></textarea><div class="row"><button id="bringManual">带入正文</button></div></details>
 <details id="desktop"><summary>查看桌面 / 框选内容</summary><p class="small">按需连接本机画面。点击许可只对本次连接生效。</p>
@@ -31,15 +34,8 @@ async function api(path,body={}){const r=await fetch(path,{method:'POST',headers
 function searchButtons(){ $('search').disabled=searching || !!window.SYSharedWechatBusy?.();$('cancel').hidden=!searching;window.dispatchEvent(new Event('sy-native-search-state')); }
 async function cancelSearch(){searchSequence++;searching=false;searchButtons();try{await api('/wechat-stop')}catch{} }
 $('cancel').onclick=()=>{cancelSearch();note('已请求停止本次查找。')};
-function renderResults(result){const host=$('results');host.replaceChildren();
-  const groups=result.groups||[],messages=result.messages||[],conversations=result.conversations||[];
-  if(groups.length){const box=el('article');box.append(el('h2','匹配群聊 · '+groups.length));groups.forEach(g=>box.append(el('p',g.name)));host.append(box);}
-  if(conversations.length){const box=el('details');box.append(el('summary','匹配会话 · '+conversations.length+'（尚未展开消息）'));conversations.forEach(c=>box.append(el('p',c)));host.append(box);}
-  if(messages.length){const box=el('article');box.append(el('h2','可读取消息 · '+messages.length));messages.forEach(m=>{const item=el('details');item.append(el('summary',m.text.slice(0,90)),el('pre',m.text));box.append(item);});const b=el('button','将这些消息带入正文');b.onclick=()=>bringBack({text:result.text,kind:'wechat',keyword:result.keyword});box.append(b);host.append(box);}
-  if(result.note)host.prepend(el('p',result.note));
-  note(result.empty?'微信返回无匹配结果。':'已读取 '+groups.length+' 个匹配群聊、'+messages.length+' 条消息。'+(!messages.length?'当前未取得消息正文，未把群名或会话数量当作消息。':''));
-}
-$('searchForm').onsubmit=async e=>{e.preventDefault();if(searching || window.SYSharedWechatBusy?.())return;const keyword=$('keyword').value.trim();if(!keyword)return note('请输入要在微信中查找的关键词。');searching=true;const current=++searchSequence;searchButtons();$('results').replaceChildren();note('正在打开微信并搜索“'+keyword+'”…');try{const result=await api('/wechat-search',{keyword});if(current===searchSequence)renderResults(result);}catch(error){if(current===searchSequence)note(error.message);}finally{if(current===searchSequence){searching=false;searchButtons();}}};
+function renderResults(result){window.SYWechatLists.render(result);}
+$('searchForm').onsubmit=e=>{e.preventDefault();window.SYWechatLists.search();};
 function bringBack(data){if(parent===window)return note('请从工作台里的“远程桌面”入口打开，才能直接带入正文。');parent.postMessage({type:'sy-remote-capture',...data},parentOrigin);stop();}
 $('bringManual').onclick=()=>{const text=$('manual').value.trim();if(!text)return note('请先粘贴实际内容。');if(text.length>30000)return note('本次最多30000字，请分段带入。');bringBack({text,kind:'wechat',keyword:$('keyword').value.trim()});};
 function buttons(){$('start').disabled=active;$('stop').disabled=!active;$('control').disabled=active;$('freeze').disabled=!active;}
@@ -55,6 +51,6 @@ function cropImage(){if(!selection||Math.abs(selection.w)<4||Math.abs(selection.
 $('sendcrop').onclick=()=>{try{bringBack({image:cropImage(),text:''});}catch(e){note(e.message);}};$('download').onclick=()=>{try{const a=el('a');a.href=cropImage();a.download='上岸鸭-桌面框选.png';a.click();}catch(e){note(e.message);}};
 function disconnect(){if(session)fetch('/stop',{method:'POST',headers:{'Content-Type':'application/json','X-SY-Token':token},body:JSON.stringify({session}),keepalive:true}).catch(()=>{});active=false;session=null;sequence++;clearTimeout(timer);buttons();}
 document.addEventListener('visibilitychange',()=>{if(document.hidden)disconnect();});window.addEventListener('pagehide',()=>{disconnect();cancelSearch();});
-window.addEventListener('message',e=>{if(!allowedParents.includes(e.origin)||e.source!==parent)return;if(e.data==='sy-remote-stop'){cancelSearch();stop();}if(e.data?.type==='sy-remote-request'){$('keyword').value=e.data.keyword||e.data.group||'';}});
+window.addEventListener('message',e=>{if(!allowedParents.includes(e.origin)||e.source!==parent)return;if(e.data==='sy-remote-stop'){cancelSearch();stop();}if(e.data?.type==='sy-remote-request'){$('keyword').value=e.data.keyword||'';$('groupQuery').value=e.data.group||'';}});
 fetch('/health').then(r=>r.json()).then(d=>{note(d.ok?'本机面板在线，可以输入微信关键词。':'本机服务异常。');if(d.ok&&parent!==window)parent.postMessage({type:'sy-remote-ready'},parentOrigin);}).catch(()=>note('本机服务未连接，请回到工作台点“重新连接”。'));
-</script><script src="/sy_wechat_share.js"></script></body></html>
+</script><script src="/sy_wechat_select.js"></script><script src="/sy_wechat_share.js"></script></body></html>

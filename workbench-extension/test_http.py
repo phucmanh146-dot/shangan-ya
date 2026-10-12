@@ -40,10 +40,14 @@ def request(path, data=None, headers=None):
 
 class HTTPTests(unittest.TestCase):
     def test_shared_frames_require_same_origin_token(self):
-        import growth_ocr, growth_wechat_screen
+        import growth_ocr, growth_wechat_screen, growth_wechat_float, growth_wechat
         routes = [('/api/growth/ocr-frame', growth_ocr, 'read_frame'),
                   ('/api/growth/wechat-screen-start', growth_wechat_screen, 'start_search'),
-                  ('/api/growth/wechat-screen-read', growth_wechat_screen, 'finish_search')]
+                  ('/api/growth/wechat-screen-read', growth_wechat_screen, 'finish_search'),
+                  ('/api/growth/wechat-float-start', growth_wechat_float, 'start'),
+                  ('/api/growth/wechat-float-frame', growth_wechat_float, 'submit_frame'),
+                  ('/api/growth/wechat-group-list', growth_wechat, 'search_group_list'),
+                  ('/api/growth/wechat-group-messages', growth_wechat, 'read_group_messages')]
         for route, module, method in routes:
             with patch.object(module, method, return_value={'ok': True}) as call:
                 self.assertEqual(request(route, {'image': 'fixture'})[0], 403)

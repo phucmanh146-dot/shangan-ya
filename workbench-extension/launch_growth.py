@@ -7,6 +7,7 @@ import sys
 import time
 from urllib.request import urlopen
 import webbrowser
+from growth_paths import data_directory, prepare_temporary_directory
 
 ROOT = Path(__file__).resolve().parent
 URL = 'http://127.0.0.1:8877'
@@ -19,12 +20,13 @@ def ready():
         return False
 
 def main():
+    prepare_temporary_directory()
     if not ready():
         with socket.socket() as test:
             if test.connect_ex(('127.0.0.1', 8877)) == 0:
                 print('8877端口已有其他版本运行。请先关闭旧的上岸鸭服务，再启动资料行动；未停止其他程序。')
                 return 1
-        logs = Path.home() / '.shanganya-growth'
+        logs = data_directory()
         logs.mkdir(exist_ok=True)
         with (logs / 'server.log').open('ab') as output:
             subprocess.Popen([sys.executable, str(ROOT / 'growth_server.py')], cwd=ROOT,
