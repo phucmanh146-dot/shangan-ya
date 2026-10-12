@@ -8,6 +8,8 @@
 
 **当前任务入口（2026-10-12，v5）：**[三人新版任务、交付物与验收](docs/first-prize-delivery-v5.md) · [具体论证与复现材料](evidence/first-prize-v5/README.md)。以全国一等奖质量为对标目标，补实际材料诊断、可执行细步骤、新成果复核、公平对照与真实用户证据。任务升级不代表新增功能已实现或已达到获奖水平。
 
+**B与队长联调候选：**[仓库总结、实际验证与双击启动](docs/repository-summary-2026-10-12.md)。139项后端检查与3组浏览器流程通过；本机Hermes实际文本请求成功，A实际诊断和内容复核仍待交付。
+
 此前的[扣子案例增补](docs/coze-benchmark-tasks.md)与[v4任务](docs/award-benchmark-v4.md)保留为历史；本轮范围、分工和阶段验收以v5为准。
 
 ## 项目依据与归属
