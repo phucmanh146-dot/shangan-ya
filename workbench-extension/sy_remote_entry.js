@@ -2,7 +2,7 @@
   'use strict';
   if (document.getElementById('syRemoteEntry')) return;
   const origin = 'http://127.0.0.1:8878', button = document.createElement('button');
-  button.id = 'syRemoteEntry'; button.type = 'button'; button.textContent = '远程桌面';
+  button.id = 'syRemoteEntry'; button.type = 'button'; button.textContent = '微信跟随 ↗';
   button.style.cssText = 'position:fixed;right:22px;bottom:24px;z-index:9000;border:1px solid #b4cba1;border-radius:14px;padding:12px 20px;background:#ddebaf;color:#173d2a;font:600 15px system-ui;cursor:pointer';
   document.body.append(button);
   let dialog, frame, status, retry, readyTimer, generation = 0, folded = false, fold, bar;
@@ -24,7 +24,7 @@
     if (!frame || e.origin !== origin || e.source !== frame.contentWindow) return;
     if (e.data?.type === 'sy-remote-fold') { setFolded(e.data.collapsed === true); return; }
     if (e.data?.type === 'sy-remote-ready') {
-      clearTimeout(readyTimer); status.textContent = '本机面板已连接。可直接输入微信关键词，或按需连接桌面画面。';
+      clearTimeout(readyTimer); status.textContent = '连接微信窗口后自由操作，搜索结果随画面更新；勾选后带入正文。';
       if (window.SYRemoteRequest) { frame.contentWindow.postMessage({ type: 'sy-remote-request', ...window.SYRemoteRequest }, origin); window.SYRemoteRequest = null; }
     }
     if (e.data?.type === 'sy-remote-capture') {
@@ -60,10 +60,11 @@
     const close = node('button', '关闭并停止'); close.dataset.close = 'true'; close.onclick = () => dialog.close();
     retry = node('button', '重新连接'); retry.onclick = connect;
     fold = node('button', '收起，继续操作微信'); fold.onclick = () => setFolded(!folded);
-    bar.append(node('strong', '上岸鸭 · 本机远程窗口'), link, retry, fold, close);
+    bar.append(node('strong', '上岸鸭 · 微信跟随'), link, retry, fold, close);
     status = node('p', '正在连接…'); status.setAttribute('role', 'status');
     frame = node('iframe'); frame.title = '本机远程桌面'; frame.allow = 'display-capture'; frame.hidden = true; frame.style.cssText = 'width:100%;height:calc(100% - 92px);border:0;border-radius:12px';
     dialog.append(bar, status, frame); document.body.append(dialog);
     window.addEventListener('message', receive); dialog.addEventListener('close', stop); dialog.show(); setFolded(false); connect();
   };
+  if (new URLSearchParams(location.search).get('wechat') === '1') button.click();
 })();

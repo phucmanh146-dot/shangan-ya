@@ -8,6 +8,7 @@ from sy_wechat_search import automation, clean, fill, name
 SEARCH_NAMES = {'搜索', 'Search', '搜索联系人、群聊和聊天记录', '搜索联系人和聊天记录'}
 SCOPES = {'聊天记录', '聊天记录搜索结果', 'Chat history', 'Chat History', '聊天記錄'}
 GROUP_SCOPES = {'群聊', '群聊搜索结果', 'Group chats', 'Groups', '群組'}
+CONTACT_SCOPES = {'联系人', 'Contacts', '联系人搜索结果'}
 CANCEL = threading.Event()
 
 
@@ -36,7 +37,7 @@ def search_boxes(window):
             if e.is_visible() and name(e) in SEARCH_NAMES and native(e)]
 
 
-def connect_window():
+def connect_window(allow_opaque=False):
     import ctypes
     from ctypes import wintypes
     import psutil
@@ -64,8 +65,11 @@ def connect_window():
         raise RescueError('找到了多个可读取的微信主窗口，请将需要查询的微信保留打开后重试。', 'WECHAT_AMBIGUOUS', 409)
     if not clients:
         if opaque:
+            if allow_opaque and len(opaque) != 1:
+                raise RescueError('有多个微信窗口，请先保留要操作的聊天主窗口。', 'WECHAT_AMBIGUOUS', 409)
             try: opaque[0].set_focus()
             except Exception: pass
+            if allow_opaque: return opaque[0]
             raise RescueError('找到了微信窗口，但该窗口没有提供可识别的聊天搜索控件。可能已经登录，不能因此判定未登录；请切到聊天主界面后重试，或在远程面板复制所需结果。', 'WECHAT_ACCESSIBILITY_UNAVAILABLE', 409)
         if login:
             try: login[0].set_focus()
@@ -78,6 +82,15 @@ def connect_window():
     except Exception:
         raise RescueError('已找到微信，但无法打开到前台。请点开微信后重试。', 'WECHAT_FOCUS', 409) from None
     return window
+
+
+def open_wechat():
+    with automation():
+        window = connect_window(allow_opaque=True)
+        try: window.set_focus()
+        except Exception:
+            raise RescueError('微信没有切到前台，请在任务栏点开微信。', 'WECHAT_FOCUS', 409) from None
+    return {'ok': True, 'note': '已打开微信。回到上岸鸭，点击“连接微信并跟随”选择这个窗口。'}
 
 
 def open_search(window):
@@ -119,21 +132,24 @@ def row_text(node):
 
 def search_results(window, keyword):
     """Headers in WeChat 4's search_list are siblings of their result rows."""
-    groups, messages, conversations = [], [], []
+    groups, contacts, messages, conversations = [], [], [], []
     lists = [n for n in window.descendants(control_type='List') if n.is_visible() and native(n)
-             and (getattr(n.element_info, 'automation_id', '') == 'search_list' or name(n) in SCOPES | GROUP_SCOPES | {'搜索结果', 'Search results'})]
+             and (getattr(n.element_info, 'automation_id', '') == 'search_list' or name(n) in SCOPES | GROUP_SCOPES | CONTACT_SCOPES | {'搜索结果', 'Search results'})]
     for container in lists:
         scope = name(container)
         for node in container.children(control_type='ListItem')[:120]:
             if not node.is_visible() or not native(node): continue
             label = name(node)
-            if label in SCOPES | GROUP_SCOPES | {'联系人', 'Contacts', '公众号', 'Public Accounts', '功能', '更多'}:
+            if label in SCOPES | GROUP_SCOPES | CONTACT_SCOPES | {'公众号', 'Public Accounts', '功能', '更多'}:
                 scope = label; continue
             raw = row_text(node)
             if not raw: continue
             if scope in GROUP_SCOPES:
                 group = {'name': label or raw.splitlines()[0], 'preview': raw, 'matchedBy': '微信群聊搜索结果'}
                 if not any(g['name'] == group['name'] for g in groups): groups.append(group)
+            elif scope in CONTACT_SCOPES:
+                contact = {'name': label or raw.splitlines()[0], 'preview': raw}
+                if not any(c['name'] == contact['name'] for c in contacts): contacts.append(contact)
             elif scope in SCOPES:
                 if re.search(r'\d+\s*条(?:相关)?(?:聊天)?记录|\d+\s*(?:matching|related)\s*(?:messages|records)', raw, re.I):
                     if raw not in conversations: conversations.append(raw)
@@ -142,7 +158,7 @@ def search_results(window, keyword):
     # Also support older versions with a named search-result parent.
     for raw in matched_messages(window, keyword):
         if raw not in messages and raw not in conversations and not re.search(r'\d+\s*条(?:相关)?(?:聊天)?记录', raw): messages.append(raw)
-    return {'groups': groups[:30], 'messages': [{'text': raw} for raw in messages[:50]], 'conversations': conversations[:30]}
+    return {'groups': groups[:30], 'contacts': contacts[:30], 'messages': [{'text': raw} for raw in messages[:50]], 'conversations': conversations[:30]}
 
 
 def search_messages(keyword):
@@ -158,7 +174,7 @@ def search_messages(keyword):
             check_cancelled()
             time.sleep(.3)
             result = search_results(window, keyword)
-            if result['groups'] or result['messages'] or result['conversations']: break
+            if any(result.values()): break
         if not any(result.values()):
             tabs = [e for e in window.descendants() if e.is_visible() and native(e)
                     and e.element_info.control_type in ('TabItem', 'Button', 'ListItem')
@@ -176,40 +192,68 @@ def search_messages(keyword):
             if visible & {'无搜索结果', '未找到相关结果', 'No results', 'No Results'}:
                 return dict(result, text='', count=0, groupCount=0, keyword=keyword, source='wechat-accessibility', empty=True, scope='当前微信搜索结果')
             raise RescueError('微信已打开并搜索该关键词，但没有读到可确认的群聊或匹配消息。请核对微信搜索结果，或复制需要的正文到工作台。', 'NO_READABLE_MESSAGES', 422)
+        remember_choices(result, keyword)
         texts = [m['text'] for m in result['messages']]
         body = ('来源：电脑版微信；关键词：' + keyword + '\n仅包含当前可读取的匹配消息，不代表全部聊天历史。\n\n' + '\n\n'.join(texts))[:30000] if texts else ''
         return dict(result, text=body, count=len(texts), groupCount=len(result['groups']), keyword=keyword, source='wechat-accessibility', scope='当前可读取的关键词搜索结果')
 
 
 GROUP_CHOICES = {}
+NAV_CHOICES = {}
+
+
+def remember_choices(found, query):
+    import secrets
+    GROUP_CHOICES.clear(); NAV_CHOICES.clear()
+    for category, kind in [('groups', 'group'), ('contacts', 'contact')]:
+        for item in found.get(category, []):
+            identifier = secrets.token_urlsafe(18)
+            choice = {'name': item['name'], 'query': query, 'kind': kind, 'until': time.monotonic()+180}
+            NAV_CHOICES[identifier] = choice
+            item['openId'] = identifier
+            if kind == 'group':
+                GROUP_CHOICES[identifier] = choice
+                item['id'] = identifier
 
 
 def search_group_list(query):
-    import secrets
     query = clean(query)
     found = search_messages(query)
-    groups = []
-    GROUP_CHOICES.clear()
-    for group in found['groups']:
-        identifier = secrets.token_urlsafe(18)
-        GROUP_CHOICES[identifier] = {'name': group['name'], 'query': query, 'until': time.monotonic()+180}
-        groups.append(dict(group, id=identifier))
-    return {'groups': groups, 'messages': [], 'conversations': [], 'keyword': query,
-            'note': '先选择一个群，再按消息关键词读取该群的聊天记录。', 'source': 'wechat-accessibility'}
+    return {'groups': found['groups'], 'contacts': found.get('contacts', []), 'messages': [], 'conversations': [], 'keyword': query,
+            'note': '选择联系人可打开聊天；选择群后可继续查找消息。', 'source': 'wechat-accessibility'}
 
 
-def group_controls(window, group_name):
+def result_controls(window, kind, target_name):
+    scopes = GROUP_SCOPES if kind == 'group' else CONTACT_SCOPES
     result = []
     for container in window.descendants(control_type='List'):
         if not container.is_visible() or not native(container): continue
-        if getattr(container.element_info, 'automation_id', '') != 'search_list' and name(container) not in GROUP_SCOPES | {'搜索结果', 'Search results'}: continue
+        if getattr(container.element_info, 'automation_id', '') != 'search_list' and name(container) not in scopes | {'搜索结果', 'Search results'}: continue
         scope = name(container)
         for node in container.children(control_type='ListItem')[:120]:
             label = name(node)
-            if label in SCOPES | GROUP_SCOPES | {'联系人', 'Contacts', '公众号', 'Public Accounts', '功能', '更多'}:
+            if label in SCOPES | GROUP_SCOPES | CONTACT_SCOPES | {'公众号', 'Public Accounts', '功能', '更多'}:
                 scope = label; continue
-            if scope in GROUP_SCOPES and label == group_name and node.is_visible() and native(node): result.append(node)
+            if scope in scopes and label == target_name and node.is_visible() and native(node): result.append(node)
     return result
+
+
+def group_controls(window, group_name):
+    return result_controls(window, 'group', group_name)
+
+
+def open_choice(identifier):
+    chosen = NAV_CHOICES.get(str(identifier))
+    if not chosen or time.monotonic() > chosen['until']:
+        raise RescueError('这条搜索结果已过期，请重新生成列表。', 'CHOICE_EXPIRED', 409)
+    with automation():
+        CANCEL.clear(); window = connect_window(); check_cancelled()
+        fill(open_search(window), chosen['query']); time.sleep(.8); check_cancelled()
+        candidates = result_controls(window, chosen['kind'], chosen['name'])
+        if len(candidates) != 1:
+            raise RescueError('无法唯一确认这条结果，请在微信中核对后重新选择。', 'CHOICE_AMBIGUOUS', 409)
+        candidates[0].click_input(); check_cancelled()
+    return {'ok': True, 'name': chosen['name'], 'kind': chosen['kind']}
 
 
 def read_group_messages(identifier, keyword):

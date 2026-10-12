@@ -117,6 +117,18 @@ class Handler(legacy.Handler):
             if path == '/api/growth/wechat-search':
                 from growth_wechat import search_messages
                 return self.send_json(search_messages(data.get('keyword', '')))
+            if path == '/api/growth/wechat-open':
+                from growth_wechat import open_wechat
+                return self.send_json(open_wechat())
+            if path == '/api/growth/wechat-open-choice':
+                from growth_wechat import open_choice
+                return self.send_json(open_choice(data.get('id')))
+            if path == '/api/growth/wechat-screen-follow':
+                from growth_wechat_screen import follow_results
+                return self.send_json(follow_results(data))
+            if path == '/api/growth/wechat-screen-open':
+                from growth_wechat_screen import open_result
+                return self.send_json(open_result(data))
             if path == '/api/growth/wechat-stop':
                 from growth_wechat import cancel_search
                 from growth_wechat_screen import cancel

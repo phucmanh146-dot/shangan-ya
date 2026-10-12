@@ -3,15 +3,45 @@
   'use strict';
   let stream = null, job = '', busy = false, epoch = 0, floatId = '', floatTimer, floatTicket = 0;
   let cropSource = null, cropRect = null, dragging = false;
+  let followTimer, followSerial = 0, lastSignature = '', candidateSignature = '', followAfter = 0;
+  const sample = document.createElement('canvas'); sample.width = 160; sample.height = 100;
   const preview = $('sharedPreview'), state = $('shareState'), cropCanvas = $('sharedCropCanvas');
   const say = text => { state.textContent = text; };
   const fold = collapsed => { if (parent !== window) parent.postMessage({type:'sy-remote-fold',collapsed},parentOrigin); };
+  function invalidate() {followSerial++; lastSignature = candidateSignature = ''; followAfter = Date.now()+2200;}
+  function signature() {
+    const ctx = sample.getContext('2d', {willReadFrequently:true}); ctx.drawImage(preview,0,0,160,100);
+    const pixels = ctx.getImageData(0,0,160,100).data; let hash = 2166136261;
+    for (let i=0;i<pixels.length;i+=8) hash = Math.imul(hash ^ pixels[i] ^ (pixels[i+1]<<8) ^ (pixels[i+2]<<16),16777619);
+    return String(hash >>> 0);
+  }
+  async function follow(current) {
+    if (!stream || current !== epoch) return;
+    try {
+      if (!$('followResults').checked || busy || searching || cropSource || Date.now()<followAfter) return;
+      const sig = signature();
+      if (sig !== candidateSignature) {candidateSignature=sig;return;}
+      if (sig === lastSignature) return;
+      const ticket=followSerial; lastSignature=sig;
+      $('followState').textContent='画面已停稳，正在更新当前搜索列表…';
+      const result=await api('/wechat-screen-follow',snapshot());
+      if (current!==epoch || ticket!==followSerial || busy || searching || cropSource || !$('followResults').checked || signature()!==sig) return;
+      window.SYWechatLists.follow(result);
+      $('followState').textContent=result.idle?'画面继续跟随；等待进入微信搜索列表。':'已跟随微信搜索“'+result.keyword+'” · 已选内容保留';
+    } catch(e) {
+      if (current===epoch) $('followState').textContent='本次列表未更新：'+e.message;
+    } finally {if(stream && current===epoch) followTimer=setTimeout(()=>follow(current),1400);}
+  }
   function buttons() {
     $('shareWechat').disabled = busy;
     for (const id of ['searchShared','readShared','floatShared','cropShared']) $(id).disabled = !stream || busy || searching;
     $('refreshShared').disabled = !stream || !job || busy || searching;
     $('stopShared').disabled = !stream;
     $('search').disabled = busy || searching;
+    $('openWechat').disabled = busy || searching;
+    $('sharedEmpty').hidden = !!stream;
+    $('connectionBadge').textContent = stream ? '微信画面跟随中' : '尚未连接微信';
+    document.body.dataset.shared = String(!!stream);
   }
   function stopFloat() {
     floatTicket++; clearTimeout(floatTimer); const id = floatId; floatId = '';
@@ -19,10 +49,11 @@
   }
   function cancelCrop() { cropSource = null; cropRect = null; dragging = false; $('sharedCropArea').hidden = true; preview.hidden = !stream; }
   function stopSharing() {
-    epoch++; job = ''; busy = false; stopFloat(); cancelCrop();
+    epoch++; job = ''; busy = false; clearTimeout(followTimer); invalidate(); stopFloat(); cancelCrop();
     if (stream) stream.getTracks().forEach(t => t.stop());
     stream = null; preview.srcObject = null; preview.hidden = true;
     buttons(); say('共享已停止。');
+    $('followState').textContent='连接后，画面停稳时更新可确认的搜索结果。';
   }
   function meta() {
     const track = stream?.getVideoTracks()[0];
@@ -37,7 +68,7 @@
   }
   async function recognizeCrop(image, current = epoch) {
     if (busy || searching) { say('正在处理前一次读取，请稍后再次框选。'); return; }
-    busy = true; buttons();
+    invalidate(); busy = true; buttons();
     try {
       say('只识别你框选的区域…');
       const doc = await api('/wechat-crop-read',{image}); if (current !== epoch) return;
@@ -53,7 +84,7 @@
       const data = await api('/wechat-float-poll',{id:floatId});
       if (ticket !== floatTicket || current !== epoch) return;
       for (const event of data.events || []) {
-        if (event.type === 'capture') await api('/wechat-float-frame',{...snapshot(),id:floatId});
+        if (event.type === 'capture') {invalidate(); followAfter=Date.now()+15000; await api('/wechat-float-frame',{...snapshot(),id:floatId});}
         if (event.type === 'crop') await recognizeCrop(event.image,current);
         if (event.type === 'show') fold(false);
         if (event.type === 'error') say(event.message);
@@ -82,12 +113,13 @@
       if (track.getSettings().displaySurface !== 'window') { selected.getTracks().forEach(t=>t.stop()); return say('请选择单独的微信窗口，整屏或标签页不适用。'); }
       stream = selected; preview.srcObject = stream; preview.hidden = false;
       track.addEventListener('ended',()=>{if(current===epoch){stopSharing();cancelSearch();fold(false);}});
-      await preview.play(); if(current!==epoch)return; buttons(); await startFloat();
+      await preview.play(); if(current!==epoch)return; buttons(); followTimer=setTimeout(()=>follow(current),1400); await startFloat();
     } catch(e) { if(current!==epoch)return;stopSharing();say(e.name==='NotAllowedError'?'请在浏览器弹窗里选择微信聊天窗口并点击共享。':'共享未开始：'+e.message); }
   };
   $('floatShared').onclick = startFloat;
   $('cropShared').onclick = () => {
     try {
+      invalidate();
       meta(); const scale = Math.min(1,2400/preview.videoWidth,1800/preview.videoHeight);
       cropCanvas.width=Math.round(preview.videoWidth*scale);cropCanvas.height=Math.round(preview.videoHeight*scale);
       cropSource=document.createElement('canvas');cropSource.width=cropCanvas.width;cropSource.height=cropCanvas.height;
@@ -116,19 +148,24 @@
     if(busy||searching)return;
     const keyword=$('groupQuery').value.trim()||$('keyword').value.trim();if(!keyword)return say('填写群名或消息关键词。');
     if(window.SYWechatLists.group()) return $('readShared').click();
-    const current=epoch;busy=true;job='';buttons();
+    invalidate(); const current=epoch;busy=true;job='';buttons();
     try{say('正在微信搜索并生成候选列表…');const result=await api('/wechat-screen-start',{...snapshot(),keyword});if(current!==epoch)return;job=result.searchId;await new Promise(r=>setTimeout(r,1000));if(current===epoch)await readResults(current);}
     catch(e){if(current===epoch)say(e.message);}finally{if(current===epoch){busy=false;buttons();}}
   };
-  $('refreshShared').onclick=async()=>{if(busy||searching)return;const current=epoch;busy=true;buttons();try{await readResults(current);}catch(e){if(current===epoch)say(e.message);}finally{if(current===epoch){busy=false;buttons();}}};
+  $('refreshShared').onclick=async()=>{if(busy||searching)return;invalidate();const current=epoch;busy=true;buttons();try{await readResults(current);}catch(e){if(current===epoch)say(e.message);}finally{if(current===epoch){busy=false;buttons();}}};
   $('readShared').onclick=async()=>{
     if(busy||searching)return;
     const group=window.SYWechatLists.group(),keyword=group?$('keyword').value.trim():($('groupQuery').value.trim()||$('keyword').value.trim());
-    if(!keyword)return say('填写与微信搜索框一致的关键词。');const current=epoch;busy=true;buttons();
+    if(!keyword)return say('填写与微信搜索框一致的关键词。');invalidate();const current=epoch;busy=true;buttons();
     try{say('正在读取当前共享画面…');const result=await api('/wechat-screen-read',{...snapshot(),keyword,group,manual:true});if(current===epoch){renderResults(result);say('已列出当前搜索画面中的内容，请勾选。');}}
     catch(e){if(current===epoch)say(e.message);}finally{if(current===epoch){busy=false;buttons();}}
   };
   $('stopShared').onclick=()=>{stopSharing();cancelSearch();fold(false);};
+  $('foldPanel').onclick=()=>{fold(true);say('面板已收起，可继续操作微信。');};
+  $('openWechat').onclick=async()=>{try{const result=await api('/wechat-open');note(result.note);}catch(e){note(e.message);}};
+  $('followResults').onchange=()=>{invalidate();$('followState').textContent=$('followResults').checked?'画面停稳后，继续跟随当前搜索结果。':'列表跟随已暂停；实时画面继续显示。';};
+  window.SYSharedWechat={connected:()=>!!stream,invalidate,search:()=>$('searchShared').onclick(),
+    async openTarget(target){invalidate();const result=await api('/wechat-screen-open',{...snapshot(),...target});fold(true);return result;}};
   window.addEventListener('pagehide',stopSharing);window.addEventListener('sy-native-search-state',buttons);
   window.SYSharedWechatBusy=()=>busy;
   window.addEventListener('message',e=>{if(e.source===parent&&allowedParents.includes(e.origin)&&e.data==='sy-remote-stop')stopSharing();});

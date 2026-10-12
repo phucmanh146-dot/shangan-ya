@@ -26,6 +26,7 @@ class SharedWindowTests(unittest.TestCase):
         self.assertEqual(result['messages'], [{'text': '同学：RAG资料'}])
         self.assertEqual(result['conversations'], ['3条相关聊天记录'])
         self.assertIn('可能有错字', result['note'])
+        self.assertEqual(result['contacts'],[{'name':'RAG 联系人'}])
 
     def test_unknown_frame_is_not_empty_search_success(self):
         with self.assertRaises(screen.RescueError):
@@ -79,6 +80,43 @@ class SharedWindowTests(unittest.TestCase):
             with self.assertRaises(screen.RescueError):
                 screen.finish_search({'displaySurface': 'window', 'windowLabel': '微信', 'searchId': 'expired'})
             read.assert_not_called()
+
+    def test_follow_reads_new_visible_query_without_operating_wechat(self):
+        doc=document([('分享',90,30),('联系人',90,120),('分享同学',90,160)])
+        with patch.object(screen,'read_frame',return_value=doc), patch.object(screen,'matching_window') as match:
+            result=screen.follow_results({'displaySurface':'window','image':'fixture'})
+        self.assertEqual(result['keyword'],'分享'); self.assertEqual(result['contacts'],[{'name':'分享同学'}]);match.assert_not_called()
+
+    def test_follow_does_not_infer_queries_from_normal_chat_text(self):
+        doc=document([('小明',430,30),('RAG的学习资料',500,200)])
+        with patch.object(screen,'read_frame',return_value=doc):
+            result=screen.follow_results({'displaySurface':'window','image':'fixture'})
+        self.assertTrue(result['idle']); self.assertEqual(result['messages'],[])
+
+    def test_follow_rejects_ambiguous_query(self):
+        doc=document([('分享',90,30),('第二个标题',90,70),('联系人',90,120),('分享同学',90,160)])
+        self.assertEqual(screen.visible_query(doc),'')
+
+    def test_navigation_row_has_correct_category_and_exact_name(self):
+        doc=document([('RAG',90,30),('群聊',90,100),('RAG伙伴',90,140),('联系人',90,200),('RAG伙伴',90,240)])
+        self.assertEqual(screen.choice_row(doc,'RAG','contact','RAG伙伴')['y'],240)
+        self.assertEqual(screen.choice_row(doc,'RAG','group','RAG伙伴')['y'],140)
+        with self.assertRaises(screen.RescueError):screen.choice_row(doc,'RAG','contact','RAG')
+
+    def test_same_name_within_one_section_cannot_be_opened(self):
+        doc=document([('RAG',90,30),('联系人',90,120),('RAG伙伴',90,160),('RAG伙伴',90,200)])
+        with self.assertRaises(screen.RescueError):screen.choice_row(doc,'RAG','contact','RAG伙伴')
+
+    def test_similar_group_name_cannot_supply_evidence(self):
+        doc=document([('测试学习群2',400,20),('聊天记录',500,70),('RAG',500,110),('RAG资料',500,170)])
+        with self.assertRaises(screen.RescueError):screen.parse_group_results(doc,'测试学习群','RAG')
+
+    def test_user_movement_during_ocr_prevents_navigation(self):
+        doc=document([('RAG',90,30),('联系人',90,120),('RAG伙伴',90,160)])
+        with patch.object(screen,'automation',return_value=nullcontext()), patch.object(screen,'physical_pixels',return_value=nullcontext()), patch.object(screen,'read_frame',return_value=doc), patch.object(screen,'last_input_tick',side_effect=[10,20]), patch.object(screen,'matching_window') as match:
+            with self.assertRaises(screen.RescueError) as error:
+                screen.open_result({'displaySurface':'window','image':'fixture','keyword':'RAG','kind':'contact','name':'RAG伙伴'})
+        self.assertEqual(error.exception.code,'WECHAT_USER_MOVED'); match.assert_not_called()
 
 
 if __name__ == '__main__': unittest.main()

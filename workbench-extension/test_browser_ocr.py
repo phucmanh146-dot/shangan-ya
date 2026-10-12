@@ -4,8 +4,9 @@ No desktop capture, permission approval, real chat search, or model request.
 import io
 import json
 import re
+from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, expect
 
 image = Image.new('RGB', (900, 600), 'white')
 font = ImageFont.truetype(r'C:\Windows\Fonts\msyh.ttc', 48)
@@ -41,8 +42,21 @@ with sync_playwright() as p:
         assert frame.evaluate("typeof navigator.mediaDevices.getDisplayMedia === 'function' && document.featurePolicy.allowsFeature('display-capture')")
         assert panel.locator('#searchShared').is_disabled()
         checks.append('share-entry-and-iframe-permission-policy')
+        output=Path(__file__).parent/'test-output';output.mkdir(exist_ok=True)
+        preview_page=browser.new_page(viewport={'width':1280,'height':1050})
+        preview_page.goto('http://127.0.0.1:8878/')
+        assert preview_page.evaluate('() => !!window.SYWechatLists')
+        preview_page.screenshot(path=str(output/'wechat-follow-page.png'),full_page=True)
+        preview_page.close()
         # All share input and WeChat list replies below are synthetic fixtures.
         pending_events = []
+        followed={'keyword':'RAG','contacts':[{'name':'测试联系人'}],'messages':[{'text':'跟随测试第一条'},{'text':'跟随测试第二条'}]}
+        page.route('**/wechat-screen-follow',lambda route:route.fulfill(json=followed))
+        opened=[]
+        def open_fixture(route):
+            opened.append(route.request.post_data_json)
+            route.fulfill(json={'ok':True,'name':'测试联系人','kind':'contact'})
+        page.route('**/wechat-screen-open',open_fixture)
         page.route('**/wechat-float-start', lambda route: route.fulfill(json={'id':'fixture-float','ok':True}))
         page.route('**/wechat-float-poll', lambda route: route.fulfill(json={'events':[pending_events.pop(0)] if pending_events else []}))
         page.route('**/wechat-float-stop', lambda route: route.fulfill(json={'ok':True}))
@@ -56,24 +70,43 @@ with sync_playwright() as p:
           track.getSettings = () => ({displaySurface:'window'});
           navigator.mediaDevices.getDisplayMedia = async () => stream;
           window.ocrFixtureStream = stream;
+          window.ocrFixtureCanvas = canvas;
         }''')
         panel.locator('#shareWechat').click()
         page.wait_for_function("document.querySelector('dialog[data-minimized=true]')")
         assert frame.evaluate("ocrFixtureStream.getVideoTracks()[0].readyState === 'live'")
         page.get_by_text('返回消息列表',exact=True).click()
         checks.append('collapse-keeps-sharing-live')
+        panel.locator('input[data-message-index="0"]').wait_for(timeout=15000)
+        panel.locator('input[data-message-index="0"]').check()
+        followed={'keyword':'新关键词','contacts':[{'name':'测试联系人'}],'messages':[{'text':'刷新后的另一条消息'}]}
+        frame.evaluate("() => {const c=ocrFixtureCanvas.getContext('2d');c.fillStyle='green';c.fillRect(800,540,80,40);}")
+        panel.locator('#resultQuery').filter(has_text='新关键词').wait_for(timeout=15000)
+        assert panel.locator('#selectedCount').inner_text()=='1'
+        panel.locator('#selectionSummary').click()
+        assert '跟随测试第一条' in panel.locator('#chosenResults').inner_text()
+        checks.append('follow-updates-results-and-preserves-checked-content')
+        panel.locator('#followResults').uncheck()
+        panel.get_by_text('打开聊天',exact=True).click()
+        page.wait_for_function("document.querySelector('dialog[data-minimized=true]')")
+        assert len(opened)==1 and opened[0]['name']=='测试联系人' and opened[0]['keyword']=='新关键词'
+        assert opened[0]['image'].startswith('data:image/png;base64,')
+        page.get_by_text('返回消息列表',exact=True).click()
+        checks.append('contact-action-uses-current-shared-window')
+        panel.locator('#clearChosen').click()
         panel.locator('#cropShared').click()
         canvas=panel.locator('#sharedCropCanvas');canvas.scroll_into_view_if_needed();box=canvas.bounding_box()
         page.mouse.move(box['x']+40*box['width']/900,box['y']+40*box['height']/600)
         page.mouse.down();page.mouse.move(box['x']+600*box['width']/900,box['y']+200*box['height']/600);page.mouse.up()
         panel.locator('#confirmSharedCrop').click()
-        panel.locator('input[data-message-index="0"]').wait_for(timeout=35000)
+        panel.locator('#results').get_by_text('微信框选文字（请核对识别结果）：',exact=False).wait_for(timeout=35000)
         crop_text=panel.locator('#results').inner_text()
         assert 'RAG' in crop_text and 'OUTSIDE' not in crop_text
         assert panel.locator('#importChosen').is_disabled()
         checks.append('crop-only-visible-selection-with-no-default-import')
         pending_events.append({'type':'stop'})
-        frame.wait_for_function("ocrFixtureStream.getTracks().every(t=>t.readyState==='ended')",timeout=8000)
+        expect(panel.locator('#stopShared')).to_be_disabled(timeout=8000)
+        assert frame.evaluate("() => ocrFixtureStream.getTracks().every(t=>t.readyState==='ended')")
         checks.append('native-stop-event-ends-share')
         page.route('**/wechat-group-list',lambda route:route.fulfill(json={'groups':[{'id':'group-fixture','name':'测试学习群'}],'messages':[],'conversations':[]}))
         requests=[]

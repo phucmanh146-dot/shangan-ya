@@ -3,6 +3,7 @@ import re
 import secrets
 import threading
 import time
+import os
 from contextlib import contextmanager
 
 from rescue_service import RescueError
@@ -48,36 +49,115 @@ def search_anchor(doc, previous=''):
     return candidates[0]
 
 
-def parse_results(doc, keyword):
-    source = rows(doc)
-    key = compact(keyword)
-    if not any(key in compact(r['text']) and r['y'] < .15*doc['height'] and r['x'] < .5*doc['width'] for r in source):
-        raise RescueError('共享画面的顶部没有识别到本次关键词，未把其他聊天内容当作搜索结果。', 'WECHAT_SCREEN_QUERY_CHANGED', 409)
-    groups, messages, conversations = [], [], []
+def scoped_rows(doc):
     scope, column = None, None
-    for row in source:
+    for row in rows(doc):
         label = compact(row['text']).rstrip(':：')
         header = re.sub(r'[（(]\d+[)）]$', '', label)
         if header in HEADERS and row['x'] < .55*doc['width']:
             scope, column = HEADERS[header], row['x']
             continue
         if column is None or not column-40 <= row['x'] <= min(doc['width']*.65, column+520): continue
+        yield scope, row
+
+
+def parse_results(doc, keyword):
+    source = rows(doc)
+    key = compact(keyword)
+    if not any(key == compact(r['text']) and r['y'] < .15*doc['height'] and r['x'] < .5*doc['width'] for r in source):
+        raise RescueError('共享画面的顶部没有识别到本次关键词，未把其他聊天内容当作搜索结果。', 'WECHAT_SCREEN_QUERY_CHANGED', 409)
+    groups, contacts, messages, conversations = [], [], [], []
+    for scope, row in scoped_rows(doc):
         if scope == 'groups' and key in compact(row['text']):
             if not any(g['name'] == row['text'] for g in groups):
                 groups.append({'name': row['text'], 'matchedBy': '共享窗口文字识别，待核对'})
+        if scope == 'contacts' and key in compact(row['text']):
+            if not any(c['name'] == row['text'] for c in contacts): contacts.append({'name': row['text']})
         if scope == 'messages':
             if re.search(r'\d+条(?:相关)?(?:聊天)?记录', compact(row['text'])):
                 if row['text'] not in conversations: conversations.append(row['text'])
             elif key in compact(row['text']) and row['text'] not in [m['text'] for m in messages]:
                 messages.append({'text': row['text']})
     empty = any(compact(r['text']) in ('无搜索结果', '未找到相关结果', '没有找到相关结果') for r in source)
-    if not groups and not messages and not conversations and not empty:
+    if not groups and not contacts and not messages and not conversations and not empty:
         raise RescueError('已识别共享画面，但尚未读到带有群聊或聊天记录分类的匹配结果。请展开微信搜索结果后点“刷新结果”。', 'WECHAT_SCREEN_RESULTS_UNCLEAR', 422)
     text = ('来源：用户共享的微信窗口；关键词：'+keyword+'\n画面文字识别，可能有错字；仅当前可见匹配消息。\n\n'+'\n\n'.join(m['text'] for m in messages)) if messages else ''
-    return {'groups': groups[:30], 'messages': messages[:50], 'conversations': conversations[:30],
+    return {'groups': groups[:30], 'contacts': contacts[:30], 'messages': messages[:50], 'conversations': conversations[:30],
             'groupCount': min(len(groups), 30), 'count': min(len(messages), 50), 'text': text[:30000],
             'keyword': keyword, 'source': 'wechat-window-ocr', 'empty': empty,
             'note': '来自你共享的微信窗口，文字识别可能有错字；只覆盖当前可见结果，请核对群名和消息。'}
+
+
+def visible_query(doc):
+    """Infer only an unambiguous query above a recognized search-results section."""
+    source = rows(doc)
+    headings = [r for r in source if r['x'] < .5*doc['width']
+        and re.sub(r'[（(]\d+[)）]$', '', compact(r['text']).rstrip(':：')) in HEADERS]
+    if not headings: return ''
+    first = min(r['y'] for r in headings)
+    candidates = [r for r in source if .035*doc['width'] < r['x'] < .4*doc['width']
+        and r['y']+r['height'] <= first and r['y'] < .13*doc['height']
+        and r['width'] < .32*doc['width'] and compact(r['text']) not in ('微信','wechat','weixin','取消','搜索','search')]
+    return clean(candidates[0]['text']) if len(candidates) == 1 else ''
+
+
+def follow_results(data):
+    check_shared(data)
+    doc = read_frame(data.get('image'))
+    query = visible_query(doc)
+    if not query:
+        return {'idle': True, 'groups': [], 'contacts': [], 'messages': [], 'conversations': [],
+                'note': '画面正在跟随。进入微信搜索后，可确认的当前结果会出现在这里；已选内容保留。'}
+    return parse_results(doc, query)
+
+
+def choice_row(doc, keyword, kind, target):
+    result = parse_results(doc, keyword)
+    scope = {'group': 'groups', 'contact': 'contacts'}.get(kind)
+    if not scope or not any(x['name'] == target for x in result[scope]):
+        raise RescueError('当前画面中没有这条搜索结果，请刷新列表后再选。', 'CHOICE_CHANGED', 409)
+    matches = [row for section, row in scoped_rows(doc) if section == scope and row['text'] == target]
+    if len(matches) != 1:
+        raise RescueError('存在同名结果，请在微信中直接选择。', 'CHOICE_AMBIGUOUS', 409)
+    return matches[0]
+
+
+def open_result(data):
+    """One user-requested click on a freshly verified shared-window search row."""
+    from growth_wechat import CANCEL, check_cancelled
+    check_shared(data)
+    keyword, target = clean(data.get('keyword', '')), clean(data.get('name', ''))
+    with automation(), physical_pixels():
+        CANCEL.clear()
+        input_tick = last_input_tick()
+        doc = read_frame(data.get('image')); check_cancelled()
+        if last_input_tick() != input_tick:
+            raise RescueError('你刚刚操作了微信，画面可能已改变。请在列表中再点一次，避免打开旧位置。', 'WECHAT_USER_MOVED', 409)
+        row = choice_row(doc, keyword, data.get('kind'), target)
+        hwnd, bounds = matching_window(doc, data.get('windowLabel', ''))
+        from pywinauto import Desktop
+        import ctypes
+        import pyautogui
+        window = Desktop(backend='uia').window(handle=hwnd).wrapper_object()
+        window.set_focus(); check_cancelled()
+        if ctypes.windll.user32.GetForegroundWindow() != hwnd or window_bounds(hwnd) != bounds:
+            raise RescueError('微信窗口发生变化，请重新选择。', 'WECHAT_WINDOW_CHANGED', 409)
+        left, top, width, height = bounds
+        pyautogui.click(left+(row['x']+row['width']/2)*width/doc['width'],
+                        top+(row['y']+row['height']/2)*height/doc['height'])
+    return {'ok': True, 'name': target, 'kind': data.get('kind')}
+
+
+def last_input_tick():
+    if os.name != 'nt': return None
+    import ctypes
+    from ctypes import wintypes
+    class LastInput(ctypes.Structure):
+        _fields_ = [('cbSize', wintypes.UINT), ('dwTime', wintypes.DWORD)]
+    value = LastInput(); value.cbSize = ctypes.sizeof(value)
+    if not ctypes.windll.user32.GetLastInputInfo(ctypes.byref(value)):
+        raise RescueError('暂时无法核对窗口操作状态，请直接在微信里选择。', 'WECHAT_INPUT_STATE_UNAVAILABLE', 409)
+    return value.dwTime
 
 
 def check_shared(data):
@@ -217,7 +297,7 @@ def cancel():
 def parse_group_results(doc, group, keyword):
     """Require both the chosen chat title and its visible history-search query."""
     source = rows(doc); width, height = doc['width'], doc['height']
-    titles = [r for r in source if compact(group) in compact(r['text']) and r['y'] < .14*height]
+    titles = [r for r in source if compact(group) == re.sub(r'[（(]\d+[)）]$', '', compact(r['text'])) and r['y'] < .14*height]
     history = [r for r in source if '聊天记录' in compact(r['text']) and r['y'] < .25*height]
     queries = [r for r in source if compact(r['text']) == compact(keyword) and r['y'] < .25*height]
     if not titles or not history or len(queries) != 1:

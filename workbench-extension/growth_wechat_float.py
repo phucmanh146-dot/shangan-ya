@@ -49,6 +49,10 @@ def start(data):
     except (KeyError, TypeError, ValueError):
         raise RescueError('共享窗口画面尚未就绪。', 'BAD_FRAME', 400) from None
     with physical_pixels(): hwnd, _ = matching_window(doc, data.get('windowLabel', ''))
+    from pywinauto import Desktop
+    try: Desktop(backend='uia').window(handle=hwnd).wrapper_object().set_focus()
+    except Exception:
+        raise RescueError('微信没有切到前台，请点开微信后再开启浮动工具条。', 'WECHAT_FOCUS', 409) from None
     with LOCK:
         for old in list(SESSIONS): stop(old)
         process = subprocess.Popen([sys.executable, str(Path(__file__)), '--widget', str(hwnd)],

@@ -53,6 +53,7 @@ class WeChatTests(unittest.TestCase):
         self.assertEqual([g['name'] for g in data['groups']],['RAG 学习群'])
         self.assertEqual(data['messages'],[{'text':'同学：RAG 先检索再回答'}])
         self.assertEqual(len(data['conversations']),1)
+        self.assertEqual(data['contacts'],[{'name':'RAG 助手','preview':'RAG 助手'}])
 
     def test_group_row_must_be_within_group_section(self):
         items = [Node('群聊','ListItem'), Node('学习群','ListItem'), Node('联系人','ListItem'), Node('学习群','ListItem')]
@@ -69,6 +70,23 @@ class WeChatTests(unittest.TestCase):
         node = Node('RAG 联系人','ListItem',Node('搜索结果'))
         window = SimpleNamespace(descendants=lambda **kwargs:[node])
         self.assertEqual(wx.matched_messages(window,'RAG'),[])
+
+    def test_contact_navigation_never_uses_the_same_named_group(self):
+        items = [Node('群聊','ListItem'), Node('学习伙伴','ListItem'), Node('联系人','ListItem'), Node('学习伙伴','ListItem')]
+        container = Node(typ='List',auto='search_list',children=items)
+        window = SimpleNamespace(descendants=lambda **kwargs:[container])
+        self.assertEqual(wx.result_controls(window, 'contact', '学习伙伴'), [items[3]])
+
+    def test_stale_navigation_cannot_operate_wechat(self):
+        with patch.object(wx,'connect_window') as connect:
+            with self.assertRaises(wx.RescueError): wx.open_choice('expired-fixture')
+        connect.assert_not_called()
+
+    def test_opening_an_opaque_client_never_types_or_clicks(self):
+        window = SimpleNamespace(set_focus=lambda:None)
+        with patch.object(wx,'automation',return_value=nullcontext()), patch.object(wx,'connect_window',return_value=window) as connect, patch.object(wx,'fill') as fill:
+            self.assertTrue(wx.open_wechat()['ok'])
+        connect.assert_called_once_with(allow_opaque=True); fill.assert_not_called()
 
 
 if __name__ == '__main__': unittest.main()
