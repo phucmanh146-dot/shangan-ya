@@ -4,7 +4,7 @@
 
 [个人介绍](docs/profile.md) · [队长一步一步操作](docs/team-onboarding.md) · [三人交接约定](docs/p1-contract.md) · [作品主页](https://shanganya-focus-hanyi.phucmanh146.chatgpt.site/) · [Skill 页面](https://shanganya-focus-hanyi.phucmanh146.chatgpt.site/skill)
 
-**进度入口：**[三人功能、交付记录与问题清单](docs/progress-2026-10-11.md) · [当前总调度与队长范围](docs/current-total-dispatch-2026-10-11.md)。
+**进度入口：**[远程核验后的当前总调度（2026-10-12）](docs/current-total-dispatch-2026-10-12.md) · [三人功能、交付记录与问题清单](docs/progress-2026-10-11.md) · [此前总调度记录](docs/current-total-dispatch-2026-10-11.md)。
 
 **当前任务入口（2026-10-12，v5）：**[三人新版任务、交付物与验收](docs/first-prize-delivery-v5.md) · [具体论证与复现材料](evidence/first-prize-v5/README.md)。以全国一等奖质量为对标目标，补实际材料诊断、可执行细步骤、新成果复核、公平对照与真实用户证据。任务升级不代表新增功能已实现或已达到获奖水平。
 

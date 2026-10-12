@@ -30,8 +30,17 @@ def now():
     return datetime.now().astimezone().isoformat(timespec='seconds')
 
 
+class ClosingConnection(sqlite3.Connection):
+    """Keep SQLite commit/rollback semantics and release Windows file handles."""
+    def __exit__(self, *args):
+        try:
+            return super().__exit__(*args)
+        finally:
+            self.close()
+
+
 def connection():
-    c = sqlite3.connect(DB, timeout=15)
+    c = sqlite3.connect(DB, timeout=15, factory=ClosingConnection)
     c.row_factory = sqlite3.Row
     return c
 
