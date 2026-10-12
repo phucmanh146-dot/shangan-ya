@@ -172,6 +172,11 @@ class GeneralLoopTests(unittest.TestCase):
         d['member_profiles'][0]['capability_evidence']=[{'capability':'数据清洗','passed':True,'evidence_confirmed':True}]
         self.p=team.diagnosis({**self.ctx(),'diagnosis':d});self.plan()
         self.assertEqual(self.p['plan']['tasks'][0]['kind'],'trial')
+        value=diagnosis_reply(self.p,['数据清洗']);value['gaps'][0]['micro_steps'][0]['capability_basis']=['已经精通，直接跳过试做']
+        with self.model_context(value):result=ai.researcher(self.p)
+        basis=result['gaps'][0]['micro_steps'][0]['capability_basis']
+        self.assertIn('未知',basis);self.assertNotIn('精通',basis)
+        self.assertEqual(result['gaps'][0]['micro_steps'][0]['capability_basis_source'],'server_member_records')
     def test_diagnosis_cannot_fake_closed_or_history_only(self):
         self.setup_inputs();self.diagnose()
         for flag in ({'status':'closed','confirmed_review_id':'fake'},{'history_only':True}):

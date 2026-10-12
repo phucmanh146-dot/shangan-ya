@@ -174,7 +174,7 @@ def diagnosis(data):
     validate_diagnosis(d)
     if p.get('artifact_storage_required'):
         import artifact_store
-        from personal_guidance import skill_status
+        from personal_guidance import skill_status, capability_basis
         known_members = {m['member_id']:m for m in p.get('member_task_briefs', [])}
         for member in d['member_profiles']:
             if member['member_id'] not in known_members:
@@ -194,6 +194,9 @@ def diagnosis(data):
             ref = required(gap,'current_artifact',dict)
             artifact_store.references(p, gap.get('evidence_refs'), (ref['artifact_id'], ref['artifact_version']))
             if gap.get('status') != 'closed':
+                for step in required(gap,'micro_steps',list):
+                    step['capability_basis'] = capability_basis(gap, d['member_profiles'])
+                    step['capability_basis_source'] = 'server_member_records'
                 validate_micro_steps({'micro_steps':required(gap,'micro_steps',list)},d)
                 for step in gap['micro_steps']:
                     artifact_store.read(p, step['input_version']['artifact_id'], step['input_version']['artifact_version'])

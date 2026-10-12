@@ -52,7 +52,8 @@ def call_json(p, stage, payload, validator):
     request_payload = {'output_instructions': '只返回一个合法JSON对象，根字段必须是'+root+
         '。output_contract只说明这些根字段的格式，不是返回字段。不得返回输入的documents、member_profiles或output_contract容器。'
         '不加Markdown代码围栏、解释前缀或后缀。current_locator只填一个实际位置；多个引用放evidence_refs列表。'
-        'gap_type选一个类别；保留未知项；不得自行确认能力或关闭差距。'+SYSTEM, **copy.deepcopy(payload)}
+        'gap_type选一个类别；capability_basis是字符串。action写具体软件/计算/编辑操作和哪些行，不只写修正/完善；'
+        'self_check写可比较的字段或数字，failure_next写具体检查位置。保留未知项；不得自行确认能力或关闭差距。'+SYSTEM, **copy.deepcopy(payload)}
     content = team.agent.dump(request_payload)
     cfg = rescue.config_snapshot()
     run = {'run_id':uuid.uuid4().hex,'stage':stage,'project_version':p['version'],
@@ -141,6 +142,8 @@ def researcher(p):
                 raise ValueError('诊断需提供基于实际材料的细操作候选')
             for row in g['micro_steps']:
                 row.setdefault('source_refs', g.get('source_refs', []))
+                row['capability_basis'] = personal_guidance.capability_basis(g, profiles)
+                row['capability_basis_source'] = 'server_member_records'
             g['deadline'] = ctx.get('deadline') or '待成员确认'
         d = {'diagnosis_version':version,'requirements':ctx['acceptance_criteria'],
              'sources':sources,'artifact_status':catalog,'artifact_versions':catalog,
@@ -207,6 +210,10 @@ def reviewer(p, request):
                 team.required(g, 'remaining_issue')
             if g['status']=='remaining' and task.get('kind') in ('production', 'check'):
                 steps = team.required(g, 'remaining_micro_steps', list)
+                gap = next(x for x in relevant if x['gap_id']==g['gap_id'])
+                for step in steps:
+                    step['capability_basis'] = personal_guidance.capability_basis(gap, d['member_profiles'])
+                    step['capability_basis_source'] = 'server_member_records'
                 check_d = copy.deepcopy(d)
                 if ref not in team.artifact_catalog(check_d):
                     check_d.setdefault('artifact_versions', []).append({'artifact_id':ref[0],'artifact_version':ref[1],'title':new_doc['filename']})

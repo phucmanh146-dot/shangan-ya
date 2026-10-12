@@ -59,6 +59,22 @@ def skill_status(member, skill):
     return 'unknown', None
 
 
+def capability_basis(gap, profiles):
+    """Display facts from member records, never certify model-reported abilities."""
+    members = {m['member_id']:m for m in profiles}
+    rows = []
+    for owner in gap['related_member_ids']:
+        member = members[owner]
+        for skill in gap['required_capabilities']:
+            status, record = skill_status(member, skill)
+            label = {'unknown':'未知；只有自述或缺试做证据','failed':'成员确认未通过','verified':'成员记录通过'}[status]
+            line = member.get('name',owner)+' / '+skill+'：'+label
+            if record:
+                line += '；判据 '+record['criterion']+'；材料 '+record['artifact_id']+' v'+str(record['artifact_version'])
+            rows.append(line)
+    return '；'.join(rows) or '未声明当前动作所需技能；不据此认定能力通过'
+
+
 def resources(diagnosis, skill):
     key = skill.strip().casefold()
     found = []
