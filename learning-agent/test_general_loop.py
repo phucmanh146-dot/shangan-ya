@@ -172,6 +172,21 @@ class GeneralLoopTests(unittest.TestCase):
         d['member_profiles'][0]['capability_evidence']=[{'capability':'数据清洗','passed':True,'evidence_confirmed':True}]
         self.p=team.diagnosis({**self.ctx(),'diagnosis':d});self.plan()
         self.assertEqual(self.p['plan']['tasks'][0]['kind'],'trial')
+    def test_diagnosis_cannot_fake_closed_or_history_only(self):
+        self.setup_inputs();self.diagnose()
+        for flag in ({'status':'closed','confirmed_review_id':'fake'},{'history_only':True}):
+            d=copy.deepcopy(self.p['diagnosis']);d['diagnosis_version']+=1;d['gaps'][0].update(flag)
+            with self.subTest(flag=flag),self.assertRaises(ValueError):team.diagnosis({**self.ctx(),'diagnosis':d})
+        value=diagnosis_reply(self.p);value['gaps'][0].update(status='closed',history_only=True)
+        with self.model_context(value):d=ai.researcher(self.p)
+        self.assertEqual(d['gaps'][0]['status'],'open');self.assertNotIn('history_only',d['gaps'][0])
+    def test_manual_diagnosis_cannot_reference_fake_step_file(self):
+        self.setup_inputs();self.diagnose()
+        d=copy.deepcopy(self.p['diagnosis']);d['diagnosis_version']+=1
+        fake={'artifact_id':'fake','artifact_version':1}
+        d['artifact_versions'].append({**fake,'title':'未上传'})
+        d['gaps'][0]['micro_steps'][0]['input_version']=fake
+        with self.assertRaises(ValueError):team.diagnosis({**self.ctx(),'diagnosis':d})
     def test_fake_submission_and_premature_production_are_blocked(self):
         self.setup_inputs();self.diagnose(['数据清洗']);self.plan()
         with self.assertRaisesRegex(ValueError,'前置'):self.event('start')

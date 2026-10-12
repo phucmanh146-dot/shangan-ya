@@ -183,12 +183,20 @@ def diagnosis(data):
             member['capability_evidence'] = copy.deepcopy(actual['capability_evidence'])
             member['verified_capabilities'] = sorted({r['capability'] for r in actual['capability_evidence'] if skill_status(actual,r['capability'])[0]=='verified'})
         for gap in d['gaps']:
+            prior = next((g for g in (p.get('diagnosis') or {}).get('gaps', []) if g['gap_id']==gap['gap_id']),None)
+            if gap.get('status') == 'closed' and (not prior or prior.get('status')!='closed' or
+                    gap.get('confirmed_review_id') not in p.get('applied_review_ids', [])):
+                raise ValueError('关闭差距必须来自本项目已确认且已应用的成果复核')
             if gap.get('history_only'):
+                if not prior or prior.get('status')!='closed' or prior.get('confirmed_review_id') not in p.get('applied_review_ids', []):
+                    raise ValueError('不能声明未确认的差距仅为历史而跳过证据核对')
                 continue
             ref = required(gap,'current_artifact',dict)
             artifact_store.references(p, gap.get('evidence_refs'), (ref['artifact_id'], ref['artifact_version']))
             if gap.get('status') != 'closed':
                 validate_micro_steps({'micro_steps':required(gap,'micro_steps',list)},d)
+                for step in gap['micro_steps']:
+                    artifact_store.read(p, step['input_version']['artifact_id'], step['input_version']['artifact_version'])
     if p['diagnosis'] and d['diagnosis_version'] <= p['diagnosis']['diagnosis_version']:
         raise Conflict('诊断版本必须递增')
     if p['plan'] and not p.get('plan_diagnosis') and p['diagnosis'] and p['plan']['based_on_diagnosis_version'] == p['diagnosis']['diagnosis_version']:

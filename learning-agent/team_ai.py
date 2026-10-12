@@ -115,6 +115,9 @@ def researcher(p):
         if not 1 <= len(gaps) <= 20:
             raise ValueError('本轮需1至20条有依据差距；全部解决请走有效复核更新')
         for g in gaps:
+            g['status'] = 'open'
+            for key in ('history_only','manual_hold','confirmed_review_id'):
+                g.pop(key, None)
             ref = team.required(g, 'current_artifact', dict)
             artifact_store.references(p, g.get('evidence_refs'), (ref.get('artifact_id'), ref.get('artifact_version')))
             locator = team.required(g, 'current_locator')
