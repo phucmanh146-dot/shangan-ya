@@ -116,7 +116,15 @@ class Handler(legacy.Handler):
                 return self.send_json(search_messages(data.get('keyword', '')))
             if path == '/api/growth/wechat-stop':
                 from growth_wechat import cancel_search
+                from growth_wechat_screen import cancel
+                cancel()
                 return self.send_json(cancel_search())
+            if path in ('/api/growth/wechat-screen-start', '/api/growth/wechat-screen-read'):
+                from growth_wechat_screen import start_search, finish_search
+                return self.send_json(start_search(data) if path.endswith('start') else finish_search(data))
+            if path == '/api/growth/ocr-frame':
+                from growth_ocr import read_frame
+                return self.send_json(read_frame(data.get('image')))
             if path in ('/api/growth/wechat-groups', '/api/growth/wechat-messages'):
                 from sy_wechat_search import search_groups, read_messages
                 result = search_groups(data.get('query', '')) if path.endswith('groups') else read_messages(data.get('id'), data.get('keyword'))

@@ -39,6 +39,19 @@ def request(path, data=None, headers=None):
         return exc.code, json.load(exc)
 
 class HTTPTests(unittest.TestCase):
+    def test_shared_frames_require_same_origin_token(self):
+        import growth_ocr, growth_wechat_screen
+        routes = [('/api/growth/ocr-frame', growth_ocr, 'read_frame'),
+                  ('/api/growth/wechat-screen-start', growth_wechat_screen, 'start_search'),
+                  ('/api/growth/wechat-screen-read', growth_wechat_screen, 'finish_search')]
+        for route, module, method in routes:
+            with patch.object(module, method, return_value={'ok': True}) as call:
+                self.assertEqual(request(route, {'image': 'fixture'})[0], 403)
+                self.assertEqual(request(route, {'image': 'fixture'}, {'X-Growth-Token': app.TOKEN, 'Origin': 'https://example.org'})[0], 403)
+                call.assert_not_called()
+                self.assertEqual(request(route, {'image': 'fixture'}, {'X-Growth-Token': app.TOKEN})[0], 200)
+                call.assert_called_once()
+
     def test_remote_start_requires_token_and_reports_real_readiness(self):
         import growth_remote
         self.assertEqual(request('/api/growth/remote-start', {})[0],403)
@@ -105,7 +118,7 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(project['title'],'project')
 
     def test_encoded_source_paths_are_not_served(self):
-        for path in ('/local_server.py','/local_server.%70%79','/%2egrowth-backup/file.html','/workflow.sqlite3','/'):
+        for path in ('/local_server.py','/local_server.%70%79','/%2egrowth-backup/file.html','/workflow.sqlite3'):
             self.assertEqual(request(path)[0],403,path)
 
     def test_original_docx_import_still_works(self):

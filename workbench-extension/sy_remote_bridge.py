@@ -38,7 +38,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Cache-Control','no-store')
         self.send_header('X-Content-Type-Options','nosniff')
         self.send_header('Referrer-Policy','no-referrer')
-        self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; connect-src 'self'; frame-ancestors 'self' http://127.0.0.1:8877 http://localhost:8877")
+        self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob:; connect-src 'self'; frame-ancestors 'self' http://127.0.0.1:8877 http://localhost:8877")
         self.end_headers()
         try:self.wfile.write(raw)
         except (BrokenPipeError,ConnectionResetError):pass
@@ -50,19 +50,25 @@ class Handler(BaseHTTPRequestHandler):
         if path=='/':
             raw=(Path(__file__).with_name('sy_remote_panel.html').read_text(encoding='utf-8').replace('__TOKEN__',TOKEN)).encode()
             return self.send(200,raw,'text/html; charset=utf-8')
+        if path=='/sy_wechat_share.js':
+            return self.send(200,Path(__file__).with_name('sy_wechat_share.js').read_bytes(),'text/javascript; charset=utf-8')
         self.send(404,{'error':'Not found'})
     def do_POST(self):
         if not self.valid_host() or self.headers.get('Origin')!=ORIGIN or not secrets.compare_digest(self.headers.get('X-SY-Token',''),TOKEN):
             return self.send(403,{'error':'连接验证失败，请刷新本机面板。'})
         try:
             n=int(self.headers.get('Content-Length','0'))
-            if not 0<n<5000 or not self.headers.get('Content-Type','').startswith('application/json'):raise ValueError('请求格式不正确')
+            route=urlsplit(self.path).path
+            limit=7_800_000 if route in ('/wechat-screen-start','/wechat-screen-read') else 5000
+            if not 0<n<limit or not self.headers.get('Content-Type','').startswith('application/json'):raise ValueError('请求格式不正确')
             data=json.loads(self.rfile.read(n))
             if not isinstance(data,dict):raise ValueError('请求格式不正确')
             if urlsplit(self.path).path=='/wechat-search':
                 return self.send(200,wechat_request('wechat-search',{'keyword':data.get('keyword','')}))
             if urlsplit(self.path).path=='/wechat-stop':
                 return self.send(200,wechat_request('wechat-stop',{}))
+            if route in ('/wechat-screen-start','/wechat-screen-read'):
+                return self.send(200,wechat_request(route[1:],{k:data.get(k) for k in ('keyword','image','displaySurface','windowLabel','searchId','manual')}))
             if urlsplit(self.path).path=='/assist-step':
                 from sy_wechat_assistant import plan_step,execute_step
                 with LOCK:

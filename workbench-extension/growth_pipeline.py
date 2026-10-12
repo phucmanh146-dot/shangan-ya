@@ -12,6 +12,7 @@ import sqlite3
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import contextmanager
 from datetime import date, datetime, timezone
 from pathlib import Path
 from growth_sources import links_in, read_url
@@ -32,10 +33,15 @@ def encode(value):
     return json.dumps(value, ensure_ascii=False)
 
 
+@contextmanager
 def connect():
     db = sqlite3.connect(DB, timeout=10)
     db.row_factory = sqlite3.Row
-    return db
+    try:
+        with db:
+            yield db
+    finally:
+        db.close()
 
 
 with connect() as db:

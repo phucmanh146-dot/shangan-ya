@@ -3,6 +3,7 @@
   let dialog, owner, token, project, selectedRun, poll, lastFocus;
   let materials = [], frames = [], mediaKind = '', working = false, generation = 0;
   let originalBody = '', analysisView = false, filledRun = '', autoFillRun = '', sourceSignature = '';
+  const ocrSources = new WeakMap();
   const $ = q => dialog && dialog.querySelector(q);
   const n = (tag, value, cls) => { const e = document.createElement(tag); if (value != null) e.textContent = value; if (cls) e.className = cls; return e; };
   const button = (label, fn, cls) => { const b = n('button', label, cls); b.type = 'button'; b.onclick = fn; return b; };
@@ -25,7 +26,7 @@
     if (capturedOwner !== acct()) throw new Error('资料空间已切换，请重新打开窗口。');
     return data;
   }
-  async function guarded(fn) { if (working) return; working = true; const current = generation, buttons = dialog ? [...dialog.querySelectorAll('[data-run],[data-collect],[data-analyze],[data-wechat-search]')] : []; buttons.forEach(b => b.disabled = true); try { await fn(); } catch (e) { if (current === generation) notify(e.message, true); } finally { if (current === generation) working = false; buttons.filter(b => b.isConnected).forEach(b => b.disabled = false); } }
+  async function guarded(fn) { if (working) return; working = true; const current = generation, buttons = dialog ? [...dialog.querySelectorAll('[data-run],[data-collect],[data-analyze],[data-wechat-search],[data-ocr]')] : []; buttons.forEach(b => b.disabled = true); try { await fn(); } catch (e) { if (current === generation) notify(e.message, true); } finally { if (current === generation) working = false; buttons.filter(b => b.isConnected).forEach(b => b.disabled = false); } }
   function close() { generation++; clearTimeout(poll); if (dialog) { dialog.close(); dialog.remove(); dialog = null; } if (lastFocus && lastFocus.isConnected) lastFocus.focus(); }
   function open(prefill) {
     if (!window.SY || !acct()) return;
@@ -72,6 +73,10 @@
       notify(result.empty ? '微信返回无匹配结果。' : '找到 ' + (result.groupCount || 0) + ' 个匹配群聊，已带入 ' + result.count + ' 条可读取的匹配消息' + (urls.length ? '，其中的链接也已带入' : '') + '。');
     })); wxDirect.dataset.wechatSearch = ''; wxBody.append(wxDirect, n('p', '使用这台电脑已登录的微信，直接打开并搜索关键词。只读取可确认的匹配消息；未登录时会提示先进入微信。', 'growth-hint'));
     const wxResults = n('div'); wxResults.dataset.wechatResults = ''; wxBody.append(wxResults);
+    wxBody.append(button('共享微信窗口读取（兼容入口）', () => {
+      window.SYRemoteRequest = { keyword: value('wxDirectKeyword') }; close();
+      document.getElementById('syRemoteEntry')?.click();
+    }));
     const groupDetails = n('details'); groupDetails.append(n('summary', '只查某个群（选填）')); const groupBody = n('div'); groupDetails.append(groupBody);
     groupBody.append(field('群聊名', 'text', 'wxQuery', '输入要查找的群名'), button('查找群聊', () => guarded(async () => { const result = await api('/api/growth/wechat-groups', { query: value('wxQuery') }); const select = $('[data-groups]'); select.replaceChildren(option('选择实际查到的群聊', '')); result.groups.forEach(g => select.append(option(g.name, g.id))); notify('找到 ' + result.groups.length + ' 个群聊。'); })));
     const groups = n('select'); groups.dataset.groups = ''; groups.setAttribute('aria-label', '选择微信群聊'); groups.append(option('先查找群聊', '')); groupBody.append(groups, field('消息关键词', 'text', 'wxKeyword', '分享 / feishu / 爬楼'));
@@ -95,7 +100,45 @@
     state.runs.forEach(run => { const b = button(historyLabel(run), () => loadRun(run.id).catch(e => notify(e.message, true))); b.dataset.historyRun = run.id; host.append(b); });
     if (selectLatest && state.runs.length) showRun(state.runs[0]);
   }
-  function drawMaterials() { const host = $('[data-materials]'); if (!host) return; host.replaceChildren(); materials.forEach((m, i) => { const row = n('div', null, 'growth-material'); row.append(n('span', m.title + ' · ' + m.text.length + '字'), button('移除', () => { materials.splice(i, 1); drawMaterials(); })); host.append(row); }); if (frames.length) host.append(n('p', (mediaKind === 'video' ? '视频' : '图片') + ' · ' + frames.length + '张待分析画面'), button('移除画面', () => { frames = []; drawMaterials(); })); }
+  function drawMaterials() {
+    const host = $('[data-materials]'); if (!host) return; host.replaceChildren();
+    materials.forEach((m, i) => {
+      const row = n('div', null, 'growth-material'); row.append(n('span', m.title + ' · ' + m.text.length + '字'), button('移除', () => { if (!working) { materials.splice(i, 1); drawMaterials(); } }));
+      if (m.kind === 'frame-text') {
+        const detail = n('details'); detail.append(n('summary', '核对画面文字'), n('pre', m.text)); row.append(detail);
+        row.append(button('追加到正文', () => {
+          if (working) return;
+          const raw = analysisView ? originalBody : value('text');
+          $('[name=text]').value = [raw, m.text].filter(Boolean).join('\n\n');
+          originalBody = ''; analysisView = false; filledRun = ''; $('[data-body-info]').replaceChildren();
+          materials.splice(materials.indexOf(m), 1); drawMaterials(); notify('画面文字已追加到正文，请核对识别结果。');
+        }));
+      }
+      host.append(row);
+    });
+    if (frames.length) {
+      const previews = n('details'); previews.append(n('summary', '查看 ' + frames.length + ' 张采样画面'));
+      frames.forEach(f => { const img = n('img'); img.src = f.image; img.alt = (f.sourceName || '上传画面') + ' · ' + f.timestamp + ' 秒'; img.style.cssText = 'max-width:100%;max-height:240px'; previews.append(n('p', img.alt), img); });
+      const read = button('识别画面文字 / 屏幕字幕', () => guarded(readFrameText)); read.dataset.ocr = '';
+      host.append(previews, read, n('p', '本机识别采样画面中的可见文字，不需要 AI 密钥；不包含声音或完整视频字幕。', 'growth-hint'), button('移除画面', () => { if (!working) { frames = []; drawMaterials(); } }));
+    }
+  }
+  async function readFrameText() {
+    const current = generation, selected = frames.slice(); let added = 0;
+    for (const [i, frame] of selected.entries()) {
+      if (ocrSources.has(frame)) continue;
+      if (materials.length >= 12) throw new Error('本次最多12份正文资料；已识别的部分保留，请先移除不需要的资料。');
+      notify('正在本机识别画面 ' + (i + 1) + ' / ' + selected.length + '…');
+      const doc = await api('/api/growth/ocr-frame', { image: frame.image }); if (current !== generation) return;
+      const text = (doc.lines || []).map(line => line.text).filter(Boolean).join('\n').trim();
+      if (!text) continue;
+      if (text.length > 29000) throw new Error('这张画面文字过多，请分区域导入；前面已识别的部分保留。');
+      const title = (frame.sourceName || '上传画面') + ' · ' + frame.timestamp + '秒';
+      const material = { title: '画面文字 · ' + title, kind: 'frame-text', text: '来源：' + title + '\n仅采样画面的可见文字，可能有识别错误；不含音轨。\n\n' + text };
+      materials.push(material); ocrSources.set(frame, material); added++; drawMaterials();
+    }
+    notify(added ? '已带入 ' + added + ' 份画面文字。可展开核对、追加到正文；按问题分析仍需有效模型连接。' : '没有新增文字。画面可能没有清晰文字，或这些画面已经识别。');
+  }
   function renderWechat(result) {
     const host = $('[data-wechat-results]'); host.replaceChildren();
     if (result.groups && result.groups.length) { host.append(n('h4', '匹配群聊')); const list = n('ul'); result.groups.forEach(g => list.append(n('li', g.name))); host.append(list); }
@@ -103,7 +146,7 @@
     if (result.messages && result.messages.length) { const box = n('details'); box.append(n('summary', '匹配消息 · ' + result.messages.length)); result.messages.forEach(m => box.append(n('pre', m.text))); host.append(box); }
   }
   function once(el, event) { return new Promise((resolve, reject) => { const timer = setTimeout(() => done(new Error('媒体读取超时，请换一个文件重试。')), 20000); function done(err) { clearTimeout(timer); el.removeEventListener(event, ok); el.removeEventListener('error', fail); err ? reject(err) : resolve(); } const ok = () => done(), fail = () => done(new Error('浏览器无法解码此媒体，请换为 JPG、MP4 或 WebM。')); el.addEventListener(event, ok, { once: true }); el.addEventListener('error', fail, { once: true }); }); }
-  function jpeg(el) { const w = el.videoWidth || el.naturalWidth, h = el.videoHeight || el.naturalHeight; if (!w || !h) throw new Error('无法读取画面尺寸。'); const scale = Math.min(1, 1000 / w, 900 / h), canvas = document.createElement('canvas'); canvas.width = Math.round(w * scale); canvas.height = Math.round(h * scale); canvas.getContext('2d').drawImage(el, 0, 0, canvas.width, canvas.height); return canvas.toDataURL('image/jpeg', .72); }
+  function jpeg(el) { const w = el.videoWidth || el.naturalWidth, h = el.videoHeight || el.naturalHeight; if (!w || !h) throw new Error('无法读取画面尺寸。'); const canvas = document.createElement('canvas'); for (const max of [1700, 1000]) { const scale = Math.min(1, max / w, max * .9 / h); canvas.width = Math.round(w * scale); canvas.height = Math.round(h * scale); canvas.getContext('2d').drawImage(el, 0, 0, canvas.width, canvas.height); const image = canvas.toDataURL('image/jpeg', .8); if (image.length <= 1000000) return image; } throw new Error('采样画面过大，请裁剪后重试。'); }
   async function mediaFrames(file) {
     const url = URL.createObjectURL(file), isVideo = file.type.startsWith('video/'), element = document.createElement(isVideo ? 'video' : 'img');
     try { if (isVideo) { element.muted = true; element.preload = 'auto'; } const ready = once(element, isVideo ? 'loadeddata' : 'load'); element.src = url; await ready;
@@ -118,7 +161,7 @@
     for (const file of files.slice(0, 12)) {
       if (materials.length >= 12) throw new Error('本次最多导入12份资料，请分批处理。');
       notify('正在读取 ' + file.name + '…');
-      if (file.type.startsWith('image/') || file.type.startsWith('video/')) { if (file.size > 100 * 1024 * 1024) throw new Error('媒体超过100 MB，请先截取需要解析的片段。'); const next = await mediaFrames(file); if (current !== generation) return; if (frames.length + next.length > 6) throw new Error('本次最多6张画面，请先移除已选画面。'); frames.push(...next); mediaKind = file.type.startsWith('video/') || mediaKind === 'video' ? 'video' : 'image'; }
+      if (file.type.startsWith('image/') || file.type.startsWith('video/')) { if (file.size > 100 * 1024 * 1024) throw new Error('媒体超过100 MB，请先截取需要解析的片段。'); const next = await mediaFrames(file); if (current !== generation) return; if (frames.length + next.length > 6) throw new Error('本次最多6张画面，请先移除已选画面。'); frames.push(...next.map(frame => ({ ...frame, sourceName: file.name }))); mediaKind = file.type.startsWith('video/') || mediaKind === 'video' ? 'video' : 'image'; }
       else { if (file.size > 5 * 1024 * 1024) throw new Error('文档每份最多5 MB，请按章节拆分。'); let doc;
         if (/\.(txt|md|srt|vtt)$/i.test(file.name)) doc = { text: await file.text() };
         else { const bytes = new Uint8Array(await file.arrayBuffer()); let binary = ''; for (let i = 0; i < bytes.length; i += 32768) binary += String.fromCharCode.apply(null, bytes.subarray(i, i + 32768)); doc = await api('/api/extract-file', { name: file.name, content: btoa(binary) }); }

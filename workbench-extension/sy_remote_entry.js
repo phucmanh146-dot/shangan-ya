@@ -53,7 +53,7 @@
     retry = node('button', '重新连接'); retry.onclick = connect;
     bar.append(node('strong', '上岸鸭 · 本机远程窗口'), link, retry, close);
     status = node('p', '正在连接…'); status.setAttribute('role', 'status');
-    frame = node('iframe'); frame.title = '本机远程桌面'; frame.hidden = true; frame.style.cssText = 'width:100%;height:calc(100% - 92px);border:0;border-radius:12px';
+    frame = node('iframe'); frame.title = '本机远程桌面'; frame.allow = 'display-capture'; frame.hidden = true; frame.style.cssText = 'width:100%;height:calc(100% - 92px);border:0;border-radius:12px';
     dialog.append(bar, status, frame); document.body.append(dialog);
     window.addEventListener('message', receive); dialog.addEventListener('close', stop); dialog.showModal(); connect();
   };
