@@ -14,6 +14,9 @@ import team_orchestrator as team
 import team_dispatch as dispatch
 import team_handoff as handoff
 import team_rescue
+import artifact_store
+import team_inputs
+import team_revision
 
 ROOT = Path(__file__).resolve().parent
 try:
@@ -76,6 +79,14 @@ class Handler(LegacyHandler):
                 if not identifier:
                     raise ValueError('请提供待复核项目的 id')
                 return self.send_json(handoff.review_request(team.state(identifier)))
+            if path == '/api/agent/team/artifact':
+                query = parse_qs(parsed.query)
+                p = team.state(query.get('id', [''])[0])
+                return self.send_json(artifact_store.read(p, query.get('artifact_id', [''])[0], int(query.get('artifact_version', ['0'])[0])))
+            if path == '/api/agent/team/trace':
+                import team_ai
+                query = parse_qs(parsed.query)
+                return self.send_json(team_ai.read_trace(query.get('id',[''])[0],query.get('run_id',[''])[0]))
             if path == '/api/agent/state':
                 return self.send_json(agent.state())
             if path == '/api/agent/run':
@@ -101,7 +112,7 @@ class Handler(LegacyHandler):
             if path.startswith('/api/agent/'):
                 return self.send_json({'error': '接口不存在'}, 404)
             if LegacyHandler is SimpleHTTPRequestHandler:
-                if self.path.split('?')[0] not in ('/planner.html', '/planner.js', '/planner-refinements.js', '/learning-agent.html', '/learning-agent.js', '/learning-agent.css', '/learning-agent-entry.js', '/team.html', '/team.js', '/team-handoff.js'):
+                if self.path.split('?')[0] not in ('/planner.html', '/planner.js', '/planner-refinements.js', '/learning-agent.html', '/learning-agent.js', '/learning-agent.css', '/learning-agent-entry.js', '/team.html', '/team.js', '/team-handoff.js', '/team-inputs.js'):
                     return self.send_json({'error': '文件不可读取'}, 404)
             return super().do_GET()
         except ValueError as exc:
@@ -158,6 +169,9 @@ class Handler(LegacyHandler):
                             'dispatch':dispatch.dispatch,'brief':dispatch.brief,
                             'handoff-check':handoff.check,'generate-b':handoff.generate,
                             'review-receive':handoff.receive_review,'review-run':handoff.invoke_review,
+                            'context':team_inputs.save_context,'member':team_inputs.save_member,
+                            'capability':team_inputs.record_capability,'artifact-import':artifact_store.import_file,
+                            'advance-review':team_revision.advance,
                             'rescue-start':team_rescue.start,'rescue-sync':team_rescue.sync}
                 if operation not in handlers:
                     return self.send_json({'error':'团队接口不存在'},404)
@@ -202,11 +216,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=8901)
     parser.add_argument('--with-b-planner', action='store_true', help='Bind the delivered deterministic B planner; A remains independently configured')
+    parser.add_argument('--with-team-ai', action='store_true', help='Bind actual stored-material diagnosis and review to the configured model, plus B remaining-work planning')
     parser.add_argument('--with-local-gateway', action='store_true', help='Explicitly connect and test the existing local Hermes gateway')
     parser.add_argument('--open-team', action='store_true', help='Open the team page after the server socket is ready')
     args = parser.parse_args()
     if args.with_b_planner:
         dispatch.PLANNER = handoff.planner
+    if args.with_team_ai:
+        import team_ai
+        team_ai.bind()
     server = ThreadingHTTPServer(('127.0.0.1', args.port), Handler)
     if args.with_local_gateway:
         from hermes_gateway import connect_local_gateway

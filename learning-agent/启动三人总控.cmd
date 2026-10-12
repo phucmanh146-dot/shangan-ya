@@ -7,5 +7,5 @@ if errorlevel 1 (
   pause
   exit /b 1
 )
-python learning_agent_server.py --port 8921 --with-b-planner --with-local-gateway --open-team
+python learning_agent_server.py --port 8922 --with-team-ai --with-local-gateway --open-team
 pause

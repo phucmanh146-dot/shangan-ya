@@ -34,7 +34,11 @@ def dashboard(p):
         stage, label = 'review', '有成果待验收'
     elif counts['blocked']:
         stage, label = 'rescue', '有任务卡住，先补充卡点证据'
-    elif tasks and counts['completed'] == len(tasks):
+    elif p.get('artifact_storage_required') and any(t['status']=='completed' and t.get('external_review') and
+          t['external_review']['packet']['diagnosis_version']==p['diagnosis']['diagnosis_version'] and
+          t['external_review']['review_id'] not in p.get('applied_review_ids', []) for t in tasks):
+        stage, label = 'followup', '成果已人工确认；点击任务上的更新按钮预览剩余问题'
+    elif (tasks and counts['completed'] == len(tasks)) or (not tasks and p['diagnosis'].get('resolution_confirmed')):
         stage, label = 'done', '当前计划全部验收完成；比赛交付仍需单独核对'
     else:
         stage, label = 'execute', '按已采用计划推进，变化时预览调整'
@@ -98,4 +102,7 @@ def dispatch(data):
         latest['dispatch'].update(status='failed', stage=stage, finished_at=team.agent.now(),
                                   error_code=type(exc).__name__,
                                   message=stage + ' 未完成；已保存的诊断与执行成果保留，请核对交付格式、连接与版本后继续')
+        from rescue_service import RescueError
+        if isinstance(exc, RescueError) and exc.code == 'CONFIG_REQUIRED':
+            latest['dispatch'].update(error_code=exc.code, message='请先在学习导航页的 AI 连接中配置模型；没有使用示例替代实际诊断')
         return team.commit(latest, latest['version'], '总调度未完成：' + stage)

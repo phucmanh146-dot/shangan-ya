@@ -13,12 +13,14 @@ def generate(diagnosis, context):
     members = {m['member_id']: m for m in diagnosis.get('member_profiles', [])}
     sources = {s['source_id'] for s in diagnosis.get('sources', [])}
     gaps = diagnosis.get('gaps', [])
-    if not gaps or len(gaps) > 100 or len({g['gap_id'] for g in gaps}) != len(gaps):
+    if (not gaps and not diagnosis.get('resolution_confirmed')) or len(gaps) > 100 or len({g['gap_id'] for g in gaps}) != len(gaps):
         raise ValueError('需提供 1 至 100 个不重复的缺口')
     tasks, paths, pending = [], [], []
     assumptions = ['规则生成草案，未调用模型或搜索；负责人及估时需成员确认。',
                    '仅有已验证能力才跳过学习；前置成果验收前，下游保持阻塞。']
     for gap in gaps:
+        if gap.get('status') == 'closed':
+            continue
         key = gap['gap_id']
         refs = gap.get('source_refs', [])
         owners = gap.get('related_member_ids', [])
@@ -28,6 +30,11 @@ def generate(diagnosis, context):
             continue
         previous = []
         for owner in owners:
+            if 'capability_evidence' in members[owner]:
+                from personal_guidance import prerequisites
+                added, learning, heads = prerequisites(gap, owner, members[owner], diagnosis, context)
+                tasks.extend(added); paths.extend(learning); previous.extend(heads)
+                continue
             verified = set(members[owner].get('verified_capabilities', []))
             for i, skill in enumerate(gap.get('required_capabilities', [])):
                 if skill in verified:
@@ -55,6 +62,13 @@ def generate(diagnosis, context):
             depends_on=dependencies,deadline=gap.get('deadline',context.get('deadline','待成员确认')),
             source_refs=refs,status='blocked' if dependencies else 'candidate',kind='production',
             estimate_basis=gap.get('estimate_basis','待校准假设：包含制作、修改与检查')))
+        if gap.get('micro_steps'):
+            tasks[-1]['micro_steps'] = deepcopy(gap['micro_steps'])
+        tasks[-1]['capability_requirements'] = [
+            {'member_id':owner,'capability':skill} for owner in owners
+            if 'capability_evidence' in members[owner] for skill in gap.get('required_capabilities', [])]
+        if gap.get('manual_hold'):
+            tasks[-1]['external_dependencies'] = ['当前复核判断未知；需人工核对：'+gap['gap_id']]
     ids={t['task_id'] for t in tasks}
     # Missing prerequisite is a visible external blocker, never silently removed.
     for t in tasks:
@@ -71,6 +85,8 @@ def generate(diagnosis, context):
           'milestones':[{'task_id':t['task_id'],'deadline':t['deadline'],'deliverable':t['deliverable']} for t in tasks if t['kind']=='production']}
     # Make each learning action refer to the concrete target and supplied material locator.
     for path in paths:
+        if path.get('personalized'):
+            continue
         for resource in path['resources']:
             label=resource.get('title') or resource.get('url') or 'A 提供的资料'
             locator=resource.get('section') or resource.get('locator') or '需确认相关章节'

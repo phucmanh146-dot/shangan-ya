@@ -70,7 +70,7 @@ def state(identifier=None):
             return value
         return {'projects': [view(json.loads(x['body'])) for x in c.execute('SELECT body FROM team_projects ORDER BY rowid DESC LIMIT 100')]}
 
-def commit(project, expected, action):
+def commit(project, expected, action, write=None):
     with agent.WRITE_LOCK, connection() as c:
         init(c)
         c.execute('BEGIN IMMEDIATE')
@@ -84,6 +84,8 @@ def commit(project, expected, action):
         project.pop('dispatch_status', None)
         project['version'] = current + 1
         project['updated_at'] = agent.now()
+        if write is not None:
+            write(c)
         body = agent.dump(project)
         c.execute('INSERT OR REPLACE INTO team_projects VALUES(?,?,?)', (project['project_id'], current+1, body))
         c.execute('INSERT INTO team_history VALUES(?,?,?,?,?)', (project['project_id'], current+1, body, action, agent.now()))
@@ -170,6 +172,23 @@ def diagnosis(data):
     p = current(data)
     d = copy.deepcopy(required(data,'diagnosis',dict))
     validate_diagnosis(d)
+    if p.get('artifact_storage_required'):
+        import artifact_store
+        from personal_guidance import skill_status
+        known_members = {m['member_id']:m for m in p.get('member_task_briefs', [])}
+        for member in d['member_profiles']:
+            if member['member_id'] not in known_members:
+                raise ValueError('先登记本人任务；诊断不能新增未确认成员')
+            actual = known_members[member['member_id']]
+            member['capability_evidence'] = copy.deepcopy(actual['capability_evidence'])
+            member['verified_capabilities'] = sorted({r['capability'] for r in actual['capability_evidence'] if skill_status(actual,r['capability'])[0]=='verified'})
+        for gap in d['gaps']:
+            if gap.get('history_only'):
+                continue
+            ref = required(gap,'current_artifact',dict)
+            artifact_store.references(p, gap.get('evidence_refs'), (ref['artifact_id'], ref['artifact_version']))
+            if gap.get('status') != 'closed':
+                validate_micro_steps({'micro_steps':required(gap,'micro_steps',list)},d)
     if p['diagnosis'] and d['diagnosis_version'] <= p['diagnosis']['diagnosis_version']:
         raise Conflict('诊断版本必须递增')
     if p['plan'] and not p.get('plan_diagnosis') and p['diagnosis'] and p['plan']['based_on_diagnosis_version'] == p['diagnosis']['diagnosis_version']:
@@ -311,12 +330,21 @@ def feedback(data):
             raise ValueError('前置任务尚未验收完成')
         if t.get('external_dependencies'):
             raise ValueError('外部前置成果尚未交付，不能开始任务')
+        if t.get('capability_requirements'):
+            from personal_guidance import skill_status
+            members = {m['member_id']:m for m in p['diagnosis']['member_profiles']}
+            for needed in t['capability_requirements']:
+                if skill_status(members[needed['member_id']], needed['capability'])[0] != 'verified':
+                    raise ValueError('先保存当前能力的实际试做结果并更新诊断，再开始制作：'+needed['capability'])
         t['status']='in_progress'
     elif action=='submit':
         if t['status']!='in_progress':
             raise ValueError('请先开始任务')
         record['artifact_id']=required(data,'artifact_id')
         record['artifact_version']=integer(data,'artifact_version',1)
+        if p.get('artifact_storage_required'):
+            import artifact_store
+            artifact_store.read(p, record['artifact_id'], record['artifact_version'])
         record['actual_minutes']=integer(data,'actual_minutes')
         record['evidence']=required(data,'evidence')
         t['submission']=copy.deepcopy(record)
@@ -328,6 +356,9 @@ def feedback(data):
         record['reviewer_id']=required(data,'reviewer_id')
         record['artifact_id']=t['submission']['artifact_id']
         record['artifact_version']=t['submission']['artifact_version']
+        if p.get('artifact_storage_required'):
+            import artifact_store
+            artifact_store.read(p, record['artifact_id'], record['artifact_version'])
         if record['reviewer_id'] not in {m['member_id'] for m in p['diagnosis']['member_profiles']}:
             raise ValueError('验收成员不在项目中')
         record['evidence']=t['submission']['evidence']

@@ -21,6 +21,7 @@ function gapView(box,g){
  fact(box,'核验状态',g.verification_status);sourceView(box,g.source_refs);
 }
 function guidanceView(box,t){
+ if(typeof resourceView==='function')resourceView(box,t.resource_options||[]);
  if(!t.micro_steps?.length){const warning=el('p','待 B 补充精细指导：材料版本、操作位置、具体动作、原因、输出、自检与卡点处理。');warning.className='warning-box';box.append(warning);const steps=el('ol','');for(const step of t.steps)steps.append(el('li',step));box.append(steps);return;}
  box.append(el('p','以下为 B 提交的精细指导；格式校验不代表内容正确，请核对来源与实际成果。'));
  const steps=el('ol','');steps.className='micro-actions';
@@ -29,9 +30,10 @@ function guidanceView(box,t){
 }
 function diagnosisView(){
  const box=$('diagnosis');box.replaceChildren();const d=project.diagnosis;if(!d){box.append(el('p','等待 A 的诊断'));return;}
- box.append(el('p','诊断版本 '+d.diagnosis_version),el('p','材料位置与版本由 A 提供；总控校验引用关系，尚未自动读取文件核实。'));
+ box.append(el('p','诊断版本 '+d.diagnosis_version),el('p',project.artifact_storage_required?'材料已保存并读取；引文与实际原文位置核对。语义判断仍需实际试做及人工确认。':'材料位置与版本由 A 提供；总控校验引用关系，尚未自动读取文件核实。'));
  for(const g of d.gaps){const card=el('article','');card.className='gap-card';card.append(el('h3',g.gap_id+' · '+g.target_result));gapView(card,g);box.append(card);}
  for(const u of d.unknowns)box.append(el('p','待确认：'+(typeof u==='string'?u:JSON.stringify(u))));showJSON('diagnosis',d);
+ if(typeof traceView==='function')traceView(box,d.model_trace);
 }
 function proposalView(){
  const box=$('proposal');box.replaceChildren();const p=project.proposal;if(!p){box.append(el('p',project.plan?'已采用计划 v'+project.plan.plan_version+'，任务见下方。':'等待 B 的计划'));return;}
@@ -39,6 +41,7 @@ function proposalView(){
  const fine=p.plan.tasks.filter(t=>t.micro_steps?.length).length;box.append(el('p',`精细指导已提供 ${fine}/${p.plan.tasks.length} 项；这不是获奖评分或完成比例。`));
  for(const t of p.plan.tasks){const card=el('article','');card.className='task';card.append(el('h3',t.title),el('p','交付：'+t.deliverable),el('p','验收：'+t.acceptance_criteria.join('；')),el('p','预计 '+t.estimate_minutes_range.join('–')+' 分钟 / 截止：'+t.deadline));guidanceView(card,t);box.append(card);}
  for(const note of p.plan.unscheduled)box.append(el('p','未排入日程：'+(typeof note==='string'?note:JSON.stringify(note))));showJSON('proposal',p);
+ for(const note of p.plan.assumptions)box.append(el('p',note));
 }
 
 async function request(path,data){const response=await fetch('/api/agent/team'+path,data?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}:{});const value=await response.json();if(!response.ok)throw new Error(value.error||'服务不可用');return value;}
@@ -49,7 +52,7 @@ async function mutate(path,data){const p=await request('/'+path,{...context(),..
 async function safe(fn){try{await fn();}catch(e){$('message').textContent=e.message;}}
 function render(){
  $('project').hidden=false;$('heading').textContent=project.goal;
- $('meta').textContent=`${project.mode==='demo'?'Demo · 示例数据':'真实项目 · 外部交付'} / 版本 ${project.version} / 真实模型与搜索尚未经总控联调验收`;
+ $('meta').textContent=`${project.mode==='demo'?'Demo · 示例数据':'真实项目 · 竞赛与科研'} / 版本 ${project.version} / 连接与格式通过须继续核对内容和真实效果`;
  $('demo').hidden=project.mode!=='demo'||!!project.diagnosis;
  $('stale').textContent=project.plan_stale?'诊断已更新，现有计划已过期。请 B 更新后再执行。':'';
  diagnosisView();proposalView();periodView();dispatchView();
@@ -58,20 +61,23 @@ function render(){
  for(const t of project.plan?.tasks||[]){
   const box=el('article','');box.className='task';box.dataset.taskId=t.task_id;box.append(el('h3',t.title+' · '+labels[t.status]),el('p','负责人：'+t.owner_ids.join('、')+' / 差距：'+t.gap_ids.join('、')),el('p','产物：'+t.deliverable),el('p','验收：'+t.acceptance_criteria.join('；')),el('p','预计：'+t.estimate_minutes_range.join('–')+' 分钟 / 截止：'+t.deadline));
   guidanceView(box,t);
+  if(t.external_dependencies?.length)fact(box,'等待确认 / 外部前置',t.external_dependencies.join('；'));
   const basis=el('details','');basis.append(el('summary','查看这项任务的差距依据'));for(const id of t.gap_ids){const g=project.diagnosis.gaps.find(x=>x.gap_id===id);if(g){basis.append(el('h4',g.gap_id));gapView(basis,g);}}box.append(basis);
   if(t.submission){fact(box,'已提交成果',t.submission.artifact_id+' · v'+t.submission.artifact_version);fact(box,'成果证据',t.submission.evidence);fact(box,'实际投入',t.submission.actual_minutes+' 分钟');}
   if(t.review){fact(box,'人工验收意见',t.review.note);for(const r of t.review.criterion_results||[])fact(box,'已核对 '+r.criterion,r.evidence);}
-  if(t.external_review){const packet=t.external_review.packet;fact(box,'A 的成果复核',packet.note);for(const r of packet.criterion_results)fact(box,(r.passed?'通过：':'未通过：')+r.criterion,r.evidence);for(const g of packet.gap_results)fact(box,'差距复核 '+g.gap_id+' · '+g.status,g.evidence+(g.remaining_issue?'；仍需：'+g.remaining_issue:''));}
+  if(t.external_review){const packet=t.external_review.packet;fact(box,'A 的成果复核',packet.note);for(const r of packet.criterion_results)fact(box,(r.passed?'通过：':'未通过：')+r.criterion,r.evidence);for(const g of packet.gap_results)fact(box,'差距复核 '+g.gap_id+' · '+g.status,g.evidence+(g.remaining_issue?'；仍需：'+g.remaining_issue:''));if(typeof traceView==='function')traceView(box,packet.model_trace);}
   const details=el('details','');details.append(el('summary','查看完整任务、来源与证据'),el('pre',JSON.stringify(t,null,2)));box.append(details);
   const choices=t.status==='pending_review'?[['approve','验收通过'],['reject','退回修改']]:t.status==='completed'?[]:t.status==='in_progress'?[['submit','提交成果'],['block','遇到卡点']]:[['start','开始任务'],['block','遇到卡点']];
   choices.push(['change','临时安排反馈']);if(!t.locked)choices.push(['lock','锁定任务']);
   for(const [kind,label]of choices){const button=el('button',label);button.disabled=project.plan_stale;button.onclick=()=>openFeedback(t,kind,label);box.append(button);}
+  if(t.status==='completed'&&t.external_review&&t.external_review.packet.diagnosis_version===project.diagnosis.diagnosis_version&&t.external_review.packet.plan_version===project.plan.plan_version&&!project.applied_review_ids?.includes(t.external_review.review_id)){const button=el('button','确认复核后更新剩余计划');button.onclick=()=>safe(()=>mutate('advance-review',{review_id:t.external_review.review_id}));box.append(button);}
   $('tasks').append(box);
  }
  if(!project.plan)$('tasks').append(el('p','采用计划后显示任务。'));
  $('feedback').replaceChildren(...project.feedback.map(f=>el('p',`${f.task_id} · ${f.action} · ${f.note}${f.evidence?' / 证据：'+f.evidence:''}`)));
  $('history').replaceChildren(...(project.history||[]).map(h=>el('p',`v${h.version} · ${h.action} · ${h.created}`)));
  if(typeof handoffView==='function')handoffView();
+ if(typeof inputView==='function')inputView();
 }
 function openFeedback(task,kind,label){
  action={task_id:task.task_id,action:kind,expected_plan_version:project.plan.plan_version,expected_version:project.version};$('feedback-form').reset();$('feedback-title').textContent=label+' · '+task.title;$('submit-fields').hidden=kind!=='submit';$('review-fields').hidden=!['approve','reject'].includes(kind);
