@@ -48,11 +48,16 @@ def trace(project, body):
 def call_json(p, stage, payload, validator):
     if not rescue.public_config()['configured']:
         raise rescue.RescueError('请先在AI连接中配置模型；未生成示例替代实际诊断', 'CONFIG_REQUIRED', 409)
-    content = team.agent.dump(payload)
+    root = 'gaps、unknowns、understanding_checks' if stage == 'diagnosis' else 'note、criterion_results、gap_results'
+    request_payload = {'output_instructions': '只返回一个合法JSON对象，根字段必须是'+root+
+        '。output_contract只说明这些根字段的格式，不是返回字段。不得返回输入的documents、member_profiles或output_contract容器。'
+        '不加Markdown代码围栏、解释前缀或后缀。current_locator只填一个实际位置；多个引用放evidence_refs列表。'
+        'gap_type选一个类别；保留未知项；不得自行确认能力或关闭差距。'+SYSTEM, **copy.deepcopy(payload)}
+    content = team.agent.dump(request_payload)
     cfg = rescue.config_snapshot()
     run = {'run_id':uuid.uuid4().hex,'stage':stage,'project_version':p['version'],
            'input_sha256':hashlib.sha256(content.encode('utf-8')).hexdigest(),
-           'input':copy.deepcopy(payload),
+           'input':copy.deepcopy(request_payload),
            'model':cfg['model'],'started':team.agent.now(),'status':'running',
            'attempts':[],'semantic_independently_verified':False}
     trace(p['project_id'], run)
@@ -72,8 +77,12 @@ def call_json(p, stage, payload, validator):
                 return result, {k:run[k] for k in ('run_id','model','input_sha256','status','semantic_independently_verified')}
             except (ValueError, KeyError, TypeError) as exc:
                 last = exc
-                attempt.update(validated=False,error_code=type(exc).__name__)
-                messages.append({'role':'user','content':'格式或原文引用未通过，请基于同一材料修正，不增加未提供事实。返回完整JSON。'})
+                attempt.update(validated=False,error_code=type(exc).__name__,validation_error=str(exc)[:700])
+                messages.append({'role':'assistant','content':reply})
+                # Some compatible gateways consume only the final user message.
+                # Repeat the bounded original input and explicit contract, not a vague retry.
+                messages.append({'role':'user','content':team.agent.dump({**request_payload,
+                    'validation_feedback':attempt['validation_error']+'；基于同一原文修正，返回完整根对象，不增加未提供事实。'})})
         raise ValueError('模型结果或原文引用两次校验未通过；已保存材料与失败记录') from last
     except Exception as exc:
         run.update(status='failed',finished=team.agent.now(),error_code=type(exc).__name__)
@@ -132,7 +141,7 @@ def researcher(p):
                 raise ValueError('诊断需提供基于实际材料的细操作候选')
             for row in g['micro_steps']:
                 row.setdefault('source_refs', g.get('source_refs', []))
-            g.setdefault('deadline', ctx.get('deadline') or '待成员确认')
+            g['deadline'] = ctx.get('deadline') or '待成员确认'
         d = {'diagnosis_version':version,'requirements':ctx['acceptance_criteria'],
              'sources':sources,'artifact_status':catalog,'artifact_versions':catalog,
              'member_profiles':profiles,'gaps':gaps,'resource_candidates':courses,

@@ -28,15 +28,20 @@ def run(base, stage, project_id=None, task_id=None):
     if not health['ai']['configured']:
         raise ValueError('实际服务没有模型配置；探针不使用假模型替代')
     if stage=='diagnose':
-        p=request('/api/agent/team/create',{'goal':'真实模型工程探针（人工构造输入，不是用户效果）','mode':'live'})
-        p=post(p,'context',project_context={'project_type':'research','event_name':'工程核验，无赛事资格或官方规则含义',
+        if project_id:
+            p=request('/api/agent/team?id='+project_id)
+            if p['goal']!='真实模型工程探针（人工构造输入，不是用户效果）':
+                raise ValueError('此脚本不能重新诊断真实用户项目')
+        else:
+            p=request('/api/agent/team/create',{'goal':'真实模型工程探针（人工构造输入，不是用户效果）','mode':'live'})
+            p=post(p,'context',project_context={'project_type':'research','event_name':'工程核验，无赛事资格或官方规则含义',
             'target_result':'修正统计说明并解释有效分母','acceptance_criteria':['总记录3、有效2、缺失1；0为有效值，缺失不计入均值分母；均值2.5；能回查CSV行'],'deadline':''})
-        p=post(p,'member',member={'member_id':'probe-member','name':'工程核验者（非真实团队成员）',
+            p=post(p,'member',member={'member_id':'probe-member','name':'工程核验者（非真实团队成员）',
             'owned_task':'在给定报告中修正均值并写明缺失与0的口径','understanding':'按CSV实际记录核对分母，缺失与0分开',
             'tools':'Python和文本编辑器','self_reported_capabilities':['文本编辑','基础算术']})
-        p=upload(p,'probe-report.txt','人工工程材料\n记录3条，当前平均值=5/3=1.67。\n未说明有效分母，缺失与0尚未区分。','probe-report')
-        p=upload(p,'probe-data.csv','id,score\nr1,5\nr2,\nr3,0\n','probe-data')
-        p=upload(p,'probe-criteria.txt','人工工程判据，不是官方赛事规则。\n缺失不计入均值分母，0为有效记录。\n正确口径：总记录3，有效2，缺失1，均值2.5；解释原因并回查CSV行。','probe-criteria',kind='reference')
+            p=upload(p,'probe-report.txt','人工工程材料\n记录3条，当前平均值=5/3=1.67。\n未说明有效分母，缺失与0尚未区分。','probe-report')
+            p=upload(p,'probe-data.csv','id,score\nr1,5\nr2,\nr3,0\n','probe-data')
+            p=upload(p,'probe-criteria.txt','人工工程判据，不是官方赛事规则。\n缺失不计入均值分母，0为有效记录。\n正确口径：总记录3，有效2，缺失1，均值2.5；解释原因并回查CSV行。','probe-criteria',kind='reference')
         p=post(p,'dispatch')
     else:
         if not project_id or not task_id:

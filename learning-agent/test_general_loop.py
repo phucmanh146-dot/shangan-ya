@@ -264,6 +264,9 @@ class GeneralLoopTests(unittest.TestCase):
         with patch.object(ai.rescue,'public_config',return_value={'configured':True}),patch.object(ai.rescue,'config_snapshot',return_value={'model':'controlled'}),patch.object(ai.rescue,'complete',return_value=json.dumps(value)) as model:
             with self.assertRaisesRegex(ValueError,'两次'):ai.researcher(self.p)
         self.assertEqual(model.call_count,2)
+        retry=json.loads(model.call_args.args[0][-1]['content'])
+        self.assertIn('output_instructions',retry);self.assertIn('validation_feedback',retry)
+        self.assertEqual(retry['documents'][0]['units'][0]['text'],'人数=3；有效分母未知')
         with team.connection() as c:run=json.loads(c.execute('SELECT body FROM team_ai_runs').fetchone()[0])
         self.assertEqual(run['status'],'failed');self.assertEqual(len(run['attempts']),2);self.assertEqual(run['input']['project_context']['deadline'],'')
     def test_reviewer_reads_actual_newer_bytes_and_remaining_actions(self):
@@ -277,10 +280,12 @@ class GeneralLoopTests(unittest.TestCase):
         for kind in ('competition','hackathon','business','research'):
             self.p=team.create({'goal':'类别'+kind,'mode':'live'});self.setup_inputs(kind)
             value=diagnosis_reply(self.p)
+            value['gaps'][0]['deadline']='2099-01-01'
             with patch.object(ai.rescue,'public_config',return_value={'configured':True}),patch.object(ai.rescue,'config_snapshot',return_value={'model':'controlled'}),patch.object(ai.rescue,'complete',return_value=json.dumps(value)) as model:
-                ai.researcher(self.p)
+                d=ai.researcher(self.p)
             payload=json.loads(model.call_args.args[0][1]['content'])
             self.assertEqual(payload['project_context']['project_type'],kind);self.assertEqual(payload['project_context']['deadline'],'')
+            self.assertEqual(d['gaps'][0]['deadline'],'待成员确认')
 
 
 class GeneralHTTPTests(unittest.TestCase):
