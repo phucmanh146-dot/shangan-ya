@@ -104,6 +104,62 @@ class PipelineTests(unittest.TestCase):
         with patch.object(rescue, 'complete', side_effect=[json.dumps(DIAG), json.dumps({'tasks': [dict(TASK, minutes=100)]})]):
             self.assertEqual(await_run('qa', self.start())['status'], 'failed')
 
+    def test_all_links_are_attempted_and_read_only_never_uses_model(self):
+        def read(url):
+            if url.endswith('/bad'):
+                raise ValueError('登录后才能读取')
+            return {'title': url, 'text': '可读取的资料正文。'}
+        with patch.object(flow, 'read_url', side_effect=read) as reader, patch.object(rescue, 'complete') as model:
+            identifier = self.start(materials=[], links='分享 https://example.org/bad。还有 [正文](https://example.org/good) https://example.org/good', readOnly=True)
+            result = await_run('qa', identifier)
+        self.assertEqual(result['status'], 'partial')
+        self.assertEqual(reader.call_count, 2)
+        self.assertEqual(result['collection'], {'total': 2, 'read': 1, 'unread': 1})
+        self.assertEqual(result['sources'][0]['id'], 'source-2')
+        self.assertEqual(result['sourceResults'][0]['status'], 'failed')
+        model.assert_not_called()
+        with patch.object(flow, 'read_url', return_value={'title': '已恢复', 'text': '补齐的正文。'}) as retry_reader:
+            flow.retry({'account': 'qa', 'id': identifier, 'readOnly': True})
+            retried = await_run('qa', identifier)
+        self.assertEqual(retried['status'], 'collected')
+        self.assertEqual(retry_reader.call_args.args[0], 'https://example.org/bad')
+        self.assertEqual(retry_reader.call_count, 1)
+        self.assertEqual(len(retried['sources']), 2)
+
+    def test_video_preview_is_saved_but_not_treated_as_transcript(self):
+        with patch.object(flow, 'read_url', return_value={'title': '视频', 'text': '这只是简介', 'thin': True, 'note': '没有公开字幕'}), patch.object(rescue, 'complete') as model:
+            result = await_run('qa', self.start(materials=[], links='https://example.org/video', readOnly=True))
+        self.assertEqual(result['status'], 'partial')
+        self.assertEqual(result['sources'], [])
+        self.assertEqual(result['sourceResults'][0]['previewText'], '这只是简介')
+        self.assertEqual(result['sourceResults'][0]['status'], 'partial')
+        model.assert_not_called()
+
+    def test_continue_uses_saved_content_without_repeating_failed_links(self):
+        with patch.object(flow, 'read_url', side_effect=ValueError('受限')):
+            identifier = self.start(links='https://example.org/restricted', readOnly=True)
+            await_run('qa', identifier)
+        with patch.object(flow, 'read_url') as reader, patch.object(rescue, 'complete', side_effect=[json.dumps(DIAG), json.dumps({'tasks': [TASK]})]):
+            flow.retry({'account': 'qa', 'id': identifier, 'readOnly': False, 'retrySources': False})
+            result = await_run('qa', identifier)
+        reader.assert_not_called()
+        self.assertEqual(result['status'], 'succeeded')
+        self.assertEqual(result['collection']['unread'], 1)
+
+    def test_batch_larger_than_twelve_links_and_single_source_retry(self):
+        urls = '\n'.join('https://example.org/item/' + str(i) for i in range(15))
+        with patch.object(flow, 'read_url', side_effect=ValueError('暂时不可读')):
+            identifier = self.start(materials=[], links=urls, readOnly=True)
+            result = await_run('qa', identifier)
+        self.assertEqual(len(result['sourceResults']), 15)
+        with patch.object(flow, 'read_url', return_value={'title': '一条', 'text': '恢复的正文'}) as reader:
+            flow.retry({'account': 'qa', 'id': identifier, 'sourceId': 'source-5', 'readOnly': True})
+            result = await_run('qa', identifier)
+        self.assertEqual(reader.call_count, 1)
+        self.assertEqual(result['collection']['read'], 1)
+        with self.assertRaises(ValueError):
+            flow.retry({'account': 'qa', 'id': identifier, 'sourceId': 'unknown'})
+
 if __name__ == '__main__':
     try:
         result = unittest.main(exit=False).result

@@ -24,7 +24,7 @@
     if (capturedOwner !== acct()) throw new Error('资料空间已切换，请重新打开窗口。');
     return data;
   }
-  async function guarded(fn) { if (working) return; working = true; const current = generation, b = $('[data-run]'); if (b) b.disabled = true; try { await fn(); } catch (e) { if (current === generation) notify(e.message, true); } finally { if (current === generation) working = false; if (b && b.isConnected) b.disabled = false; } }
+  async function guarded(fn) { if (working) return; working = true; const current = generation, buttons = dialog ? [...dialog.querySelectorAll('[data-run],[data-collect]')] : []; buttons.forEach(b => b.disabled = true); try { await fn(); } catch (e) { if (current === generation) notify(e.message, true); } finally { if (current === generation) working = false; buttons.filter(b => b.isConnected).forEach(b => b.disabled = false); } }
   function close() { generation++; clearTimeout(poll); if (dialog) { dialog.close(); dialog.remove(); dialog = null; } if (lastFocus && lastFocus.isConnected) lastFocus.focus(); }
   function open(prefill) {
     if (!window.SY || !acct()) return;
@@ -51,7 +51,9 @@
     const fileList = n('div', null, 'growth-materials'); fileList.dataset.materials = '';
     left.append(upload, drop, n('p', '文档每份 ≤5 MB。视频提取最多6张带时间点的画面；声音内容请同时提供字幕。', 'growth-hint'), fileList);
     const search = n('label', null, 'growth-check'); const check = n('input'); check.type = 'checkbox'; check.name = 'search'; search.append(check, document.createTextNode('结合当前目标联网搜索，保留来源链接')); left.append(search);
-    const start = button('解析资料，生成行动草稿 →', () => guarded(begin), 'growth-primary'); start.dataset.run = ''; left.append(start);
+    const collect = button('读取并保存全部链接', () => guarded(() => begin(true)), 'growth-primary'); collect.dataset.collect = ''; left.append(collect);
+    left.append(n('p', '最多100条链接，自动去重、逐条保存。某条失败不影响其他链接；只读取资料不需要连接AI。', 'growth-hint'));
+    const start = button('解析资料，生成行动草稿 →', () => guarded(() => begin(false)), 'growth-primary'); start.dataset.run = ''; left.append(start);
     const wx = n('details'); wx.append(n('summary', '从微信带入资料')); const wxBody = n('div', null, 'growth-wechat');
     wxBody.append(field('群聊名', 'text', 'wxQuery', '输入要查找的群名'), button('查找群聊', () => guarded(async () => { const result = await api('/api/growth/wechat-groups', { query: value('wxQuery') }); const select = $('[data-groups]'); select.replaceChildren(option('选择实际查到的群聊', '')); result.groups.forEach(g => select.append(option(g.name, g.id))); notify('找到 ' + result.groups.length + ' 个群聊。'); })));
     const groups = n('select'); groups.dataset.groups = ''; groups.setAttribute('aria-label', '选择微信群聊'); groups.append(option('先查找群聊', '')); wxBody.append(groups, field('消息关键词', 'text', 'wxKeyword', '分享 / feishu / 爬楼'));
@@ -72,7 +74,7 @@
     const state = await api('/api/growth/state?account=' + encodeURIComponent(owner)); if (!dialog) return;
     const select = $('[data-projects]'); select._projects = state.projects; select.replaceChildren(option('新建目标', '')); state.projects.forEach(p => select.append(option(p.title, p.id))); if (project) select.value = project.id;
     const host = $('[data-history]'); host.replaceChildren();
-    state.runs.forEach(run => host.append(button((run.project && run.project.title || '资料处理') + ' · ' + ({ succeeded: '待核对', failed: '未完成', interrupted: '已中断', running: '处理中', queued: '等待中' }[run.status] || run.status), () => showRun(run))));
+    state.runs.forEach(run => { const b = button(historyLabel(run), () => loadRun(run.id).catch(e => notify(e.message, true))); b.dataset.historyRun = run.id; host.append(b); });
     if (selectLatest && state.runs.length) showRun(state.runs[0]);
   }
   function drawMaterials() { const host = $('[data-materials]'); if (!host) return; host.replaceChildren(); materials.forEach((m, i) => { const row = n('div', null, 'growth-material'); row.append(n('span', m.title + ' · ' + m.text.length + '字'), button('移除', () => { materials.splice(i, 1); drawMaterials(); })); host.append(row); }); if (frames.length) host.append(n('p', (mediaKind === 'video' ? '视频' : '图片') + ' · ' + frames.length + '张待分析画面'), button('移除画面', () => { frames = []; drawMaterials(); })); }
@@ -103,19 +105,39 @@
       drawMaterials();
     } notify('资料已带入，点击“生成行动草稿”继续。');
   }
-  async function begin() {
+  async function begin(readOnly = false) {
     await saveProject(); const inputs = materials.slice(); if (value('text')) inputs.push({ title: '手动正文 / 笔记', text: value('text'), kind: 'text' });
-    const links = window.SYSourceIO ? SYSourceIO.normalizeLinks(value('links')) : value('links').match(/https?:\/\/\S+/g) || [];
-    links.forEach(url => inputs.push({ url }));
     const current = SY.getAcctData();
-    const run = await api('/api/growth/run', { account: owner, projectId: project.id, materials: inputs, frames, mediaKind, question: value('question'), search: $('[name=search]').checked, categories: (current.categories || []).map(c => typeof c === 'string' ? c : c.name).filter(Boolean) });
+    const run = await api('/api/growth/run', { account: owner, projectId: project.id, materials: inputs, links: value('links'), readOnly, frames, mediaKind, question: value('question'), search: $('[name=search]').checked, categories: (current.categories || []).map(c => typeof c === 'string' ? c : c.name).filter(Boolean) });
     notify('已开始处理。可以关闭窗口，稍后从处理记录继续。'); await loadRun(run.id);
   }
   async function loadRun(id) { const run = await api('/api/growth/run?account=' + encodeURIComponent(owner) + '&id=' + encodeURIComponent(id)); if (dialog) showRun(run); }
+  function historyLabel(run) { return (run.project && run.project.title || '资料处理') + ' · ' + ({ succeeded: '待核对', failed: '未完成', interrupted: '已中断', running: '处理中', queued: '等待中', collected: '资料已读取', partial: '已保存 · 有待补充链接', blocked: '等待补充' }[run.status] || run.status); }
+  async function retryRun(run, options) { await api('/api/growth/retry', { account: owner, id: run.id, ...options }); await loadRun(run.id); }
   function showRun(run) {
     clearTimeout(poll); selectedRun = run; const host = $('[data-result]'); if (!host) return; host.replaceChildren();
+    let history = [...dialog.querySelectorAll('[data-history-run]')].find(b => b.dataset.historyRun === run.id);
+    if (!history) { history = button('', () => loadRun(run.id).catch(e => notify(e.message, true))); history.dataset.historyRun = run.id; $('[data-history]').prepend(history); }
+    history.textContent = historyLabel(run);
+    const active = ['queued', 'running'].includes(run.status);
     const flow = n('div', null, 'growth-flow'); ['读取资料', '识别画面', '提炼内容', '生成行动', '核对采用'].forEach((t, i) => { const stage = ['collect', 'vision', 'diagnose', 'plan', 'review'].indexOf(run.stage); flow.append(n('span', t, i === stage ? 'active' : '')); }); host.append(flow);
     const events = n('div', null, 'growth-events'); (run.events || []).slice(-4).forEach(e => events.append(n('p', e.message))); host.append(events);
+    if (run.sourceResults && run.sourceResults.length) {
+      const list = n('details', null, 'growth-link-results'); list.open = true;
+      const count = run.sourceResults.filter(s => s.status === 'read').length;
+      list.append(n('summary', '全部资料 · ' + count + '/' + run.sourceResults.length + ' 已读取'));
+      run.sourceResults.forEach(s => {
+        const item = n('article', null, 'growth-source'); item.dataset.sourceStatus = s.status;
+        const label = { read: '已读取', partial: '仅有简介', failed: '待补充', pending: '等待读取' }[s.status] || s.status;
+        item.append(n('strong', label + (s.chars ? ' · ' + s.chars + '字' : '')), s.url ? link(s.title + ' ↗', s.url) : n('p', s.title));
+        if (s.error) item.append(n('p', s.error, 'growth-hint'));
+        if (s.previewText) { const preview = n('details'); preview.append(n('summary', '标题/简介预览 · 尚未读到完整内容'), n('pre', s.previewText)); item.append(preview); }
+        if (s.status !== 'read' && !active) item.append(button('重试此链接', () => guarded(() => retryRun(run, { readOnly: true, sourceId: s.id }))));
+        list.append(item);
+      }); host.append(list);
+      if (count < run.sourceResults.length && !active) host.append(n('p', '待补充的链接已保留。生成行动只依据已读取的资料，不会把未读取的视频当作已理解。', 'growth-hint'), button('重试全部未读链接', () => guarded(() => retryRun(run, { readOnly: true }))));
+    }
+    if (!active && run.sources && run.sources.length && ['collected', 'partial', 'blocked'].includes(run.status)) host.append(button('用已读取资料生成行动', () => guarded(() => retryRun(run, { readOnly: false, retrySources: false })), 'growth-primary'));
     if (run.error) { host.append(n('p', run.error, 'growth-error')); if (['failed', 'interrupted'].includes(run.status)) host.append(button('从中断处继续', () => guarded(async () => { await api('/api/growth/retry', { account: owner, id: run.id }); await loadRun(run.id); }))); }
     (run.warnings || []).forEach(t => host.append(n('p', t, 'growth-error')));
     if (run.sources && run.sources.length) { const details = n('details'); details.append(n('summary', '已保存的来源 · ' + run.sources.length)); run.sources.forEach(s => { const item = n('article', null, 'growth-source'); item.append(s.url ? link(s.title + ' ↗', s.url) : n('strong', s.title)); if (s.note) item.append(n('p', s.note, 'growth-hint')); item.append(n('pre', s.text)); details.append(item); }); host.append(details); }

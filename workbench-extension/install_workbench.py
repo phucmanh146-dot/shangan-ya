@@ -4,7 +4,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-FILES = ['growth_pipeline.py', 'growth_server.py', 'growth-workspace.js', 'growth-workspace.css',
+FILES = ['growth_sources.py', 'growth_pipeline.py', 'growth_server.py', 'growth-workspace.js', 'growth-workspace.css',
          'launch_growth.py', '启动资料行动.cmd']
 
 

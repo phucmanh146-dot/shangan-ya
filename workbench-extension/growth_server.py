@@ -123,5 +123,6 @@ if __name__ == '__main__':
     parser.add_argument('--port', type=int, default=8877)
     args = parser.parse_args()
     server = legacy.LocalServer(('127.0.0.1', args.port), Handler)
+    flow.recover_interrupted()
     print(f'上岸鸭资料行动： http://127.0.0.1:{args.port}/index.html', flush=True)
     server.serve_forever()
