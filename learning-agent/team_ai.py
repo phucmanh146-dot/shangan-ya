@@ -48,7 +48,8 @@ def trace(project, body):
 def call_json(p, stage, payload, validator):
     if not rescue.public_config()['configured']:
         raise rescue.RescueError('请先在AI连接中配置模型；未生成示例替代实际诊断', 'CONFIG_REQUIRED', 409)
-    root = 'gaps、unknowns、understanding_checks' if stage == 'diagnosis' else 'note、criterion_results、gap_results'
+    default_root = ['gaps','unknowns','understanding_checks'] if stage == 'diagnosis' else ['note','criterion_results','gap_results']
+    root = '、'.join(payload['output_contract'].get('root_fields',default_root))
     request_payload = {'output_instructions': '只返回一个合法JSON对象，根字段必须是'+root+
         '。output_contract只说明这些根字段的格式，不是返回字段。不得返回输入的documents、member_profiles或output_contract容器。'
         '不加Markdown代码围栏、解释前缀或后缀。current_locator只填一个实际位置；多个引用放evidence_refs列表。'
@@ -173,6 +174,7 @@ def reviewer(p, request):
     task = request['pending_tasks'][0]
     submitted = task['submission']
     ref = (submitted['artifact_id'], submitted['artifact_version'])
+    task_only = task.get('kind') not in ('production','check')
     new_doc = artifact_store.read(p, *ref)
     d = p['diagnosis']
     relevant = [g for g in d['gaps'] if g['gap_id'] in task['gap_ids']]
@@ -202,6 +204,12 @@ def reviewer(p, request):
                    'required_new_artifact':{'artifact_id':ref[0],'artifact_version':ref[1]},
                    'available_new_locators':[u['locator'] for u in new_doc['units']],
                    'quote_rule':'逐字复制submitted_document.units中对应位置的实际文字。输出具体结果，不复制字段说明。'}}
+    if task_only:
+        payload['review_scope'] = 'task_evidence_only'
+        payload['instructions'] = '本次只核对试做/学习任务的实际产物与验收条件。仅返回note和criterion_results，不判断目标成果gap是否消除；流程保留目标成果验收环节。'
+        payload['output_contract']['root_fields'] = ['note','criterion_results']
+        for key in ('gap_item_fields','required_gap_ids'):
+            payload['output_contract'].pop(key,None)
     def validate(value):
         rows = team.required(value, 'criterion_results', list)
         if len(rows) != len(task['acceptance_criteria']):
@@ -211,7 +219,15 @@ def reviewer(p, request):
                 raise ValueError('criterion必须逐字为「'+criterion+'」，passed必须为JSON布尔值')
             team.required(row, 'evidence')
             artifact_store.references(p, row.get('evidence_refs'), ref)
-        gaps = team.required(value, 'gap_results', list)
+        if task_only:
+            new_refs = [copy.deepcopy(r) for row in rows for r in row['evidence_refs']
+                        if (r['artifact_id'],r['artifact_version'])==ref]
+            gaps = [{'gap_id':key,'status':'remaining',
+                'evidence':'已读取当前试做/学习产物并核对任务条件；本次未判断目标成果差距是否消除',
+                'remaining_issue':'试做或学习通过不能替代目标成果验收',
+                'evidence_refs':copy.deepcopy(new_refs),'result_source':'workflow_gate'} for key in task['gap_ids']]
+        else:
+            gaps = team.required(value, 'gap_results', list)
         if team.unique(gaps, 'gap_id') != set(task['gap_ids']):
             raise ValueError('复核差距编号不一致')
         for g in gaps:
@@ -241,7 +257,8 @@ def reviewer(p, request):
                 'plan_version':p['plan']['plan_version'],'diagnosis_version':d['diagnosis_version'],
                 'artifact_id':ref[0],'artifact_version':ref[1],'method':'model','note':team.required(value,'note'),
                 'criterion_results':rows,'gap_results':gaps,'content_read_verified':True,
-                'read_sha256':new_doc['sha256']}
+                'read_sha256':new_doc['sha256'],
+                'review_scope':'task_evidence_only' if task_only else 'artifact_and_gap'}
     result, record = call_json(p, 'review', payload, validate)
     result['model_trace'] = record
     return result

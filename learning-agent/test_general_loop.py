@@ -300,6 +300,23 @@ class GeneralLoopTests(unittest.TestCase):
         self.assertEqual({d['artifact_id'] for d in payload['original_documents']},{'report','data','criteria'})
         self.assertEqual(payload['output_contract']['required_criteria'],['写明有效分母和缺失人数'])
         self.assertNotIn('原条件文字',json.dumps(payload['output_contract'],ensure_ascii=False))
+    def test_trial_review_scopes_to_task_evidence_and_workflow_keeps_gap_open(self):
+        self.setup_inputs();self.diagnose(['数据清洗']);self.plan()
+        task=self.p['plan']['tasks'][0];self.event('start',task['task_id'])
+        self.upload('试做：实际副本、判据与未通过记录',identifier='trial',purpose='submission')
+        self.event('submit',task['task_id'],artifact_id='trial',artifact_version=1,actual_minutes=5,evidence='实际试做')
+        ref={'artifact_id':'trial','artifact_version':1,'locator':'line:1','quote':'试做：实际副本、判据与未通过记录'}
+        value={'note':'人工控制夹具：记录完整，不代表能力通过',
+            'criterion_results':[{'criterion':task['acceptance_criteria'][0],'passed':True,'evidence':'有实际记录','evidence_refs':[ref]}]}
+        with patch.object(ai.rescue,'public_config',return_value={'configured':True}),patch.object(ai.rescue,'config_snapshot',return_value={'model':'controlled'}),patch.object(ai.rescue,'complete',return_value=json.dumps(value)) as model:
+            result=ai.reviewer(self.p,handoff.review_request(self.p,task['task_id']))
+        payload=json.loads(model.call_args.args[0][1]['content'])
+        self.assertEqual(payload['output_contract']['root_fields'],['note','criterion_results'])
+        self.assertEqual(result['review_scope'],'task_evidence_only')
+        self.assertEqual(result['gap_results'][0]['result_source'],'workflow_gate')
+        self.assertEqual(result['gap_results'][0]['status'],'remaining')
+        self.assertEqual(result['gap_results'][0]['evidence_refs'],[ref])
+        self.assertEqual(self.p['diagnosis']['gaps'][0]['status'],'open')
     def test_four_project_contexts_reach_model_without_fixed_contest(self):
         for kind in ('competition','hackathon','business','research'):
             self.p=team.create({'goal':'类别'+kind,'mode':'live'});self.setup_inputs(kind)

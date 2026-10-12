@@ -49,7 +49,7 @@ async function request(path,data){const response=await fetch('/api/agent/team'+p
 function context(){return {project_id:project.project_id,expected_version:project.version};}
 async function load(id){project=await request('?id='+encodeURIComponent(id));localStorage.setItem('team-project',id);render();}
 async function refresh(){const state=await request('');$('projects').replaceChildren(...state.projects.map(p=>{const option=el('option',p.goal);option.value=p.project_id;return option;}));const id=project?.project_id||localStorage.getItem('team-project');const found=state.projects.find(p=>p.project_id===id)||state.projects[0];if(found){$('projects').value=found.project_id;await load(found.project_id);} $('message').textContent='已读取后端最新状态';}
-async function mutate(path,data){const p=await request('/'+path,{...context(),...data});if(path==='undo-plan')periodProject=null;await load(p.project_id);$('message').textContent='已保存 · 版本 '+project.version;}
+async function mutate(path,data){const selected=project.project_id;const p=await request('/'+path,{...context(),...data});if(project.project_id!==selected){$('message').textContent='已保存到原项目；当前项目选择保留';return;}if(path==='undo-plan')periodProject=null;await load(p.project_id);$('message').textContent='已保存 · 版本 '+project.version;}
 async function safe(fn){try{await fn();}catch(e){$('message').textContent=e.message;}}
 function render(){
  $('project').hidden=false;$('heading').textContent=project.goal;
