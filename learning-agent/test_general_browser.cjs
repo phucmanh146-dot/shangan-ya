@@ -11,7 +11,7 @@ import learning_agent as agent, rescue_service as rescue, team_orchestrator as t
 from test_general_loop import diagnosis_reply
 original=rescue.public_config
 rescue.public_config=lambda:{**original(),'configured':(agent.DATA/'fixture-ready').exists(),'verified':False}
-rescue.config_snapshot=lambda:{'model':'controlled-browser-fixture'}
+rescue.config_snapshot=lambda:{'base':'http://127.0.0.1:1/v1','model':'controlled-browser-fixture','key':'','protocol':'chat','verified':False}
 def controlled(messages,cfg):
     payload=json.loads(messages[1]['content'])
     if payload['stage']=='diagnosis':

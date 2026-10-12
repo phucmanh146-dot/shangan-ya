@@ -225,6 +225,25 @@ class GeneralLoopTests(unittest.TestCase):
             self.p=dispatch.dispatch(self.ctx())
         self.assertEqual(self.p['dispatch']['error_code'],'CONFIG_REQUIRED');self.assertIsNone(self.p['diagnosis'])
         self.assertIsNone(self.p['proposal'])
+    def test_new_failed_evidence_creates_new_retest_preserves_completed_learning(self):
+        self.setup_inputs();self.capability(False);self.diagnose(['数据清洗']);self.plan()
+        for t in copy.deepcopy(self.p['plan']['tasks'][:3]):
+            self.event('start',t['task_id']);self.event('submit',t['task_id'],artifact_id='report',artifact_version=1,actual_minutes=3,evidence='人工试做记录')
+            self.event('approve',t['task_id'],reviewer_id='member-a',criterion_results=[{'criterion':t['acceptance_criteria'][0],'passed':True,'evidence':'记录已提交，不代表能力通过'}])
+        old=copy.deepcopy(self.p['plan']['tasks'][:3]);self.capability(False);self.diagnose(['数据清洗']);self.p=handoff.generate(self.ctx())
+        tasks=self.p['proposal']['plan']['tasks'];self.assertEqual(tasks[:3],old)
+        self.assertEqual([t['kind'] for t in tasks[3:]],['learn','practice','retest','production'])
+        self.assertTrue(all(t['task_id'].endswith(':revision:2') for t in tasks[3:6]))
+        self.assertEqual(tasks[-1]['depends_on'],[tasks[-2]['task_id']])
+    def test_omitted_old_gap_remains_unknown_not_silently_closed(self):
+        self.setup_inputs();self.diagnose();self.plan();self.event('start')
+        value=diagnosis_reply(self.p);value['gaps'][0]['gap_id']='G2'
+        with self.model_context(value):d=ai.researcher(self.p)
+        kept=next(g for g in d['gaps'] if g['gap_id']=='G1')
+        self.assertTrue(kept['manual_hold']);self.assertFalse(kept['history_only'])
+        self.assertTrue(any('G1' in x for x in d['unknowns']))
+        self.p=team.diagnosis({**self.ctx(),'diagnosis':d});self.p=handoff.generate(self.ctx())
+        self.assertEqual(self.p['proposal']['plan']['tasks'][0]['status'],'in_progress')
     def test_invalid_model_quote_bounded_retry_and_durable_trace(self):
         self.setup_inputs();value=diagnosis_reply(self.p);value['gaps'][0]['evidence_refs'][0]['quote']='杜撰事实'
         with patch.object(ai.rescue,'public_config',return_value={'configured':True}),patch.object(ai.rescue,'config_snapshot',return_value={'model':'controlled'}),patch.object(ai.rescue,'complete',return_value=json.dumps(value)) as model:

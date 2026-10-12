@@ -53,9 +53,13 @@ def plan_remaining(d, project):
                 keep.add(dep)
                 pending.append(dep)
     fresh = {t['task_id']: t for t in draft['tasks']}
+    before_members = {m['member_id']:m for m in (project.get('plan_diagnosis') or {}).get('member_profiles', [])}
+    after_members = {m['member_id']:m for m in d['member_profiles']}
     mapping = {}
     for key, task in fresh.items():
-        if key in keep and previous[key]['status'] == 'completed' and task.get('kind') == 'production':
+        new_failed_evidence = task.get('kind') in ('trial','learn','practice','retest') and task.get('capability_status') in ('failed','unknown') and any(
+            before_members.get(owner,{}).get('capability_evidence',[]) != after_members[owner].get('capability_evidence',[]) for owner in task['owner_ids'])
+        if key in keep and previous[key]['status'] == 'completed' and (task.get('kind') == 'production' or new_failed_evidence):
             mapping[key] = key + ':revision:' + str(d['diagnosis_version'])
         else:
             mapping[key] = key

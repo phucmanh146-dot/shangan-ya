@@ -74,7 +74,7 @@ def generate(diagnosis, context):
     for t in tasks:
         external=[x for x in t['depends_on'] if x not in ids]
         if external:
-            t['external_dependencies']=external
+            t['external_dependencies']=t.get('external_dependencies',[])+external
             t['depends_on']=[x for x in t['depends_on'] if x in ids]
             t['status']='blocked'
             pending.append({'task_id':t['task_id'],'reason':'前置缺口尚未形成有效任务：'+', '.join(external)})
