@@ -177,27 +177,38 @@ def reviewer(p, request):
     d = p['diagnosis']
     relevant = [g for g in d['gaps'] if g['gap_id'] in task['gap_ids']]
     original_refs = [g['current_artifact'] for g in relevant if g.get('current_artifact')]
+    # A comparison needs the underlying input data/criteria, not only the old report.
+    latest_inputs = {}
+    for artifact in p.get('stored_artifacts', []):
+        if artifact.get('purpose','input') == 'input':
+            latest_inputs[artifact['artifact_id']] = artifact
+    original_refs.extend(latest_inputs.values())
+    original_refs = list({(r['artifact_id'],r['artifact_version']):r for r in original_refs}.values())
     original_docs = documents(p, original_refs) if original_refs else []
     if sum(len(x['text']) for doc in [new_doc]+original_docs for x in doc['units']) > 60000:
         raise ValueError('复核正文超过本轮模型读取上限，请拆分交付')
     payload = {'stage':'review','goal':p['goal'],'context':p.get('project_context'),
                'task':task,'gaps':relevant,'original_documents':original_docs,'submitted_document':new_doc,
                'instructions':'逐条件比对真实新版。试做/学习通过不能关闭成果gap。缺证据不得通过。',
-               'output_contract':{'note':'直接复核结论','criterion_results':[{'criterion':'原条件文字','passed':False,
-                   'evidence':'所见证据','evidence_refs':[{'artifact_id':ref[0],'artifact_version':ref[1],'locator':'新版位置','quote':'原文'}]}],
-                   'gap_results':[{'gap_id':'原gap','status':'closed/remaining/unknown','evidence':'依据',
-                     'remaining_issue':'未关闭时必填','evidence_refs':[{'artifact_id':ref[0],'artifact_version':ref[1],'locator':'新版位置','quote':'原文'}]}]}}
-    payload['output_contract']['gap_results'][0]['remaining_micro_steps'] = [{'step_id':'步骤编号',
-        'input_version':{'artifact_id':ref[0],'artifact_version':ref[1]},'target_locator':'新版具体位置',
-        'action':'只修剩余问题','reason':'对应新版事实','expected_change':'变化','output':'新产物',
-        'self_check':'核对方法','failure_next':'失败下一步','capability_basis':'已提供的能力证据'}]
+               'output_contract':{'root_fields':['note','criterion_results','gap_results'],
+                   'required_criteria':task['acceptance_criteria'],'required_gap_ids':task['gap_ids'],
+                   'note_type':'非空字符串，描述实际看到的结论',
+                   'criterion_item_fields':{'criterion':'逐字复制required_criteria的对应文字','passed':'根据实际证据判断的JSON布尔值',
+                       'evidence':'实际观察的非空说明','evidence_refs':'非空引用列表；每项含artifact_id/artifact_version/locator/quote'},
+                   'gap_item_fields':{'gap_id':'required_gap_ids中的实际编号','status':'closed或remaining或unknown',
+                       'evidence':'实际观察的非空说明','remaining_issue':'没有关闭时说明具体剩余问题',
+                       'evidence_refs':'按新版实际原文引用；不填说明文字或占位符',
+                       'remaining_micro_steps':'制作/检查任务仍有问题时，给非空细步骤列表，字段同原任务micro_steps，input_version必须为新版'},
+                   'required_new_artifact':{'artifact_id':ref[0],'artifact_version':ref[1]},
+                   'available_new_locators':[u['locator'] for u in new_doc['units']],
+                   'quote_rule':'逐字复制submitted_document.units中对应位置的实际文字。输出具体结果，不复制字段说明。'}}
     def validate(value):
         rows = team.required(value, 'criterion_results', list)
         if len(rows) != len(task['acceptance_criteria']):
             raise ValueError('复核条件数量不一致')
         for row, criterion in zip(rows, task['acceptance_criteria']):
             if row.get('criterion') != criterion or type(row.get('passed')) is not bool:
-                raise ValueError('复核必须对应原条件和布尔结果')
+                raise ValueError('criterion必须逐字为「'+criterion+'」，passed必须为JSON布尔值')
             team.required(row, 'evidence')
             artifact_store.references(p, row.get('evidence_refs'), ref)
         gaps = team.required(value, 'gap_results', list)

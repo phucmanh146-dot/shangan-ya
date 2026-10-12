@@ -289,6 +289,17 @@ class GeneralLoopTests(unittest.TestCase):
         with self.model_context(value),patch.object(dispatch,'REVIEWER',ai.reviewer):self.p=handoff.invoke_review({**self.ctx(),'task_id':'G1:deliver'})
         record=self.p['artifact_reviews'][0];self.assertTrue(record['content_read_verified']);self.assertFalse(record['content_independently_verified'])
         self.assertEqual(record['packet']['read_sha256'],store.read(self.p,'report',2)['sha256'])
+    def test_review_also_reads_underlying_data_and_has_bound_contract(self):
+        self.setup_inputs();self.upload('id,value\na,2\nb,\n',identifier='data',filename='data.csv')
+        self.upload('缺失不计入分母',identifier='criteria',filename='criteria.txt')
+        self.diagnose();self.plan();self.event('start');self.upload('有效分母=2；缺失人数=1',purpose='submission')
+        self.event('submit',artifact_id='report',artifact_version=2,actual_minutes=5,evidence='实际新版')
+        with patch.object(ai.rescue,'public_config',return_value={'configured':True}),patch.object(ai.rescue,'config_snapshot',return_value={'model':'controlled'}),patch.object(ai.rescue,'complete',return_value=json.dumps(self.packet())) as model:
+            ai.reviewer(self.p,handoff.review_request(self.p,'G1:deliver'))
+        payload=json.loads(model.call_args.args[0][1]['content'])
+        self.assertEqual({d['artifact_id'] for d in payload['original_documents']},{'report','data','criteria'})
+        self.assertEqual(payload['output_contract']['required_criteria'],['写明有效分母和缺失人数'])
+        self.assertNotIn('原条件文字',json.dumps(payload['output_contract'],ensure_ascii=False))
     def test_four_project_contexts_reach_model_without_fixed_contest(self):
         for kind in ('competition','hackathon','business','research'):
             self.p=team.create({'goal':'类别'+kind,'mode':'live'});self.setup_inputs(kind)
