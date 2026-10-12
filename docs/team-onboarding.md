@@ -1,3 +1,7 @@
+> 2026-10-11：优先按 [实现路线 v3](implementation-roadmap-v3.md) 选择首轮范围、具体交付与建议交接点；v2 仍保留完整需求。案例与岗位依据见 [研究报告](agent-award-readiness-research.md)，新版功能须按 [验收表](agent-v3-acceptance-checklist.md) 另行验证。v3 是开发提案，不表示新增功能已完成，内部日期尚未由三人承诺。
+
+> 最新开发任务见 [三人开发任务 v2](team-tasks-v2.md)，其职责与验收要求优先于本指南旧版第 5–6 节。本轮提问者为 B，文中第二人称队长称呼仅为历史教程角色。
+
 # 队长与两位队友：一步一步把 Agent 接起来
 
 仓库：[phucmanh146-dot/shangan-ya](https://github.com/phucmanh146-dot/shangan-ya)

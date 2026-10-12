@@ -10,6 +10,10 @@ from urllib.parse import urlparse, parse_qs
 
 import learning_agent as agent
 import rescue_service as rescue
+import team_orchestrator as team
+import team_dispatch as dispatch
+import team_handoff as handoff
+import team_rescue
 
 ROOT = Path(__file__).resolve().parent
 try:
@@ -65,6 +69,13 @@ class Handler(LegacyHandler):
                                                  'verified':False, 'note':'有配置不代表检索已成功；请查看每次执行记录。'},
                                        'capabilities': {'liveSearch': True, 'sourceReading': True, 'persistedRoutes': True,
                                                         'replan': True, 'videoRenderer': bool(shutil.which('ffmpeg') and importlib.util.find_spec('PIL'))}})
+            if path == '/api/agent/team':
+                return self.send_json(team.state(parse_qs(parsed.query).get('id', [None])[0]))
+            if path == '/api/agent/team/handoff':
+                identifier = parse_qs(parsed.query).get('id', [''])[0]
+                if not identifier:
+                    raise ValueError('请提供待复核项目的 id')
+                return self.send_json(handoff.review_request(team.state(identifier)))
             if path == '/api/agent/state':
                 return self.send_json(agent.state())
             if path == '/api/agent/run':
@@ -90,7 +101,7 @@ class Handler(LegacyHandler):
             if path.startswith('/api/agent/'):
                 return self.send_json({'error': '接口不存在'}, 404)
             if LegacyHandler is SimpleHTTPRequestHandler:
-                if self.path.split('?')[0] not in ('/learning-agent.html', '/learning-agent.js', '/learning-agent.css', '/learning-agent-entry.js'):
+                if self.path.split('?')[0] not in ('/planner.html', '/planner.js', '/planner-refinements.js', '/learning-agent.html', '/learning-agent.js', '/learning-agent.css', '/learning-agent-entry.js', '/team.html', '/team.js', '/team-handoff.js'):
                     return self.send_json({'error': '文件不可读取'}, 404)
             return super().do_GET()
         except ValueError as exc:
@@ -113,6 +124,44 @@ class Handler(LegacyHandler):
             data = json.loads(self.rfile.read(size))
             if not isinstance(data, dict):
                 raise ValueError('请求必须为 JSON 对象')
+            if path.startswith('/api/agent/planner/') and path.rsplit('/',1)[-1] in ('split','lock','calibrate','reconcile','alternatives'):
+                import b_refinements as b
+                op=path.rsplit('/',1)[-1]
+                d,p,v=data['diagnosis'],data['plan'],data['expected_plan_version']
+                if op=='split':value=b.split(d,p,data['task_id'],v,data.get('wait_minutes',0))
+                elif op=='lock':value=b.lock(d,p,data['task_id'],data['locked'],v)
+                elif op=='calibrate':value=b.calibrate(d,p,v)
+                elif op=='reconcile':value=b.reconcile(d,data['new_diagnosis'],p,data.get('context',{}),v)
+                else:value=b.alternatives(d,p,data['settings'],v,data.get('optional_ids'),data.get('extension_days',0))
+                return self.send_json(value)
+            if path == '/api/agent/planner/validate':
+                import action_planner
+                action_planner.validate(data['plan'], data['diagnosis'])
+                return self.send_json(data['plan'])
+            if path == '/api/agent/planner/edit':
+                import action_planner
+                return self.send_json(action_planner.edit(data['diagnosis'],data['plan'],data['task_id'],data['patch'],data['expected_plan_version']))
+            if path == '/api/agent/planner/feedback':
+                import action_planner
+                return self.send_json(action_planner.feedback(data['diagnosis'],data['plan'],data['task_id'],data['actual_minutes'],data['remaining_minutes'],data['expected_plan_version']))
+            if path == '/api/agent/planner/generate':
+                import action_planner
+                return self.send_json(action_planner.generate(data['diagnosis'], data.get('context', {})))
+            if path == '/api/agent/planner/replan':
+                import action_planner
+                return self.send_json(action_planner.replan(data['diagnosis'], data['plan'], data['settings'], data['expected_plan_version']))
+            if path.startswith('/api/agent/team/'):
+                operation = path.rsplit('/',1)[-1]
+                handlers = {'create':team.create,'diagnosis':team.diagnosis,'propose':team.propose,
+                            'apply':team.apply,'feedback':team.feedback,'demo':team.demo,
+                            'period-replan':team.period_replan,'undo-plan':team.undo_plan,
+                            'dispatch':dispatch.dispatch,'brief':dispatch.brief,
+                            'handoff-check':handoff.check,'generate-b':handoff.generate,
+                            'review-receive':handoff.receive_review,'review-run':handoff.invoke_review,
+                            'rescue-start':team_rescue.start,'rescue-sync':team_rescue.sync}
+                if operation not in handlers:
+                    return self.send_json({'error':'团队接口不存在'},404)
+                return self.send_json(handlers[operation](data))
             if path == '/api/agent/run':
                 return self.send_json(agent.submit(data), 202)
             if path == '/api/agent/replan':
@@ -133,12 +182,14 @@ class Handler(LegacyHandler):
             if path == '/api/ai-test':
                 return self.send_json(rescue.test_connection())
             if path == '/api/ai-local-gateway':
-                from local_integrations import connect_local_gateway
+                from hermes_gateway import connect_local_gateway
                 value = connect_local_gateway()
                 if value is None:
                     raise ValueError('本机模型网关暂时不可用，请在 AI 连接中设置服务')
                 return self.send_json(value)
             return self.send_json({'error': '接口不存在'}, 404)
+        except team.Conflict as exc:
+            return self.send_json({'error':str(exc)},409)
         except rescue.RescueError as exc:
             return self.send_json({'error': str(exc), 'code': exc.code, **exc.extra}, exc.status)
         except (ValueError, TypeError, KeyError, UnicodeError) as exc:
@@ -150,7 +201,22 @@ class Handler(LegacyHandler):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=8901)
+    parser.add_argument('--with-b-planner', action='store_true', help='Bind the delivered deterministic B planner; A remains independently configured')
+    parser.add_argument('--with-local-gateway', action='store_true', help='Explicitly connect and test the existing local Hermes gateway')
+    parser.add_argument('--open-team', action='store_true', help='Open the team page after the server socket is ready')
     args = parser.parse_args()
+    if args.with_b_planner:
+        dispatch.PLANNER = handoff.planner
     server = ThreadingHTTPServer(('127.0.0.1', args.port), Handler)
+    if args.with_local_gateway:
+        from hermes_gateway import connect_local_gateway
+        try:
+            connected = connect_local_gateway()
+        except OSError:
+            connected = None
+        print('本机 AI 已连接并完成文本请求验证' if connected else '本机 AI 暂未连接，可在 AI 连接中重试', flush=True)
     print(f'上岸鸭学习导航 Agent: http://127.0.0.1:{args.port}/learning-agent.html', flush=True)
+    if args.open_team:
+        import webbrowser
+        webbrowser.open(f'http://127.0.0.1:{args.port}/team.html')
     server.serve_forever()

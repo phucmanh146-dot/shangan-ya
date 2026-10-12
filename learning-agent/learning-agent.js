@@ -77,7 +77,7 @@ function renderHelp(route) {
 }
 function renderEvents(run) { clear($('events')); for(const e of run.events) { const node=el('li',e.message); $('events').append(node); } $('events').scrollTop=$('events').scrollHeight; $('run-state').textContent={queued:'排队中',running:'执行中',completed:'已完成',failed:'需要处理',interrupted:'已中断'}[run.status] || run.status; }
 function busy(value) { running=value; $('start').disabled=value; $('research').disabled=value; $('open-rescue').disabled=value; const rescue=$('mode').value==='rescue';$('start').textContent=value?(rescue?'正在分析问题并解答…':'正在检索与规划…'):(rescue?'分析图片 / 视频，给我解答 ↗':'检索资料，生成可执行路线 ↗'); }
-function updateMode() { const rescue=$('mode').value==='rescue';$('planning-settings').hidden=rescue;$('daily').disabled=rescue;$('deadline').disabled=rescue;$('research').hidden=rescue;$('input-title').textContent=rescue?'告诉我，你卡在哪一步':'告诉我，你想走到哪里';if(!rescue){previousHelpId=null;showFollowup();}busy(running); }
+function updateMode() { const rescue=$('mode').value==='rescue',competition=$('mode').value==='competition';$('competition-field').hidden=!competition;$('competition-name').disabled=!competition;$('competition-name').required=competition;$('planning-settings').hidden=rescue;$('daily').disabled=rescue;$('deadline').disabled=rescue;$('research').hidden=rescue;$('input-title').textContent=rescue?'告诉我，你卡在哪一步':'告诉我，你想走到哪里';if(!rescue){previousHelpId=null;showFollowup();}busy(running); }
 function showFollowup(title='') { $('followup-context').hidden=!previousHelpId;$('clear-followup').hidden=!previousHelpId;$('followup-context').textContent=previousHelpId?'继续解答：'+title+'。会结合上次步骤和你这次补充的信息。':''; }
 function clearMedia() { $('media').value='';$('video-focus').value='';showMedia(); }
 function openRescue(previous=null) { if(running)return;$('mode').value='rescue';$('goal').value='';$('goal').placeholder=previous?'做到第几步仍没解决？实际出现了什么？可以附新截图或录屏。':'例如：点击运行后出现这个报错，我希望程序正常启动。请告诉我怎么处理。';$('level').value='';$('deadline').value='';$('urls').value='';clearMedia();previousHelpId=previous?.id||null;updateMode();showFollowup(previous?.title);$('goal').focus();$('goal-form').scrollIntoView({behavior:'smooth',block:'start'}); }
@@ -117,7 +117,7 @@ async function mediaFrames() {
 }
 async function start(researchOnly=false) {
   if(running||!$('goal-form').reportValidity())return;busy(true);$('form-error').textContent='';clear($('events'));$('events').append(el('li','准备输入与时间约束…'));
-  try { const frames=researchOnly?[]:await mediaFrames(); const rescue=$('mode').value==='rescue';const input={goal:$('goal').value,level:$('level').value,mode:$('mode').value,frames,researchOnly,
+  try { const frames=researchOnly?[]:await mediaFrames(); const rescue=$('mode').value==='rescue';const input={goal:$('goal').value,level:$('level').value,mode:$('mode').value,competitionName:$('mode').value==='competition'?$('competition-name').value.trim():'',frames,researchOnly,
     mediaKind:frames.length?($('media').files[0].type.startsWith('video/')?'video':'image'):'',previousRouteId:rescue?previousHelpId:null,
     urls:$('urls').value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean),settings:{startDate:localDate(),dailyMinutes:rescue?60:Number($('daily').value),deadline:rescue?'':$('deadline').value||''}};
     const run=await api('/api/agent/run',input);poll(run.runId);
