@@ -39,6 +39,15 @@ def request(path, data=None, headers=None):
         return exc.code, json.load(exc)
 
 class HTTPTests(unittest.TestCase):
+    def test_remote_start_requires_token_and_reports_real_readiness(self):
+        import growth_remote
+        self.assertEqual(request('/api/growth/remote-start', {})[0],403)
+        with patch.object(growth_remote,'ensure_ready',return_value={'ready':True,'url':'http://127.0.0.1:8878/'}) as start:
+            status,body=request('/api/growth/remote-start',{}, {'X-Growth-Token':app.TOKEN})
+        self.assertEqual(status,200);self.assertTrue(body['ready']);start.assert_called_once()
+        with patch.object(growth_remote,'status',return_value={'ready':False,'url':'http://127.0.0.1:8878/'}):
+            self.assertFalse(request('/api/growth/remote-status')[1]['ready'])
+
     def test_public_docx_link_is_read_as_document(self):
         import growth_sources
         content = io.BytesIO()

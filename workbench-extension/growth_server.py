@@ -67,6 +67,9 @@ class Handler(legacy.Handler):
                                      'wechat': bool(importlib.util.find_spec('pywinauto')),
                                      'videoFrames': True, 'videoAudio': False},
                     'storage': '此电脑持久保存资料与处理进度；原清单仍在原浏览器空间。'})
+            if parsed.path == '/api/growth/remote-status':
+                from growth_remote import status
+                return self.send_json(status())
             if parsed.path == '/api/growth/state':
                 return self.send_json(flow.state(account))
             if parsed.path == '/api/growth/run':
@@ -105,9 +108,15 @@ class Handler(legacy.Handler):
                 return self.send_json(result)
             if path == '/api/growth/search-test':
                 return self.send_json(rescue.search_web('Python official tutorial', 3))
+            if path == '/api/growth/remote-start':
+                from growth_remote import ensure_ready
+                return self.send_json(ensure_ready())
             if path == '/api/growth/wechat-search':
                 from growth_wechat import search_messages
                 return self.send_json(search_messages(data.get('keyword', '')))
+            if path == '/api/growth/wechat-stop':
+                from growth_wechat import cancel_search
+                return self.send_json(cancel_search())
             if path in ('/api/growth/wechat-groups', '/api/growth/wechat-messages'):
                 from sy_wechat_search import search_groups, read_messages
                 result = search_groups(data.get('query', '')) if path.endswith('groups') else read_messages(data.get('id'), data.get('keyword'))

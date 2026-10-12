@@ -27,7 +27,7 @@ win.fetch = async (url, options={}) => {
   if(p==='/api/growth/project') body = {...project,...JSON.parse(options.body),id:project.id,version:2};
   if(p==='/api/growth/run') { if(options.method==='POST'){started=true;run.status=input.analysisOnly?'answered':'succeeded';body={id:run.id};} else body=run; }
   if(p==='/api/growth/retry'){run.status=input.analysisOnly?'answered':'succeeded';body={id:run.id};}
-  if(p==='/api/growth/wechat-search') body={count:1,text:'关键词 RAG：学习资料 https://example.org/rag',source:'wechat-accessibility'};
+  if(p==='/api/growth/wechat-search') body={count:1,groupCount:1,groups:[{name:'RAG 学习群'}],messages:[{text:'关键词 RAG：学习资料 https://example.org/rag'}],conversations:['其他会话：2条相关聊天记录'],text:'关键词 RAG：学习资料 https://example.org/rag',source:'wechat-accessibility'};
   return new Response(JSON.stringify(body),{status:200,headers:{'Content-Type':'application/json'}});
 };
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
@@ -56,6 +56,8 @@ try {
   dialog.querySelector('[data-wechat-search]').click();await settle();
   assert.ok(calls.some(c=>c.path==='/api/growth/wechat-search'&&c.body.keyword==='RAG'));
   assert.ok(!calls.some(c=>c.path==='/api/growth/wechat-groups'),'global keyword search has no group prerequisite');
+  assert.match(dialog.querySelector('[data-wechat-results]').textContent,/RAG 学习群/);
+  assert.match(dialog.querySelector('[data-wechat-results]').textContent,/尚未展开消息/);
   assert.match(dialog.querySelector('[name=links]').value,/example.org\/rag/);
   dialog.querySelector('[data-analyze]').click();await settle();
   assert.match(dialog.querySelector('[name=text]').value,/先写出访谈目标/);

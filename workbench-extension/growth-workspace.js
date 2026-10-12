@@ -65,11 +65,13 @@
       if (materials.length >= 12) throw new Error('本次最多12份正文资料，请先移除不需要的资料。');
       notify('正在打开电脑上的微信并搜索“' + keyword + '”…');
       const result = await api('/api/growth/wechat-search', { keyword });
-      materials.push({ title: '微信搜索 · ' + keyword, text: result.text, kind: 'wechat' }); drawMaterials();
-      const urls = result.text.match(/https?:\/\/[^\s<>"，。；！？]+/g) || [];
+      renderWechat(result);
+      if (result.text) materials.push({ title: '微信搜索 · ' + keyword, text: result.text, kind: 'wechat' }); drawMaterials();
+      const urls = (result.text || '').match(/https?:\/\/[^\s<>"，。；！？]+/g) || [];
       if (urls.length) $('[name=links]').value = [...new Set([...value('links').split('\n').filter(Boolean), ...urls])].join('\n');
-      notify('已带入 ' + result.count + ' 条可读取的匹配消息' + (urls.length ? '，其中的链接也已带入' : '') + '。可按问题解析到正文。');
+      notify(result.empty ? '微信返回无匹配结果。' : '找到 ' + (result.groupCount || 0) + ' 个匹配群聊，已带入 ' + result.count + ' 条可读取的匹配消息' + (urls.length ? '，其中的链接也已带入' : '') + '。');
     })); wxDirect.dataset.wechatSearch = ''; wxBody.append(wxDirect, n('p', '使用这台电脑已登录的微信，直接打开并搜索关键词。只读取可确认的匹配消息；未登录时会提示先进入微信。', 'growth-hint'));
+    const wxResults = n('div'); wxResults.dataset.wechatResults = ''; wxBody.append(wxResults);
     const groupDetails = n('details'); groupDetails.append(n('summary', '只查某个群（选填）')); const groupBody = n('div'); groupDetails.append(groupBody);
     groupBody.append(field('群聊名', 'text', 'wxQuery', '输入要查找的群名'), button('查找群聊', () => guarded(async () => { const result = await api('/api/growth/wechat-groups', { query: value('wxQuery') }); const select = $('[data-groups]'); select.replaceChildren(option('选择实际查到的群聊', '')); result.groups.forEach(g => select.append(option(g.name, g.id))); notify('找到 ' + result.groups.length + ' 个群聊。'); })));
     const groups = n('select'); groups.dataset.groups = ''; groups.setAttribute('aria-label', '选择微信群聊'); groups.append(option('先查找群聊', '')); groupBody.append(groups, field('消息关键词', 'text', 'wxKeyword', '分享 / feishu / 爬楼'));
@@ -94,6 +96,12 @@
     if (selectLatest && state.runs.length) showRun(state.runs[0]);
   }
   function drawMaterials() { const host = $('[data-materials]'); if (!host) return; host.replaceChildren(); materials.forEach((m, i) => { const row = n('div', null, 'growth-material'); row.append(n('span', m.title + ' · ' + m.text.length + '字'), button('移除', () => { materials.splice(i, 1); drawMaterials(); })); host.append(row); }); if (frames.length) host.append(n('p', (mediaKind === 'video' ? '视频' : '图片') + ' · ' + frames.length + '张待分析画面'), button('移除画面', () => { frames = []; drawMaterials(); })); }
+  function renderWechat(result) {
+    const host = $('[data-wechat-results]'); host.replaceChildren();
+    if (result.groups && result.groups.length) { host.append(n('h4', '匹配群聊')); const list = n('ul'); result.groups.forEach(g => list.append(n('li', g.name))); host.append(list); }
+    if (result.conversations && result.conversations.length) { const box = n('details'); box.append(n('summary', '匹配会话（尚未展开消息）')); result.conversations.forEach(t => box.append(n('p', t))); host.append(box); }
+    if (result.messages && result.messages.length) { const box = n('details'); box.append(n('summary', '匹配消息 · ' + result.messages.length)); result.messages.forEach(m => box.append(n('pre', m.text))); host.append(box); }
+  }
   function once(el, event) { return new Promise((resolve, reject) => { const timer = setTimeout(() => done(new Error('媒体读取超时，请换一个文件重试。')), 20000); function done(err) { clearTimeout(timer); el.removeEventListener(event, ok); el.removeEventListener('error', fail); err ? reject(err) : resolve(); } const ok = () => done(), fail = () => done(new Error('浏览器无法解码此媒体，请换为 JPG、MP4 或 WebM。')); el.addEventListener(event, ok, { once: true }); el.addEventListener('error', fail, { once: true }); }); }
   function jpeg(el) { const w = el.videoWidth || el.naturalWidth, h = el.videoHeight || el.naturalHeight; if (!w || !h) throw new Error('无法读取画面尺寸。'); const scale = Math.min(1, 1000 / w, 900 / h), canvas = document.createElement('canvas'); canvas.width = Math.round(w * scale); canvas.height = Math.round(h * scale); canvas.getContext('2d').drawImage(el, 0, 0, canvas.width, canvas.height); return canvas.toDataURL('image/jpeg', .72); }
   async function mediaFrames(file) {

@@ -7,12 +7,15 @@ import growth_wechat as wx
 
 
 class Node:
-    def __init__(self, name='', typ='Pane', parent=None, cls='mmui::Native'):
+    def __init__(self, name='', typ='Pane', parent=None, cls='mmui::Native', auto='', children=None):
         self.label, self.up = name, parent
-        self.element_info = SimpleNamespace(control_type=typ, class_name=cls)
+        self.items = children or []
+        self.element_info = SimpleNamespace(control_type=typ, class_name=cls, automation_id=auto)
     def window_text(self): return self.label
     def parent(self): return self.up
     def is_visible(self): return True
+    def children(self, **kwargs): return self.items
+    def descendants(self, **kwargs): return []
 
 
 class WeChatTests(unittest.TestCase):
@@ -31,7 +34,7 @@ class WeChatTests(unittest.TestCase):
 
     def test_global_search_only_fills_identified_search_control(self):
         control, window = object(), object()
-        with patch.object(wx, 'automation', return_value=nullcontext()), patch.object(wx, 'connect_window', return_value=window), patch.object(wx, 'search_boxes', return_value=[control]), patch.object(wx, 'fill') as fill, patch.object(wx, 'matched_messages', return_value=['RAG 资料']), patch.object(wx.time, 'sleep'):
+        with patch.object(wx, 'automation', return_value=nullcontext()), patch.object(wx, 'connect_window', return_value=window), patch.object(wx, 'search_boxes', return_value=[control]), patch.object(wx, 'fill') as fill, patch.object(wx, 'search_results', return_value={'groups':[],'messages':[{'text':'RAG 资料'}],'conversations':[]}), patch.object(wx.time, 'sleep'):
             result = wx.search_messages('RAG')
         fill.assert_called_once_with(control, 'RAG')
         self.assertEqual(result['count'], 1)
@@ -41,6 +44,20 @@ class WeChatTests(unittest.TestCase):
         with patch.object(wx, 'connect_window') as connect:
             with self.assertRaises(wx.RescueError): wx.search_messages('RAG\n发送')
         connect.assert_not_called()
+
+    def test_sibling_headers_separate_groups_messages_and_counts(self):
+        items = [Node('群聊','ListItem'),Node('RAG 学习群','ListItem'),Node('聊天记录','ListItem'),Node('学习伙伴\n3条相关聊天记录','ListItem'),Node('同学：RAG 先检索再回答','ListItem'),Node('联系人','ListItem'),Node('RAG 助手','ListItem')]
+        results = Node(typ='List',auto='search_list',children=items)
+        window = SimpleNamespace(descendants=lambda **kwargs: [results] if kwargs.get('control_type')=='List' else [])
+        data = wx.search_results(window,'RAG')
+        self.assertEqual([g['name'] for g in data['groups']],['RAG 学习群'])
+        self.assertEqual(data['messages'],[{'text':'同学：RAG 先检索再回答'}])
+        self.assertEqual(len(data['conversations']),1)
+
+    def test_contact_in_general_search_results_is_not_a_message(self):
+        node = Node('RAG 联系人','ListItem',Node('搜索结果'))
+        window = SimpleNamespace(descendants=lambda **kwargs:[node])
+        self.assertEqual(wx.matched_messages(window,'RAG'),[])
 
 
 if __name__ == '__main__': unittest.main()

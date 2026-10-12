@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 FILES = ['growth_sources.py', 'growth_video.py', 'growth_web.py', 'growth_wechat.py', 'growth_analysis.py', 'growth_pipeline.py', 'growth_server.py', 'growth-workspace.js', 'growth-workspace.css',
-         'launch_growth.py', '启动资料行动.cmd']
+         'growth_remote.py', 'sy_remote_bridge.py', 'sy_remote_entry.js', 'sy_remote_panel.html', 'launch_growth.py', 'start-remote.cmd', '启动资料行动.cmd']
 
 
 def patch_reader(content):
