@@ -274,6 +274,14 @@ class GeneralLoopTests(unittest.TestCase):
         self.assertEqual(retry['documents'][0]['units'][0]['text'],'人数=3；有效分母未知')
         with team.connection() as c:run=json.loads(c.execute('SELECT body FROM team_ai_runs').fetchone()[0])
         self.assertEqual(run['status'],'failed');self.assertEqual(len(run['attempts']),2);self.assertEqual(run['input']['project_context']['deadline'],'')
+    def test_structured_understanding_annotation_preserves_content_without_confirming(self):
+        self.setup_inputs();value=diagnosis_reply(self.p)
+        row={'check_id':'1','target_locator':'line:1','expected_output':'能回查原文','rationale':'核对本人理解','passed':True}
+        value['understanding_checks']=[row]
+        with self.model_context(value):d=ai.researcher(self.p)
+        self.assertEqual(json.loads(d['understanding_checks'][0]),row)
+        self.assertTrue(d['understanding_confirmation_required'])
+        self.assertEqual(d['gaps'][0]['status'],'open')
     def test_reviewer_reads_actual_newer_bytes_and_remaining_actions(self):
         self.submitted();value=self.packet('remaining');s=copy.deepcopy(self.p['diagnosis']['gaps'][0]['micro_steps'])
         s[0]['input_version']={'artifact_id':'report','artifact_version':2};s[0]['action']='在新版人数后追加口径说明'

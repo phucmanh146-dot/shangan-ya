@@ -1,7 +1,7 @@
 """Captain adapters for B's delivered rules and A's versioned review packets.
 
-The imported B modules are unchanged from action-planner commit 59a1eaff.
-This module does not generate an A diagnosis or claim model verification.
+B's baseline is action-planner commit 59a1eaff. Current extensions add recorded
+capability branching and confirmed-review remaining plans; this adapter is rules.
 """
 import copy
 import team_orchestrator as team
@@ -80,6 +80,8 @@ def planner(diagnosis, project):
         if task['task_id'] not in old_ids and task['status'] == 'blocked':
             task['status'] = 'candidate'
     plan['handoff_provenance'] = {'role': 'B', 'source_commit': B_SOURCE_COMMIT,
+                                  'source_commit_role':'original_B_baseline',
+                                  'extensions':['personal_guidance','team_revision'],
                                   'generation': 'rules', 'live_model_verified': False}
     team.validate_plan(plan, diagnosis)
     team.protected(old_plan, plan)

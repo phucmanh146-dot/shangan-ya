@@ -32,6 +32,7 @@ function diagnosisView(){
  const box=$('diagnosis');box.replaceChildren();const d=project.diagnosis;if(!d){box.append(el('p','等待 A 的诊断'));return;}
  box.append(el('p','诊断版本 '+d.diagnosis_version),el('p',project.artifact_storage_required?'材料已保存并读取；引文与实际原文位置核对。语义判断仍需实际试做及人工确认。':'材料位置与版本由 A 提供；总控校验引用关系，尚未自动读取文件核实。'));
  for(const g of d.gaps){const card=el('article','');card.className='gap-card';card.append(el('h3',g.gap_id+' · '+g.target_result));gapView(card,g);box.append(card);}
+ for(const note of d.understanding_checks||[])fact(box,'本人理解核对候选（待成员确认）',typeof note==='string'?note:JSON.stringify(note));
  for(const u of d.unknowns)box.append(el('p','待确认：'+(typeof u==='string'?u:JSON.stringify(u))));showJSON('diagnosis',d);
  if(typeof traceView==='function')traceView(box,d.model_trace);
 }

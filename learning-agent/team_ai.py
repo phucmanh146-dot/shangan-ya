@@ -145,11 +145,17 @@ def researcher(p):
                 row['capability_basis'] = personal_guidance.capability_basis(g, profiles)
                 row['capability_basis_source'] = 'server_member_records'
             g['deadline'] = ctx.get('deadline') or '待成员确认'
+        checks = team.required(value, 'understanding_checks', list)
+        if any(not isinstance(row,(str,dict)) or not row for row in checks):
+            raise ValueError('理解核对须为有效文字或结构化核对对象')
+        # Preserve structured annotations verbatim as display text; do not infer a pass.
+        checks = [team.agent.dump(row) if isinstance(row,dict) else row for row in checks]
         d = {'diagnosis_version':version,'requirements':ctx['acceptance_criteria'],
              'sources':sources,'artifact_status':catalog,'artifact_versions':catalog,
              'member_profiles':profiles,'gaps':gaps,'resource_candidates':courses,
              'unknowns':team.strings(value, 'unknowns'),
-             'understanding_checks':team.strings(value, 'understanding_checks')}
+             'understanding_checks':team.strings({'checks':checks}, 'checks'),
+             'understanding_confirmation_required':True}
         from team_revision import retain_history
         retain_history(d, p.get('diagnosis'), p.get('plan'))
         team.validate_diagnosis(d)
