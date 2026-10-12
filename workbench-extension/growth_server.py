@@ -105,6 +105,9 @@ class Handler(legacy.Handler):
                 return self.send_json(result)
             if path == '/api/growth/search-test':
                 return self.send_json(rescue.search_web('Python official tutorial', 3))
+            if path == '/api/growth/wechat-search':
+                from growth_wechat import search_messages
+                return self.send_json(search_messages(data.get('keyword', '')))
             if path in ('/api/growth/wechat-groups', '/api/growth/wechat-messages'):
                 from sy_wechat_search import search_groups, read_messages
                 result = search_groups(data.get('query', '')) if path.endswith('groups') else read_messages(data.get('id'), data.get('keyword'))

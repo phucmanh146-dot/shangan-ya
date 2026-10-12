@@ -54,13 +54,31 @@ class HTTPTests(unittest.TestCase):
         self.assertEqual(result['kind'], 'document')
 
     def test_video_access_failure_is_distinguished(self):
-        import growth_sources
-        error = app.rescue.RescueError('字幕无法读取', 'VIDEO_UNAVAILABLE')
-        error.__cause__ = RuntimeError('Fresh cookies are needed')
-        with patch.object(app.rescue, 'validate_url'), patch.object(app.rescue, 'extract_video', side_effect=error):
+        import growth_sources, growth_video
+        result = type('Result', (), {'stdout':json.dumps({'error':'需要有效会话','code':'SOURCE_REQUIRES_LOGIN'})})()
+        self.assertEqual(growth_video.error_code('Fresh cookies are needed'), 'SOURCE_REQUIRES_LOGIN')
+        with patch.object(app.rescue, 'validate_url'), patch.object(growth_video.subprocess, 'run', return_value=result):
             with self.assertRaises(app.rescue.RescueError) as raised:
                 growth_sources.read_url('https://v.douyin.com/example/')
         self.assertEqual(raised.exception.code, 'SOURCE_REQUIRES_LOGIN')
+
+    def test_bilibili_srt_and_json_captions_are_parsed_without_danmaku(self):
+        import growth_video
+        self.assertIn('先明确目标', growth_video.subtitle_text('1\n00:00:01,000 --> 00:00:02,000\n先明确目标\n\n','srt'))
+        self.assertEqual(growth_video.subtitle_text('{"body":[{"content":"再核对来源"}]}','json'),'再核对来源')
+
+    def test_wechat_and_baidu_body_containers(self):
+        from growth_web import parse_page
+        article = '<html><head><meta property="og:title" content="学习资料"></head><body><nav>菜单</nav><div id="js_content"><p>' + '先读资料，再写出具体任务。' * 12 + '</p><script>这不是正文</script></div><footer>页脚</footer></body></html>'
+        result = parse_page(article,'https://mp.weixin.qq.com/s/example')
+        self.assertEqual(result['title'],'学习资料')
+        self.assertNotIn('菜单',result['text']);self.assertNotIn('这不是正文',result['text'])
+        result = parse_page('<html><title>百度搜索</title><div id="content_left">' + '搜索结果的标题和摘要。'*12 + '</div></html>','https://www.baidu.com/s?wd=example')
+        self.assertEqual(result['kind'],'search-results')
+        with self.assertRaises(app.rescue.RescueError):
+            parse_page('<title>百度安全验证</title><main>'+'请完成验证。'*30+'</main>','https://www.baidu.com/')
+        fallback = parse_page('<html><noscript><meta http-equiv="refresh" content="0;url=http://www.baidu.com/"></noscript></html>', 'https://www.baidu.com/s?wd=RAG')
+        self.assertEqual(fallback.get('redirect'), '', 'noscript fallback must not silently discard the user search query')
 
     def test_semantic_main_container_is_extracted_without_browser(self):
         import sy_web_reader as reader

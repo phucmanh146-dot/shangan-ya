@@ -7,6 +7,15 @@ from urllib.parse import urlsplit, unquote
 from urllib.request import Request, build_opener
 
 
+def is_video_link(url):
+    import rescue_service as rescue
+    parsed = urlsplit(url)
+    host = (parsed.hostname or '').lower()
+    if host == 'bilibili.com' or host.endswith('.bilibili.com'):
+        return parsed.path.startswith(('/video/', '/festival/', '/bangumi/play/'))
+    return rescue.is_video_url(url) or host in ('www.iesdouyin.com', 'iesdouyin.com', 'bili2233.cn')
+
+
 def links_in(value):
     result = []
     for url in re.findall(r'https?://[^\s<>"\'，。；！？、（）【】]+', html.unescape(str(value or ''))):
@@ -39,17 +48,10 @@ def read_url(value):
                         'note': '已读取链接中的文字文件。', 'kind': 'document', 'url': url}
         result = rescue.extract_uploaded({'name': name, 'content': base64.b64encode(content).decode()})
         return dict(result, url=url, kind='document')
-    if rescue.is_video_url(url):
-        try:
-            result = rescue.extract_video(url)
-        except rescue.RescueError as exc:
-            cause = str(exc.__cause__ or '')
-            if re.search(r'fresh cookies|login|log in|sign in|captcha|verify|verification|cookies? (?:are |is )?needed', cause, re.I):
-                raise rescue.RescueError('视频平台要求浏览器登录或验证，当前自动读取未获通过。请打开原链接完成验证，或补充该视频的字幕/转写；链接已保留。', 'SOURCE_REQUIRES_LOGIN', 422) from None
-            raise
-        return dict(result, url=url, kind='video-transcript' if result.get('transcript') else 'video-preview')
-    try:
-        from sy_web_reader import extract_readable
-    except ImportError:
+    if is_video_link(url):
+        from growth_video import extract_video
+        return extract_video(url)
+    if rescue.parse_feishu_url(url):
         return rescue.extract(url)
-    return extract_readable(url)
+    from growth_web import read_web
+    return read_web(url)

@@ -25,7 +25,7 @@ rescue.search_web = lambda *args: None
 sys.modules['rescue_service'] = rescue
 import growth_pipeline as flow
 
-DIAG = {'summary': '根据提供资料整理行动。', 'keyPoints': ['资料中的关键点'], 'gaps': [], 'unknowns': []}
+DIAG = {'summary': '根据提供资料整理行动。', 'answer': '先从访谈中整理目标，再逐条核对验收要求。', 'steps': ['写下访谈目标'], 'relevantSources': [{'id': 'source-1', 'why': '提供实际要求'}], 'keyPoints': ['资料中的关键点'], 'gaps': [], 'unknowns': []}
 TASK = {'name': '整理一页需求', 'minutes': 25, 'firstStep': '打开笔记并写下目标',
         'deliverable': '一页需求笔记', 'check': '包含目标和验收要求', 'sourceIds': ['source-1'], 'owner': '待分配'}
 
@@ -159,6 +159,41 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(result['collection']['read'], 1)
         with self.assertRaises(ValueError):
             flow.retry({'account': 'qa', 'id': identifier, 'sourceId': 'unknown'})
+
+    def test_question_answer_persists_without_planning_and_reuses_sources(self):
+        with patch.object(rescue, 'complete', return_value=json.dumps(DIAG)) as model:
+            identifier = self.start(question='如何提炼访谈需求？', analysisOnly=True)
+            result = await_run('qa', identifier)
+        self.assertEqual(result['status'], 'answered')
+        self.assertEqual(result['question'], '如何提炼访谈需求？')
+        self.assertEqual(result['diagnosis']['answer'], DIAG['answer'])
+        self.assertNotIn('drafts', result)
+        self.assertEqual(model.call_count, 1)
+        context = json.loads(model.call_args.args[0][1]['content'])
+        self.assertEqual(context['question'], result['question'])
+        with patch.object(rescue, 'complete', return_value=json.dumps({'tasks': [TASK]})) as model:
+            flow.retry({'account': 'qa', 'id': identifier, 'analysisOnly': False, 'retrySources': False})
+            self.assertEqual(await_run('qa', identifier)['status'], 'succeeded')
+        self.assertEqual(model.call_count, 1)
+
+    def test_changed_question_recomputes_answer_and_invalid_citations_are_rejected(self):
+        with patch.object(rescue, 'complete', return_value=json.dumps(DIAG)):
+            identifier = self.start(question='问题一', analysisOnly=True)
+            await_run('qa', identifier)
+        bad = dict(DIAG, relevantSources=[{'id': 'invented', 'why': '不存在'}])
+        with patch.object(rescue, 'complete', return_value=json.dumps(bad)):
+            flow.retry({'account': 'qa', 'id': identifier, 'question': '问题二', 'analysisOnly': True})
+            result = await_run('qa', identifier)
+        self.assertEqual(result['status'], 'failed')
+        self.assertNotIn('diagnosis', result)
+        self.assertEqual(result['question'], '问题二')
+
+    def test_relevant_content_near_end_is_not_lost_in_context(self):
+        from growth_analysis import question_excerpt
+        content = '普通背景材料。' * 1500 + '重点：访谈需求应先记录用户的目标，再补充验收条件。'
+        excerpt = question_excerpt(content, '访谈需求如何提炼？', 600)
+        self.assertIn('访谈需求应先记录用户的目标', excerpt)
+        self.assertLessEqual(len(excerpt), 600)
 
 if __name__ == '__main__':
     try:

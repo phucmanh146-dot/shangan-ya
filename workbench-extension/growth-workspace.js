@@ -2,6 +2,7 @@
   'use strict';
   let dialog, owner, token, project, selectedRun, poll, lastFocus;
   let materials = [], frames = [], mediaKind = '', working = false, generation = 0;
+  let originalBody = '', analysisView = false, filledRun = '', autoFillRun = '', sourceSignature = '';
   const $ = q => dialog && dialog.querySelector(q);
   const n = (tag, value, cls) => { const e = document.createElement(tag); if (value != null) e.textContent = value; if (cls) e.className = cls; return e; };
   const button = (label, fn, cls) => { const b = n('button', label, cls); b.type = 'button'; b.onclick = fn; return b; };
@@ -24,11 +25,12 @@
     if (capturedOwner !== acct()) throw new Error('资料空间已切换，请重新打开窗口。');
     return data;
   }
-  async function guarded(fn) { if (working) return; working = true; const current = generation, buttons = dialog ? [...dialog.querySelectorAll('[data-run],[data-collect]')] : []; buttons.forEach(b => b.disabled = true); try { await fn(); } catch (e) { if (current === generation) notify(e.message, true); } finally { if (current === generation) working = false; buttons.filter(b => b.isConnected).forEach(b => b.disabled = false); } }
+  async function guarded(fn) { if (working) return; working = true; const current = generation, buttons = dialog ? [...dialog.querySelectorAll('[data-run],[data-collect],[data-analyze],[data-wechat-search]')] : []; buttons.forEach(b => b.disabled = true); try { await fn(); } catch (e) { if (current === generation) notify(e.message, true); } finally { if (current === generation) working = false; buttons.filter(b => b.isConnected).forEach(b => b.disabled = false); } }
   function close() { generation++; clearTimeout(poll); if (dialog) { dialog.close(); dialog.remove(); dialog = null; } if (lastFocus && lastFocus.isConnected) lastFocus.focus(); }
   function open(prefill) {
     if (!window.SY || !acct()) return;
     close(); owner = acct(); token = ''; project = null; selectedRun = null; materials = []; frames = []; mediaKind = ''; working = false;
+    originalBody = ''; analysisView = false; filledRun = ''; autoFillRun = ''; sourceSignature = '';
     lastFocus = document.activeElement;
     dialog = n('dialog', null, 'growth-dialog'); dialog.setAttribute('aria-labelledby', 'growth-title');
     const header = n('header', null, 'growth-head'), titles = n('div'); titles.append(n('p', '把资料变成下一步', 'growth-eyebrow'), n('h2', '资料 → 行动'));
@@ -43,7 +45,8 @@
     left.append(presets);
     const row = n('div', null, 'growth-row'); row.append(field('截止日期', 'date', 'deadline'), field('每天可投入（分钟）', 'number', 'dailyMinutes')); left.append(row);
     left.append(button('保存目标', () => guarded(async () => { await saveProject(); notify('目标已保存，资料和后续任务会关联到这里。'); })));
-    left.append(n('h3', '02 / 带入资料与卡点'), field('链接 / 分享文字', 'textarea', 'links', '飞书、网页、B站、YouTube，可粘贴多条链接'), field('正文 / 笔记 / 字幕', 'textarea', 'text', '也可以直接粘贴内容'), field('当前卡点（选填）', 'textarea', 'question', '哪一步没做成？你已经尝试过什么？'));
+    left.append(n('h3', '02 / 带入资料与卡点'), field('你要解决的问题', 'textarea', 'question', '例如：这些资料中，哪种方法最适合我？具体应该怎么做？'), field('链接 / 分享文字', 'textarea', 'links', '百度、微信公众号、抖音、哔哩哔哩、飞书或其他网页；直接粘贴复制的整段分享文字'), field('正文 / 笔记 / 字幕', 'textarea', 'text', '可粘贴原始资料；针对问题的解析完成后会写到这里'));
+    const bodyInfo = n('div', null, 'growth-hint'); bodyInfo.dataset.bodyInfo = ''; left.append(bodyInfo);
     const upload = n('input'); upload.type = 'file'; upload.multiple = true; upload.accept = '.pdf,.doc,.docx,.txt,.md,.srt,.vtt,image/*,video/mp4,video/webm,video/quicktime'; upload.hidden = true;
     upload.onchange = () => { const files = Array.from(upload.files); upload.value = ''; guarded(() => importFiles(files)); };
     const drop = button('＋ 拖入文档、图片或视频，也可点击选择', () => upload.click(), 'growth-drop');
@@ -53,18 +56,31 @@
     const search = n('label', null, 'growth-check'); const check = n('input'); check.type = 'checkbox'; check.name = 'search'; search.append(check, document.createTextNode('结合当前目标联网搜索，保留来源链接')); left.append(search);
     const collect = button('读取并保存全部链接', () => guarded(() => begin(true)), 'growth-primary'); collect.dataset.collect = ''; left.append(collect);
     left.append(n('p', '最多100条链接，自动去重、逐条保存。某条失败不影响其他链接；只读取资料不需要连接AI。', 'growth-hint'));
+    const analyze = button('按问题解析并写入正文', () => guarded(() => begin(false, true)), 'growth-primary'); analyze.dataset.analyze = ''; left.append(analyze);
     const start = button('解析资料，生成行动草稿 →', () => guarded(() => begin(false)), 'growth-primary'); start.dataset.run = ''; left.append(start);
     const wx = n('details'); wx.append(n('summary', '从微信带入资料')); const wxBody = n('div', null, 'growth-wechat');
-    wxBody.append(field('群聊名', 'text', 'wxQuery', '输入要查找的群名'), button('查找群聊', () => guarded(async () => { const result = await api('/api/growth/wechat-groups', { query: value('wxQuery') }); const select = $('[data-groups]'); select.replaceChildren(option('选择实际查到的群聊', '')); result.groups.forEach(g => select.append(option(g.name, g.id))); notify('找到 ' + result.groups.length + ' 个群聊。'); })));
-    const groups = n('select'); groups.dataset.groups = ''; groups.setAttribute('aria-label', '选择微信群聊'); groups.append(option('先查找群聊', '')); wxBody.append(groups, field('消息关键词', 'text', 'wxKeyword', '分享 / feishu / 爬楼'));
-    wxBody.append(button('读取匹配消息', () => guarded(async () => { if (!groups.value) throw new Error('先选择查到的群聊。'); const result = await api('/api/growth/wechat-messages', { id: groups.value, keyword: value('wxKeyword') }); materials.push({ title: '微信 · ' + groups.selectedOptions[0].textContent, text: result.text, kind: 'wechat' }); drawMaterials(); notify('匹配消息已带入，可核对后生成草稿。'); })), n('p', '读取当前已登录微信可访问的搜索结果。若微信未开放搜索控件，会保留错误并提示手动带入。', 'growth-hint')); wx.append(wxBody); left.append(wx);
+    wxBody.append(field('微信搜索关键词', 'text', 'wxDirectKeyword', '直接搜索，例如：Agent 比赛 / 资料 / RAG'));
+    const wxDirect = button('打开微信并读取关键词', () => guarded(async () => {
+      const keyword = value('wxDirectKeyword'); if (!keyword) throw new Error('先输入要在微信中查找的关键词。');
+      if (materials.length >= 12) throw new Error('本次最多12份正文资料，请先移除不需要的资料。');
+      notify('正在打开电脑上的微信并搜索“' + keyword + '”…');
+      const result = await api('/api/growth/wechat-search', { keyword });
+      materials.push({ title: '微信搜索 · ' + keyword, text: result.text, kind: 'wechat' }); drawMaterials();
+      const urls = result.text.match(/https?:\/\/[^\s<>"，。；！？]+/g) || [];
+      if (urls.length) $('[name=links]').value = [...new Set([...value('links').split('\n').filter(Boolean), ...urls])].join('\n');
+      notify('已带入 ' + result.count + ' 条可读取的匹配消息' + (urls.length ? '，其中的链接也已带入' : '') + '。可按问题解析到正文。');
+    })); wxDirect.dataset.wechatSearch = ''; wxBody.append(wxDirect, n('p', '使用这台电脑已登录的微信，直接打开并搜索关键词。只读取可确认的匹配消息；未登录时会提示先进入微信。', 'growth-hint'));
+    const groupDetails = n('details'); groupDetails.append(n('summary', '只查某个群（选填）')); const groupBody = n('div'); groupDetails.append(groupBody);
+    groupBody.append(field('群聊名', 'text', 'wxQuery', '输入要查找的群名'), button('查找群聊', () => guarded(async () => { const result = await api('/api/growth/wechat-groups', { query: value('wxQuery') }); const select = $('[data-groups]'); select.replaceChildren(option('选择实际查到的群聊', '')); result.groups.forEach(g => select.append(option(g.name, g.id))); notify('找到 ' + result.groups.length + ' 个群聊。'); })));
+    const groups = n('select'); groups.dataset.groups = ''; groups.setAttribute('aria-label', '选择微信群聊'); groups.append(option('先查找群聊', '')); groupBody.append(groups, field('消息关键词', 'text', 'wxKeyword', '分享 / feishu / 爬楼'));
+    groupBody.append(button('读取匹配消息', () => guarded(async () => { if (!groups.value) throw new Error('先选择查到的群聊。'); const result = await api('/api/growth/wechat-messages', { id: groups.value, keyword: value('wxKeyword') }); materials.push({ title: '微信 · ' + groups.selectedOptions[0].textContent, text: result.text, kind: 'wechat' }); drawMaterials(); notify('匹配消息已带入，可核对后生成草稿。'); }))); wxBody.append(groupDetails); wx.append(wxBody); left.append(wx);
     right.append(n('h3', '03 / 核对来源与行动')); const out = n('div'); out.dataset.result = ''; out.append(n('div', '先带入一份资料。处理完成后，在这里核对核心内容、差距和任务草稿。', 'growth-empty')); right.append(out);
     const history = n('details'); history.open = true; history.append(n('summary', '处理记录 · 中断后继续')); const historyList = n('div'); historyList.dataset.history = ''; history.append(historyList); right.append(history);
     const memos = n('details'); memos.append(n('summary', '已保存备忘')); const memoList = n('div'); memoList.dataset.memos = ''; memos.append(memoList); right.append(memos);
     const connection = n('details'); connection.append(n('summary', '模型与联网连接')); const connections = n('div'); connections.dataset.connections = ''; connection.append(connections); right.append(connection);
     body.append(left, right); dialog.append(body); dialog.addEventListener('cancel', e => { e.preventDefault(); close(); }); document.body.append(dialog); dialog.showModal();
     $('[name=dailyMinutes]').value = '60'; $('[name=dailyMinutes]').min = '5'; $('[name=dailyMinutes]').max = '720';
-    for (const key of ['title', 'outcome', 'links', 'text']) if (prefill && typeof prefill[key] === 'string') $('[name="' + key + '"]').value = prefill[key];
+    for (const key of ['title', 'outcome', 'links', 'text', 'question']) if (prefill && typeof prefill[key] === 'string') $('[name="' + key + '"]').value = prefill[key];
     drawMemos();
     guarded(async () => { token = (await api('/api/growth/session')).token; await refresh(); await renderConnections(); notify('已连接。目标、资料和处理记录会持续保存在这台电脑。'); });
   }
@@ -105,15 +121,33 @@
       drawMaterials();
     } notify('资料已带入，点击“生成行动草稿”继续。');
   }
-  async function begin(readOnly = false) {
-    await saveProject(); const inputs = materials.slice(); if (value('text')) inputs.push({ title: '手动正文 / 笔记', text: value('text'), kind: 'text' });
+  async function begin(readOnly = false, analysisOnly = false) {
+    await saveProject(); const inputs = materials.slice(), rawBody = analysisView ? originalBody : value('text'); if (rawBody) inputs.push({ title: '手动正文 / 笔记', text: rawBody, kind: 'text' });
+    const signature = JSON.stringify({ project: project.id, title: value('title'), outcome: value('outcome'), inputs, links: value('links'), question: value('question'), search: $('[name=search]').checked, frames });
+    if (!readOnly && selectedRun && !['queued', 'running'].includes(selectedRun.status) && signature === sourceSignature) {
+      autoFillRun = selectedRun.id; filledRun = '';
+      await retryRun(selectedRun, { readOnly: false, analysisOnly, retrySources: false, question: value('question') }); return;
+    }
     const current = SY.getAcctData();
-    const run = await api('/api/growth/run', { account: owner, projectId: project.id, materials: inputs, links: value('links'), readOnly, frames, mediaKind, question: value('question'), search: $('[name=search]').checked, categories: (current.categories || []).map(c => typeof c === 'string' ? c : c.name).filter(Boolean) });
+    const run = await api('/api/growth/run', { account: owner, projectId: project.id, materials: inputs, links: value('links'), readOnly, analysisOnly, frames, mediaKind, question: value('question'), search: $('[name=search]').checked, categories: (current.categories || []).map(c => typeof c === 'string' ? c : c.name).filter(Boolean) });
+    sourceSignature = signature; autoFillRun = run.id; filledRun = '';
     notify('已开始处理。可以关闭窗口，稍后从处理记录继续。'); await loadRun(run.id);
   }
   async function loadRun(id) { const run = await api('/api/growth/run?account=' + encodeURIComponent(owner) + '&id=' + encodeURIComponent(id)); if (dialog) showRun(run); }
-  function historyLabel(run) { return (run.project && run.project.title || '资料处理') + ' · ' + ({ succeeded: '待核对', failed: '未完成', interrupted: '已中断', running: '处理中', queued: '等待中', collected: '资料已读取', partial: '已保存 · 有待补充链接', blocked: '等待补充' }[run.status] || run.status); }
+  function historyLabel(run) { return (run.project && run.project.title || '资料处理') + ' · ' + ({ succeeded: '待核对', answered: '问题已解析', failed: '未完成', interrupted: '已中断', running: '处理中', queued: '等待中', collected: '资料已读取', partial: '已保存 · 有待补充链接', blocked: '等待补充' }[run.status] || run.status); }
   async function retryRun(run, options) { await api('/api/growth/retry', { account: owner, id: run.id, ...options }); await loadRun(run.id); }
+  function writeAnswer(run) {
+    const d = run.diagnosis; if (!d || !d.answer) return;
+    if (!analysisView) originalBody = value('text');
+    const lines = ['针对问题：' + (run.question || run.project.outcome || run.project.title), '', d.answer];
+    if (d.steps && d.steps.length) lines.push('', '可以这样做：', ...d.steps.map((s, i) => (i + 1) + '. ' + s));
+    const refs = (d.relevantSources || []).map(r => ({ ...r, source: (run.sources || []).find(s => s.id === r.id) })).filter(r => r.source);
+    if (refs.length) lines.push('', '相关来源（按关联程度排序）：', ...refs.map((r, i) => (i + 1) + '. ' + r.source.title + '：' + r.why + (r.source.url ? '\n' + r.source.url : '')));
+    if (d.unknowns && d.unknowns.length) lines.push('', '还需核实：', ...d.unknowns.map(t => '• ' + t));
+    $('[name=text]').value = lines.join('\n'); $('[name=text]').rows = 14; analysisView = true; filledRun = run.id;
+    const info = $('[data-body-info]'); info.replaceChildren(n('p', '正文当前显示针对问题的解析。原始正文和已读取来源仍保留。'), button('返回原始正文', () => { $('[name=text]').value = originalBody; $('[name=text]').rows = 4; analysisView = false; info.replaceChildren(); }));
+    notify('针对问题的解析已写入正文，附有相关来源。');
+  }
   function showRun(run) {
     clearTimeout(poll); selectedRun = run; const host = $('[data-result]'); if (!host) return; host.replaceChildren();
     let history = [...dialog.querySelectorAll('[data-history-run]')].find(b => b.dataset.historyRun === run.id);
@@ -137,11 +171,14 @@
       }); host.append(list);
       if (count < run.sourceResults.length && !active) host.append(n('p', '待补充的链接已保留。生成行动只依据已读取的资料，不会把未读取的视频当作已理解。', 'growth-hint'), button('重试全部未读链接', () => guarded(() => retryRun(run, { readOnly: true }))));
     }
-    if (!active && run.sources && run.sources.length && ['collected', 'partial', 'blocked'].includes(run.status)) host.append(button('用已读取资料生成行动', () => guarded(() => retryRun(run, { readOnly: false, retrySources: false })), 'growth-primary'));
+    if (!active && run.sources && run.sources.length && ['collected', 'partial', 'blocked', 'answered', 'succeeded', 'failed'].includes(run.status)) {
+      const continueWith = analysisOnly => guarded(async () => { autoFillRun = run.id; filledRun = ''; await retryRun(run, { readOnly: false, analysisOnly, retrySources: false, question: value('question') || run.question }); });
+      host.append(button('用已读取资料回答问题', () => continueWith(true)), button('用已读取资料生成行动', () => continueWith(false), 'growth-primary'));
+    }
     if (run.error) { host.append(n('p', run.error, 'growth-error')); if (['failed', 'interrupted'].includes(run.status)) host.append(button('从中断处继续', () => guarded(async () => { await api('/api/growth/retry', { account: owner, id: run.id }); await loadRun(run.id); }))); }
     (run.warnings || []).forEach(t => host.append(n('p', t, 'growth-error')));
     if (run.sources && run.sources.length) { const details = n('details'); details.append(n('summary', '已保存的来源 · ' + run.sources.length)); run.sources.forEach(s => { const item = n('article', null, 'growth-source'); item.append(s.url ? link(s.title + ' ↗', s.url) : n('strong', s.title)); if (s.note) item.append(n('p', s.note, 'growth-hint')); item.append(n('pre', s.text)); details.append(item); }); host.append(details); }
-    if (run.diagnosis) { const d = run.diagnosis; host.append(n('h4', '核心内容'), n('p', d.summary, 'growth-summary')); for (const [key, label] of [['keyPoints', '关键点'], ['gaps', '还需补齐'], ['unknowns', '待核实']]) if (d[key] && d[key].length) { host.append(n('h4', label)); const list = n('ul'); d[key].forEach(t => list.append(n('li', t))); host.append(list); } host.append(button('将核心内容存入备忘', () => saveMemo(run))); }
+    if (run.diagnosis) { const d = run.diagnosis; host.append(n('h4', '针对问题的解析'), n('p', d.answer || d.summary, 'growth-summary')); for (const [key, label] of [['steps', '具体步骤'], ['keyPoints', '关键点'], ['gaps', '还需补齐'], ['unknowns', '待核实']]) if (d[key] && d[key].length) { host.append(n('h4', label)); const list = n('ul'); d[key].forEach(t => list.append(n('li', t))); host.append(list); } if (d.answer) { host.append(button('将解析放入正文', () => writeAnswer(run))); if (autoFillRun === run.id && filledRun !== run.id && (!value('question') || value('question') === run.question)) writeAnswer(run); } host.append(button('将核心内容存入备忘', () => saveMemo(run))); }
     if (run.status === 'succeeded') {
       const estimates = n('p', '建议行动共 ' + run.totalMinutes + ' 分钟；每天可投入 ' + run.project.dailyMinutes + ' 分钟。加入清单后仍可调整时间。', 'growth-hint'); host.append(estimates);
       (run.drafts || []).forEach(draft => { const card = n('article', null, 'growth-draft'); card.dataset.draft = draft.id; const select = n('label', null, 'growth-check'); const check = n('input'); check.type = 'checkbox'; check.checked = !(SY.getAcctData().tasks || []).some(t => t.growthSourceKey === draft.id); check.dataset.selectDraft = ''; select.append(check, document.createTextNode('加入我的清单')); card.append(select);
@@ -157,7 +194,7 @@
     }
     if (['queued', 'running'].includes(run.status)) poll = setTimeout(() => loadRun(run.id).catch(e => notify(e.message, true)), 1600);
   }
-  function memoFor(run) { return { id: run.id, title: run.project.title, summary: run.diagnosis.summary, keyPoints: run.diagnosis.keyPoints, sources: run.sources.map(s => ({ title: s.title, url: s.url })), savedAt: new Date().toISOString() }; }
+  function memoFor(run) { return { id: run.id, title: run.project.title, summary: run.diagnosis.answer || run.diagnosis.summary, keyPoints: run.diagnosis.keyPoints, question: run.question, sources: run.sources.map(s => ({ title: s.title, url: s.url })), savedAt: new Date().toISOString() }; }
   function saveMemo(run) { if (owner !== acct()) return; const data = SY.getAcctData(); data.growthMemos = data.growthMemos || []; if (!data.growthMemos.some(m => m.id === run.id)) data.growthMemos.push(memoFor(run)); SY.saveAcctData(data); drawMemos(); notify('核心内容已保存到备忘。'); }
   function drawMemos() { const host = $('[data-memos]'); if (!host || !window.SY) return; host.replaceChildren(); const memos = SY.getAcctData().growthMemos || []; if (!memos.length) host.append(n('p', '还没有保存备忘。', 'growth-hint')); memos.slice().reverse().forEach(m => { const a = n('article', null, 'growth-memo'); a.append(n('h4', m.title), n('p', m.summary)); (m.sources || []).filter(s => s.url).forEach(s => a.append(link(s.title + ' ↗', s.url))); host.append(a); }); }
   function applyDrafts(run) {
