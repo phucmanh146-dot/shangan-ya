@@ -17,6 +17,7 @@ import team_rescue
 import artifact_store
 import team_inputs
 import team_revision
+import cc_progress
 
 ROOT = Path(__file__).resolve().parent
 try:
@@ -71,7 +72,13 @@ class Handler(LegacyHandler):
                                        'search':{'provider':'Tavily' if os.getenv('TAVILY_API_KEY') else 'public-fallback',
                                                  'verified':False, 'note':'有配置不代表检索已成功；请查看每次执行记录。'},
                                        'capabilities': {'liveSearch': True, 'sourceReading': True, 'persistedRoutes': True,
-                                                        'replan': True, 'videoRenderer': bool(shutil.which('ffmpeg') and importlib.util.find_spec('PIL'))}})
+                                                        'replan': True, 'ccProgress': True,
+                                                        'videoRenderer': bool(shutil.which('ffmpeg') and importlib.util.find_spec('PIL'))}})
+            if path == '/api/agent/team/cc-board':
+                identifier = parse_qs(parsed.query).get('id', [''])[0]
+                if not identifier:
+                    raise ValueError('请提供项目 id')
+                return self.send_json(cc_progress.board(team.state(identifier)))
             if path == '/api/agent/team':
                 return self.send_json(team.state(parse_qs(parsed.query).get('id', [None])[0]))
             if path == '/api/agent/team/handoff':
@@ -112,7 +119,11 @@ class Handler(LegacyHandler):
             if path.startswith('/api/agent/'):
                 return self.send_json({'error': '接口不存在'}, 404)
             if LegacyHandler is SimpleHTTPRequestHandler:
-                if self.path.split('?')[0] not in ('/planner.html', '/planner.js', '/planner-refinements.js', '/learning-agent.html', '/learning-agent.js', '/learning-agent.css', '/learning-agent-entry.js', '/team.html', '/team.js', '/team-handoff.js', '/team-inputs.js'):
+                allowed = ('/planner.html', '/planner.js', '/planner-refinements.js', '/learning-agent.html',
+                           '/learning-agent.js', '/learning-agent.css', '/learning-agent-entry.js', '/team.html',
+                           '/team.js', '/team-handoff.js', '/team-inputs.js', '/team-progress-dashboard.html',
+                           '/team-progress-dashboard.js')
+                if self.path.split('?')[0] not in allowed:
                     return self.send_json({'error': '文件不可读取'}, 404)
             return super().do_GET()
         except ValueError as exc:
@@ -172,7 +183,8 @@ class Handler(LegacyHandler):
                             'context':team_inputs.save_context,'member':team_inputs.save_member,
                             'capability':team_inputs.record_capability,'artifact-import':artifact_store.import_file,
                             'advance-review':team_revision.advance,
-                            'rescue-start':team_rescue.start,'rescue-sync':team_rescue.sync}
+                            'rescue-start':team_rescue.start,'rescue-sync':team_rescue.sync,
+                            'cc-register':cc_progress.register,'cc-heartbeat':cc_progress.heartbeat}
                 if operation not in handlers:
                     return self.send_json({'error':'团队接口不存在'},404)
                 return self.send_json(handlers[operation](data))
