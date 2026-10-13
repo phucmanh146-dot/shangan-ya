@@ -78,7 +78,7 @@ class Handler(LegacyHandler):
                 identifier = parse_qs(parsed.query).get('id', [''])[0]
                 if not identifier:
                     raise ValueError('请提供待复核项目的 id')
-                return self.send_json(handoff.review_request(team.state(identifier)))
+                return self.send_json(handoff.review_request(team.state(identifier), include_documents=True))
             if path == '/api/agent/team/artifact':
                 query = parse_qs(parsed.query)
                 p = team.state(query.get('id', [''])[0])

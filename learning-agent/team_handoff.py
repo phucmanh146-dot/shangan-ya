@@ -96,18 +96,53 @@ def generate(data):
     return team.propose({**data, 'plan': draft, 'reason': '调用 B 已交付的规则规划器；核对后再采用'})
 
 
-def review_request(p, task_id=None):
+def review_request(p, task_id=None, include_documents=False):
     tasks = (p.get('plan') or {}).get('tasks', [])
     pending = [copy.deepcopy(t) for t in tasks if t['status'] == 'pending_review' and t.get('submission')]
     if task_id is not None:
         pending = [t for t in pending if t['task_id'] == task_id]
         if not pending:
             raise ValueError('没有对应的待复核成果')
-    return {'schema_version': '0.1', 'project_id': p['project_id'], 'project_version': p['version'],
+    packet = {'schema_version': '0.1', 'project_id': p['project_id'], 'project_version': p['version'],
             'goal': p['goal'], 'plan_version': (p.get('plan') or {}).get('plan_version'),
+            'project_context': copy.deepcopy(p.get('project_context')),
+            'member_task_briefs': copy.deepcopy(p.get('member_task_briefs', [])),
+            'brief_history': copy.deepcopy(p.get('brief_history', [])),
+            'artifact_manifest': copy.deepcopy(p.get('stored_artifacts', [])),
+            'diagnosis_needs_refresh': bool(p.get('diagnosis_needs_refresh')),
+            'plan_stale': bool(p.get('plan_stale')),
             'diagnosis': copy.deepcopy(p.get('diagnosis')), 'pending_tasks': pending,
             'feedback': copy.deepcopy(p['feedback']),
             'note': 'A 对照原 gap 与实际新成果复核；总控不会把格式校验当成内容正确。'}
+    if include_documents:
+        import artifact_store
+        refs = {}
+        # Latest diagnostic inputs, then exact old/new versions and capability evidence.
+        for row in p.get('stored_artifacts', []):
+            if row.get('purpose', 'input') == 'input':
+                refs[row['artifact_id']] = row
+        rows = list(refs.values())
+        rows.extend(g['current_artifact'] for g in (p.get('diagnosis') or {}).get('gaps', []) if g.get('current_artifact'))
+        rows.extend(t['submission'] for t in pending)
+        rows.extend(r for m in p.get('member_task_briefs', []) for r in m.get('capability_evidence', []))
+        if p.get('artifact_storage_required'):
+            refs = {(r['artifact_id'], r['artifact_version']) for r in rows}
+            docs, total = [], 0
+            for identifier, version in sorted(refs):
+                doc = artifact_store.read(p, identifier, version)
+                total += sum(len(unit['text']) for unit in doc['units'])
+                if total > 60000:
+                    raise ValueError('交给A的材料正文超过60000字，请拆分本次交付；没有静默裁切')
+                docs.append(doc)
+            packet['documents'] = docs
+        else:
+            packet['documents'] = []
+        packet['document_bytes_checked'] = bool(packet['documents'])
+        packet['response_context'] = {'project_id': p['project_id'], 'expected_version': p['version']}
+        packet['note'] = ('以本次project_context、本人任务及补充记录核对目标；材料已抓取时沿用其内容。'
+                          'documents来自本项目实际文件，哈希和原文位置可核对；空列表表示未接入实际正文。'
+                          '返回交付沿用response_context，版本变化先重新核对；目标变化时旧待复核任务先保留，不能按旧目标放行。')
+    return packet
 
 
 def receive_review(data, content_read=False):

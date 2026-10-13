@@ -230,6 +230,43 @@ class GeneralLoopTests(unittest.TestCase):
         with self.assertRaises(team.Conflict):handoff.receive_review({**self.ctx(),'review':packet})
         packet=self.packet();packet['criterion_results'][0]['evidence_refs'][0]['quote']='不存在';packet['content_read_verified']=True
         with self.assertRaises(ValueError):handoff.receive_review({**self.ctx(),'review':packet})
+    def test_A_goal_handoff_before_diagnosis_contains_actual_project_inputs(self):
+        self.setup_inputs()
+        self.p = dispatch.brief({**self.ctx(),'content':'A已收集资料，本轮只核对有效分母'})
+        other = team.create({'goal':'另一个项目，不应泄漏','mode':'live'})
+        store.import_file({'project_id':other['project_id'],'expected_version':other['version'],
+            'artifact_id':'report','filename':'report.txt','kind':'user_material','purpose':'input',
+            'data_base64':base64.b64encode('另一个项目的材料'.encode()).decode()})
+        packet = handoff.review_request(self.p, include_documents=True)
+        self.assertIsNone(packet['diagnosis'])
+        self.assertEqual(packet['response_context'],self.ctx())
+        self.assertEqual(packet['project_context']['target_result'],'可复查的报告')
+        self.assertEqual(packet['member_task_briefs'][0]['owned_task'],'核对人数口径')
+        self.assertEqual(packet['brief_history'][-1]['content'],'A已收集资料，本轮只核对有效分母')
+        self.assertEqual(packet['documents'][0]['units'][0]['text'],'人数=3；有效分母未知')
+        self.assertTrue(packet['document_bytes_checked'])
+        self.assertNotIn('另一个项目的材料',json.dumps(packet,ensure_ascii=False))
+        packet['member_task_briefs'][0]['owned_task']='不得修改原记录'
+        self.assertEqual(team.state(self.p['project_id'])['member_task_briefs'][0]['owned_task'],'核对人数口径')
+    def test_A_handoff_after_goal_change_keeps_versions_and_blocks_old_review(self):
+        self.submitted()
+        old_context=self.ctx(); old_review=self.packet(); old_plan=copy.deepcopy(self.p['plan'])
+        self.p=inputs.save_context({**self.ctx(),'project_context':{'project_type':'research',
+            'target_result':'新增逐行复算依据','acceptance_criteria':['每行可复算'],'deadline':''}})
+        packet=handoff.review_request(self.p,include_documents=True)
+        self.assertEqual(packet['project_context']['target_result'],'新增逐行复算依据')
+        self.assertTrue(packet['diagnosis_needs_refresh']);self.assertTrue(packet['plan_stale'])
+        self.assertEqual({(d['artifact_id'],d['artifact_version']) for d in packet['documents']},{('report',1),('report',2)})
+        self.assertEqual(packet['pending_tasks'][0]['submission']['artifact_version'],2)
+        self.assertEqual(self.p['plan'],old_plan)
+        with self.assertRaises(team.Conflict):handoff.receive_review({**old_context,'review':old_review})
+        with self.assertRaises(team.Conflict):handoff.receive_review({**self.ctx(),'review':old_review})
+    def test_A_handoff_over_budget_refuses_without_truncating_or_mutating(self):
+        self.setup_inputs(); self.upload('实际正文'*16000,identifier='large',filename='large.txt')
+        version=self.p['version']
+        with self.assertRaisesRegex(ValueError,'没有静默裁切'):
+            handoff.review_request(self.p,include_documents=True)
+        self.assertEqual(team.state(self.p['project_id'])['version'],version)
     def test_b_preserves_started_dependencies_and_locked_slots(self):
         self.setup_inputs();self.diagnose(['数据清洗']);self.plan()
         self.event('start',self.p['plan']['tasks'][0]['task_id'])
@@ -353,6 +390,10 @@ class GeneralHTTPTests(unittest.TestCase):
             with urlopen(request,timeout=5) as r:return json.load(r)
         cfg={'base':'http://127.0.0.1:'+str(model.server_port)+'/v1','model':'controlled-http-fixture','key':'','protocol':'chat','verified':False}
         try:
+            with urlopen(base+'/api/agent/team/handoff?id='+self.p['project_id']) as r:
+                packet=json.load(r)
+            self.assertEqual(packet['response_context'],self.ctx())
+            self.assertEqual(packet['documents'][0]['units'][0]['text'],'人数=3；有效分母未知')
             with patch.object(ai.rescue,'CONFIG',cfg),patch.object(dispatch,'RESEARCHER',ai.researcher),patch.object(dispatch,'PLANNER',handoff.planner):
                 self.p=post('dispatch',self.ctx())
             self.assertEqual(self.p['dispatch']['status'],'succeeded');self.assertEqual(len(seen),1)
