@@ -1,5 +1,7 @@
 # 三人总调度｜远程核验后的当前任务
 
+**后续更新：**本文保留当时核验快照。A抓取已完成（用户2026-10-12确认）；当前分工与接入顺序见[2026-10-13任务分类及队长—A交接](team-goal-tasks-2026-10-13.md)，新增实现和验证见[优化记录](general-agent-implementation-2026-10-12.md)。
+
 核验日期：2026-10-12（Asia/Shanghai）。工作分支：`feature/orchestrator-agent`；本轮修复前基线：`1482d5fab69a483c251263c8c3d5d9c6b216bcd2`。
 任务范围继续按[三人任务v5](first-prize-delivery-v5.md)执行。本文补充本次Windows远程验证与A新附件；国一是准备目标，以下是内部交付要求。
 
