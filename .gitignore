@@ -1,3 +1,7 @@
 /shangan-ya-ai-backend/
 **/__pycache__/
 **/test-output/
+**/.growth-data/
+**/.growth-tmp/
+**/.growth-backup-*/
+**/obsidian-bridge/data.json

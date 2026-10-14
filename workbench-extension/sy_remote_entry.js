@@ -5,7 +5,7 @@
   button.id = 'syRemoteEntry'; button.type = 'button'; button.textContent = '微信跟随 ↗';
   button.style.cssText = 'position:fixed;right:22px;bottom:24px;z-index:9000;border:1px solid #b4cba1;border-radius:14px;padding:12px 20px;background:#ddebaf;color:#173d2a;font:600 15px system-ui;cursor:pointer';
   document.body.append(button);
-  let dialog, frame, status, retry, readyTimer, generation = 0, folded = false, fold, bar;
+  let dialog, frame, status, retry, readyTimer, generation = 0, folded = false, fold, bar, account;
   const node = (tag, text) => { const el = document.createElement(tag); if (text) el.textContent = text; return el; };
   function stop() {
     generation++; clearTimeout(readyTimer);
@@ -29,10 +29,11 @@
     }
     if (e.data?.type === 'sy-remote-capture') {
       const data = e.data;
+      if (account !== String(window.SY?.currentAccountKey || '')) { status.textContent = '资料空间已切换，请关闭微信面板后重新打开。'; return; }
       if (data.image && (!data.image.startsWith('data:image/png;base64,') || data.image.length > 7000000)) return;
       if (data.text && (typeof data.text !== 'string' || data.text.length > 60000)) return;
       stop();
-      if (data.kind === 'wechat' && data.text && window.SYGrowth) SYGrowth.open({ title: '微信资料 · ' + (data.keyword || '内容整理'), text: data.text });
+      if (data.kind === 'wechat' && data.text && window.SYGrowth) SYGrowth.open({wechatCapture:data});
       else if (window.SYSmart) SYSmart.receiveCapture(data);
     }
   }
@@ -54,6 +55,7 @@
   }
   button.onclick = () => {
     if (dialog) { setFolded(false); return; }
+    account = String(window.SY?.currentAccountKey || '');
     dialog = node('dialog'); dialog.style.cssText = 'padding:16px;border:1px solid #688368;border-radius:20px;width:min(1100px,94vw);height:88vh;position:fixed;inset:16px 16px auto auto;margin:0;z-index:9001;overflow:hidden;background:#153b2e;color:#eef3d5';
     bar = node('div'); bar.style.cssText = 'display:flex;gap:14px;align-items:center;flex-wrap:wrap';
     const link = node('a', '独立窗口打开'); link.href = origin + '/'; link.target = '_blank'; link.rel = 'noopener'; link.style.color = '#deedb8';
