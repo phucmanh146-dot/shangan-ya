@@ -1,6 +1,7 @@
 /* Desktop-only Obsidian plugin. No arbitrary shell commands or folder scanning. */
 const { Plugin, Notice, TFile, requestUrl } = require('obsidian');
 const { randomBytes } = require('crypto');
+const { setInterval: heartbeatInterval, clearInterval: clearHeartbeat } = require('timers');
 const BASE = 'http://127.0.0.1:8877/api/obsidian-bridge';
 const safePath = path => typeof path === 'string' && path.endsWith('.md') && !/[\\:]/.test(path)
   && path.split('/').every(p => p && !p.startsWith('.'));
@@ -20,7 +21,10 @@ module.exports = class ShanganyaBridge extends Plugin {
     });
     this.registerEvent(this.app.workspace.on('file-open', file => this.touch(file)));
     this.app.workspace.onLayoutReady(() => { this.touch(this.app.workspace.getActiveFile()); this.tick(); });
-    this.registerInterval(window.setInterval(() => this.tick(), 1500));
+    // Chromium throttles window timers when the user works in WeChat. Node's
+    // timer keeps this desktop-only connection responsive in the background.
+    const heartbeat = heartbeatInterval(() => this.tick(), 1500);
+    this.register(() => clearHeartbeat(heartbeat));
   }
   async touch(file) {
     if (!(file instanceof TFile) || !safePath(file.path)) return;

@@ -141,7 +141,7 @@ def read_web(url, redirects=0):
         from growth_video import extract_video
         return extract_video(final_url)
     if not result['thin']: return result
-    from sy_web_reader import render
+    from growth_web_render import render
     try:
         title, rendered = render(final_url)
         result = parse_page('<title>' + title.replace('<', '&lt;') + '</title>' + rendered, final_url)
