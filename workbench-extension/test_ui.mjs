@@ -16,6 +16,7 @@ const run = {id:'run-fixture',projectId:project.id,project,status:'succeeded',st
   question:'怎样整理需求？',diagnosis:{summary:'一页需求笔记',answer:'先写出访谈目标，再核对验收条件。',steps:['整理一页需求笔记'],relevantSources:[{id:'source-1',why:'提供目标和验收要求'}],keyPoints:['目标与验收要求'],gaps:[],unknowns:[]},
   drafts:[{id:'draft-1',name:'整理一页需求',minutes:25,owner:'待分配',firstStep:'写下目标',deliverable:'需求笔记',check:'包含目标与验收要求',sourceIds:['source-1'],dueDate:''}]};
 let started = false;
+let materialPool = [];
 const calls=[];
 const payloads = {'/api/health':{ok:true,capabilities:{ai:false}},'/api/ai-config':{configured:false},'/api/ai-providers':{providers:[]},'/api/cc-switch':{providers:[]},
   '/api/growth/session':{token:'fixture-token'},'/api/growth/health':{ai:{verified:false},providers:[]}};
@@ -23,6 +24,13 @@ win.fetch = async (url, options={}) => {
   const p = new URL(url,win.location.href).pathname;
   const input=options.body?JSON.parse(options.body):null;calls.push({path:p,body:input});
   let body = payloads[p] || {ok:true};
+  if(p==='/api/growth/materials') body={materials:materialPool};
+  if(p==='/api/growth/obsidian-status') body={connected:false,vaults:[],activeVaultId:null};
+  if(p==='/api/growth/materials-add') {
+    const added=[];
+    for(const m of input.materials){const old=materialPool.find(saved=>saved.content===m.content&&saved.sourceRef===m.sourceRef);if(old)old.selected=true;else{const id='material-'+(materialPool.length+1);materialPool.push({...m,id,selected:true});added.push(id);}}
+    body={materials:materialPool,addedIds:added,existingIds:[]};
+  }
   if(p==='/api/growth/state') body = {projects:[project],runs:started?[run]:[]};
   if(p==='/api/growth/project') body = {...project,...JSON.parse(options.body),id:project.id,version:2};
   if(p==='/api/growth/run') { if(options.method==='POST'){started=true;run.status=input.analysisOnly?'answered':'succeeded';body={id:run.id};} else body=run; }
@@ -58,7 +66,10 @@ try {
   assert.ok(!calls.some(c=>c.path==='/api/growth/wechat-groups'),'global keyword search has no group prerequisite');
   assert.match(dialog.querySelector('[data-wechat-results]').textContent,/RAG 学习群/);
   assert.match(dialog.querySelector('[data-wechat-results]').textContent,/尚未展开消息/);
-  assert.match(dialog.querySelector('[name=links]').value,/example.org\/rag/);
+  assert.equal(materialPool.length,0,'search alone never imports messages');
+  const choice=dialog.querySelector('.growth-wx-choice input');choice.checked=true;choice.dispatchEvent(new win.Event('change'));
+  Array.from(dialog.querySelectorAll('button')).find(b=>b.textContent==='将所选消息加入资料池').click();await settle();
+  assert.match(materialPool[0].content,/example.org\/rag/);
   dialog.querySelector('[data-analyze]').click();await settle();
   assert.match(dialog.querySelector('[name=text]').value,/先写出访谈目标/);
   assert.match(dialog.querySelector('[name=text]').value,/https:\/\/example.org\/requirements/);
@@ -79,7 +90,7 @@ try {
   assert.equal(S.getAcctData().tasks.length,2,'repeat apply is idempotent');
   win.SYGrowth.close();win.SYGrowth.open();await settle();
   dialog=win.document.querySelector('.growth-dialog');assert.ok(dialog.querySelector('[data-memos]').textContent.includes('先写出访谈目标'));
-  assert.equal(dialog.querySelector('[name=text]').value,'','opening history does not overwrite composer');
+  assert.equal(dialog.querySelector('[name=text]').value,'需要整理访谈中的目标与验收条件。','reopening retains original composer');
   assert.equal(win.document.querySelectorAll('[data-growth-open]').length,1,'toolbar entry does not duplicate');
   assert.deepEqual(errors,[]);
   console.log(JSON.stringify({ok:true,checks:['original-route-entry','goal-prefill','media-inputs','wechat-direct-search','wechat-links','question-to-body','source-citations','original-body-preserved','no-generated-evidence','literal-source','task-and-memo-write','idempotency','reopen','preserve-existing-task']}));

@@ -4,7 +4,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-FILES = ['growth_paths.py', 'growth_sources.py', 'growth_video.py', 'growth_web.py', 'growth_wechat.py', 'growth_analysis.py', 'growth_pipeline.py', 'growth_server.py', 'growth-workspace.js', 'growth-workspace.css',
+FILES = ['growth_materials.py', 'growth_obsidian.py', 'growth_models.py', 'growth_paths.py', 'growth_sources.py', 'growth_video.py', 'growth_web.py', 'growth_wechat.py', 'growth_analysis.py', 'growth_pipeline.py', 'growth_server.py', 'growth-workspace.js', 'growth-workspace.css',
          'growth_remote.py', 'sy_remote_bridge.py', 'sy_remote_entry.js', 'sy_remote_panel.html', 'sy_wechat_share.js', 'sy_wechat_select.js', 'sy_wechat_store.js', 'growth_ocr.py', 'growth_ocr.ps1', 'growth_wechat_screen.py', 'growth_wechat_float.py', 'launch_growth.py', 'start-remote.cmd', '启动资料行动.cmd']
 
 
@@ -34,12 +34,16 @@ def install(target):
             shutil.copy2(source, target / name)
     index = target / 'index.html'
     content = index.read_text(encoding='utf-8-sig')
+    if 'sy_remote_entry.js' not in content:
+        if '</body>' not in content:
+            raise ValueError('原首页缺少 body 结束标签，未修改。')
+        content = content.replace('</body>', '<script src="./sy_remote_entry.js"></script>\n</body>')
     if 'growth-workspace.js' not in content:
         snippet = '\n<link rel="stylesheet" href="./growth-workspace.css">\n<script src="./growth-workspace.js"></script>\n'
         if '</body>' not in content:
             raise ValueError('原首页缺少 body 结束标签，未修改。')
         content = content.replace('</body>', snippet + '</body>')
-        index.write_text(content, encoding='utf-8')
+    index.write_text(content, encoding='utf-8')
     starter = target / 'start-rescue.ps1'
     if starter.is_file():
         script = starter.read_text(encoding='utf-8-sig')

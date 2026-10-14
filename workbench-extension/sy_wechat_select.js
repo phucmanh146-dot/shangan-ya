@@ -104,7 +104,7 @@
     const messages = store.chosen(); if (!messages.length) return;
     const text = '来源：微信中由我勾选的内容；仅所选消息 / 框选区域。\n\n' + messages.map(m => (m.group ? '群聊：' + m.group + '\n' : '') + m.text).join('\n\n');
     if (text.length > 30000) return note('所选内容超过30000字，请分批带入。');
-    bringBack({text, kind:'wechat', keyword:$('keyword').value.trim()});
+    bringBack({text, kind:'wechat', keyword:$('keyword').value.trim(), messages:messages.map(m=>({text:m.text,group:m.group||'',time:m.time||'',sender:m.sender||''}))});
   };
   window.SYWechatLists = {render, search, group:() => selectedGroup?.name || '',
     follow(result) {if (!result.idle) {selectedGroup = null; $('selectedGroup').textContent = '';} render(result, false, true);},
