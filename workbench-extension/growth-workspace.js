@@ -42,7 +42,7 @@
     if (!window.SY || !acct()) return;
     close(); owner = acct(); token = ''; project = null; selectedRun = null; materials = []; frames = []; mediaKind = ''; working = false;
     pool = []; vaults = []; activeVault = ''; wxChosen.clear();
-    const draft = (!prefill || prefill.wechatCapture) ? draftsByOwner.get(owner) : null;
+    const draft = (!prefill || prefill.wechatCapture || prefill.focusObsidian) ? draftsByOwner.get(owner) : null;
     if (draft) project = draft.project;
     stagedBody = draft?.stagedBody || '';
     originalBody = ''; analysisView = false; filledRun = ''; autoFillRun = ''; sourceSignature = '';
@@ -120,6 +120,7 @@
       pool = (await api('/api/growth/materials?account=' + encodeURIComponent(owner))).materials; drawPool();
       await refresh(); await renderConnections(); await refreshObsidian();
       if (prefill?.wechatCapture) await importWechatCapture(prefill.wechatCapture);
+      else if (prefill?.focusObsidian) await connectObsidian();
       else notify('已连接。勾选资料后提问，资料池和处理记录会持续保存在这台电脑。');
     });
   }
@@ -468,6 +469,11 @@
   }
   function mount() {
     if (!window.SY) return;
+    document.querySelectorAll('.sykv-toolbar .sykv-actions button').forEach(b => {
+      if (b.textContent.trim() === '连接 Obsidian') {
+        b.dataset.growthObsidian = ''; b.textContent = '打开我的 Obsidian';
+      }
+    });
     const bar = document.querySelector('.app-topbar-right');
     if (bar && !bar.querySelector('[data-growth-open]')) { const b = button('资料 → 行动', () => open(), 'btn btn-primary btn-sm'); b.dataset.growthOpen = ''; bar.prepend(b); }
     const form = document.querySelector('#syRouteForm');
@@ -479,6 +485,10 @@
     }
   }
   window.SYGrowth = { open, close };
+  document.addEventListener('click', e => {
+    if (!e.target.closest('[data-growth-obsidian],[data-open-vault]')) return;
+    e.preventDefault(); e.stopImmediatePropagation(); open({focusObsidian:true});
+  }, true);
   document.addEventListener('sy:data', mount); document.addEventListener('DOMContentLoaded', mount); mount();
   new MutationObserver(mount).observe(document.body, { childList: true, subtree: true });
 })();

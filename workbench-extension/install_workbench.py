@@ -4,7 +4,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-FILES = ['growth_materials.py', 'growth_obsidian.py', 'growth_models.py', 'growth_paths.py', 'growth_sources.py', 'growth_video.py', 'growth_web.py', 'growth_wechat.py', 'growth_analysis.py', 'growth_pipeline.py', 'growth_server.py', 'growth-workspace.js', 'growth-workspace.css',
+FILES = ['sy_wechat_search.py', 'growth_materials.py', 'growth_obsidian.py', 'growth_models.py', 'growth_paths.py', 'growth_sources.py', 'growth_video.py', 'growth_web.py', 'growth_wechat.py', 'growth_analysis.py', 'growth_pipeline.py', 'growth_server.py', 'growth-workspace.js', 'growth-workspace.css',
          'growth_remote.py', 'sy_remote_bridge.py', 'sy_remote_entry.js', 'sy_remote_panel.html', 'sy_wechat_share.js', 'sy_wechat_select.js', 'sy_wechat_store.js', 'growth_ocr.py', 'growth_ocr.ps1', 'growth_wechat_screen.py', 'growth_wechat_float.py', 'launch_growth.py', 'start-remote.cmd', '启动资料行动.cmd']
 
 

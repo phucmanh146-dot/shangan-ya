@@ -9,7 +9,7 @@ const {Window}=await import(pathToFileURL(require.resolve('happy-dom')).href);
 const win=new Window({url:'http://127.0.0.1:8877/index.html',settings:{enableJavaScriptEvaluation:true}});
 const root=path.dirname(new URL(import.meta.url).pathname), calls=[], errors=[];
 win.addEventListener('error',e=>errors.push(e.message));
-win.document.write('<div class="app-topbar-right"></div><button id="syRemoteEntry">微信跟随</button>');
+win.document.write('<div class="app-topbar-right"></div><button id="syRemoteEntry">微信跟随</button><section class="sykv-toolbar"><div class="sykv-actions"><button>连接 Obsidian</button></div></section>');
 let account='alice',pool=[],seq=0;
 const data={tasks:[{id:'existing',name:'原任务',done:false}],categories:['学习']};
 win.SY={get currentAccountKey(){return account;},getAcctData:()=>data,saveAcctData:()=>{},refreshCurrentView:()=>{},todayKey:()=> '2026-10-14'};
@@ -40,6 +40,7 @@ const settle=()=>new Promise(r=>setTimeout(r,30));
 const dialog=()=>win.document.querySelector('.growth-dialog');
 const click=text=>{const b=[...dialog().querySelectorAll('button')].find(b=>b.textContent===text);assert.ok(b,'button '+text);b.click();};
 try{
+  assert.equal(win.document.querySelector('[data-growth-obsidian]').textContent,'打开我的 Obsidian');
   win.SYGrowth.open({title:'正在写的目标',question:'我的问题'});await settle();
   assert.ok(dialog());assert.match(dialog().querySelector('[data-obsidian]').textContent,/最近笔记/);
   const note=[...dialog().querySelectorAll('button')].find(b=>b.textContent==='最近笔记');
