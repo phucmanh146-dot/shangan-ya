@@ -79,6 +79,7 @@ function render(){
  $('history').replaceChildren(...(project.history||[]).map(h=>el('p',`v${h.version} · ${h.action} · ${h.created}`)));
  if(typeof handoffView==='function')handoffView();
  if(typeof inputView==='function')inputView();
+ if(typeof recoveryView==='function')recoveryView();
 }
 function openFeedback(task,kind,label){
  action={task_id:task.task_id,action:kind,expected_plan_version:project.plan.plan_version,expected_version:project.version};$('feedback-form').reset();$('feedback-title').textContent=label+' · '+task.title;$('submit-fields').hidden=kind!=='submit';$('review-fields').hidden=!['approve','reject'].includes(kind);

@@ -110,6 +110,8 @@ def researcher(p):
     version = (p.get('diagnosis') or {}).get('diagnosis_version', 0) + 1
     payload = {'stage':'diagnosis','goal':p['goal'],'project_context':ctx,'member_profiles':profiles,
                'brief_history':p.get('brief_history', []),'documents':docs,'sources':sources,
+               'pending_commitments':[c for c in p.get('recovery', {}).get('commitments', []) if not c['task_id']],
+               'observed_attempts':p.get('recovery', {}).get('attempts', [])[-5:],
                'previous_gaps':(p.get('diagnosis') or {}).get('gaps', []),
                'execution_history':(p.get('plan') or {}).get('tasks', []),
                'output_contract':{'gaps':[{'gap_id':'稳定编号','current_evidence':'当前事实',

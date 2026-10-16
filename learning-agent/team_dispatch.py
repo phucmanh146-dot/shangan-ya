@@ -17,6 +17,7 @@ def providers(p):
 
 
 def dashboard(p):
+    from team_recovery import summary
     a, b = providers(p)
     run = p.get('dispatch', {})
     active = run.get('status') == 'running' and run.get('boot_id') == BOOT_ID
@@ -32,6 +33,8 @@ def dashboard(p):
         stage, label = 'B', '等待 B 根据最新诊断生成计划'
     elif counts['pending_review']:
         stage, label = 'review', '有成果待验收'
+    elif p.get('recovery') and summary(p)['ready']:
+        stage, label = 'recovery', '有保存的任务现场可以返回；先核对当前优先次序'
     elif counts['blocked']:
         stage, label = 'rescue', '有任务卡住，先补充卡点证据'
     elif p.get('artifact_storage_required') and any(t['status']=='completed' and t.get('external_review') and
