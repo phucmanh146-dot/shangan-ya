@@ -1,5 +1,7 @@
 # 从目标到成果：三人协作 Agent
 
+**2026-10-16 受阻与中断恢复增补：**[本轮PRD、已实现范围与验收](docs/recovery-agent-upgrade-2026-10-16.md)。沿用现有 Python/SQLite 和作品复核流程，新增任务现场、条件返回、实际尝试、来源承诺及当前项目的候选顺序。运行 `learning-agent/learning_agent_server.py` 后打开 `/team.html` 的“受阻、打断后，接着把事情做完”。这是一条待共同集成的功能分支，工程检查与真人收益分别验收。
+
 **由队长 phucmanh146-dot 统筹，沿用已有 PRD，参考上岸鸭产品思路继续开发。**
 
 [个人介绍](docs/profile.md) · [队长一步一步操作](docs/team-onboarding.md) · [三人交接约定](docs/p1-contract.md) · [作品主页](https://shanganya-focus-hanyi.phucmanh146.chatgpt.site/) · [Skill 页面](https://shanganya-focus-hanyi.phucmanh146.chatgpt.site/skill)

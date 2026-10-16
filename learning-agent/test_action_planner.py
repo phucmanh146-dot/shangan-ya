@@ -6,6 +6,7 @@ import action_planner as b
 class PlannerTests(unittest.TestCase):
     def setUp(self):
         self.d={'diagnosis_version':1,'sources':[{'source_id':'s'}],'member_profiles':[{'member_id':'B','verified_capabilities':['x']}], 'gaps':[{'gap_id':'g','target_result':'作品','source_refs':['s'],'related_member_ids':['B'],'required_capabilities':['x'],'acceptance_criteria':['能复现'],'estimate_minutes_range':[30,60]}]}
+        self.d['gaps'][0]['steps']=['打开本次作品的验收记录，核对输入版本并记录复现结果']
         self.p=b.generate(self.d,{'deadline':'2030-01-02'})
         self.s={'member_id':'B','period_start':'2030-01-02','period_end':'2030-01-02','daily_limit':90,'buffer_minutes':0,'chunk_minutes':30,'windows':[{'date':'2030-01-02','start':'10:00','end':'11:30'}],'busy':[],'selected_task_ids':['g:deliver'],'allow_split':True}
         self.now=datetime.fromisoformat('2030-01-02T09:00+08:00')
@@ -18,6 +19,12 @@ class PlannerTests(unittest.TestCase):
     def test_missing_evidence(self):
         self.d['gaps'][0]['source_refs']=[]
         self.assertFalse(b.generate(self.d,{})['tasks'])
+    def test_missing_actions_stay_blocked_instead_of_generic_production(self):
+        del self.d['gaps'][0]['steps']
+        p=b.generate(self.d,{})
+        self.assertTrue(p['tasks'][0]['guidance_required'])
+        self.assertEqual(p['tasks'][0]['status'],'blocked')
+        self.assertTrue(p['unscheduled'])
     def test_learning(self):
         self.d['member_profiles'][0]['verified_capabilities']=[]
         p=b.generate(self.d,{})

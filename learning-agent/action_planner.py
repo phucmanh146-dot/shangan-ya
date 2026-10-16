@@ -56,12 +56,18 @@ def generate(diagnosis, context):
         if not isinstance(estimate,list) or len(estimate)!=2 or any(type(n)!=int or n<1 for n in estimate) or estimate[0]>estimate[1]:
             raise ValueError('估时范围无效：'+key)
         dependencies=previous+[dep+':deliver' for dep in gap.get('depends_on_gap_ids',[])]
+        explicit_steps = gap.get('steps') or [s.get('action') for s in gap.get('micro_steps', [])]
+        has_guidance = isinstance(explicit_steps, list) and bool(explicit_steps) and all(isinstance(s, str) and s.strip() for s in explicit_steps)
         tasks.append(dict(task_id=key+':deliver',title=gap['target_result'],gap_ids=[key],owner_ids=owners,
-            steps=gap.get('steps') or ['用 5 分钟打开相关材料，定位当前缺口','完成目标产物','逐条检查验收条件并提交证据'],
+            steps=explicit_steps if has_guidance else ['等待 A/B 补齐当前作品位置、具体操作、产物与自检方式'],
             deliverable=gap['target_result'],acceptance_criteria=criteria,estimate_minutes_range=estimate,
             depends_on=dependencies,deadline=gap.get('deadline',context.get('deadline','待成员确认')),
             source_refs=refs,status='blocked' if dependencies else 'candidate',kind='production',
             estimate_basis=gap.get('estimate_basis','待校准假设：包含制作、修改与检查')))
+        if not has_guidance:
+            tasks[-1].update(status='blocked', guidance_required=True,
+                             blocker='尚无具体操作步骤，不能开始制作')
+            pending.append({'task_id':key+':deliver','reason':'缺少具体操作步骤；请补充 steps 或 micro_steps，不使用通用三步代填'})
         if gap.get('micro_steps'):
             tasks[-1]['micro_steps'] = deepcopy(gap['micro_steps'])
         tasks[-1]['capability_requirements'] = [
