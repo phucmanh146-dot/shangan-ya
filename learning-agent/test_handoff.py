@@ -104,7 +104,9 @@ class HandoffTests(unittest.TestCase):
     def test_incremental_A_addition_preserves_completed_task_and_evidence(self):
         self.prepared(); self.event('start')
         self.event('submit', artifact_id='record', artifact_version=1, actual_minutes=10, evidence='实际记录')
-        self.event('approve', reviewer_id='A')
+        self.event('approve', reviewer_id='A', criterion_results=[
+            {'criterion':c,'passed':True,'evidence':'人工夹具：逐条核对本次提交的执行记录'}
+            for c in self.p['plan']['tasks'][0]['acceptance_criteria']])
         original = copy.deepcopy(self.p['plan']['tasks'][0])
         d = copy.deepcopy(self.p['diagnosis']); d['diagnosis_version'] = 2
         extra = copy.deepcopy(d['gaps'][0]); extra['gap_id'] = 'G2'; extra['target_result'] = '第二次交接记录'
