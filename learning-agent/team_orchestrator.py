@@ -199,7 +199,6 @@ def diagnosis(data):
                 ref = required(gap,'current_artifact',dict)
                 artifact_store.references(p, gap.get('evidence_refs'), (ref['artifact_id'], ref['artifact_version']))
                 if gap.get('verification_status') in ('verified', 'evidence_linked_pending_confirmation'):
-                if gap.get('verification_status') in ('verified', 'evidence_linked_pending_confirmation'):
                     required(gap, 'current_locator')
                     required(gap, 'current_evidence')
                     required(gap, 'extract_pattern')
