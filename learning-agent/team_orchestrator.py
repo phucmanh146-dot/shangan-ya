@@ -191,9 +191,14 @@ def diagnosis(data):
                 if not prior or prior.get('status')!='closed' or prior.get('confirmed_review_id') not in p.get('applied_review_ids', []):
                     raise ValueError('不能声明未确认的差距仅为历史而跳过证据核对')
                 continue
-            ref = required(gap,'current_artifact',dict)
-            artifact_store.references(p, gap.get('evidence_refs'), (ref['artifact_id'], ref['artifact_version']))
             if gap.get('status') != 'closed':
+                if gap.get('verification_status') in ('unknown', 'blocked'):
+                    if gap.get('micro_steps'):
+                        raise ValueError('unknown/blocked 差距不能提前生成生产微动作；先补证据并重新诊断')
+                    continue
+                ref = required(gap,'current_artifact',dict)
+                artifact_store.references(p, gap.get('evidence_refs'), (ref['artifact_id'], ref['artifact_version']))
+                if gap.get('verification_status') in ('verified', 'evidence_linked_pending_confirmation'):
                 if gap.get('verification_status') in ('verified', 'evidence_linked_pending_confirmation'):
                     required(gap, 'current_locator')
                     required(gap, 'current_evidence')
@@ -213,8 +218,6 @@ def diagnosis(data):
                     validate_micro_steps({'micro_steps':steps},d)
                     for step in steps:
                         artifact_store.read(p, step['input_version']['artifact_id'], step['input_version']['artifact_version'])
-                elif gap.get('verification_status') in ('unknown', 'blocked') and gap.get('micro_steps'):
-                    raise ValueError('unknown/blocked 差距不能提前生成生产微动作；先补证据并重新诊断')
     if p['diagnosis'] and d['diagnosis_version'] <= p['diagnosis']['diagnosis_version']:
         raise Conflict('诊断版本必须递增')
     if p['plan'] and not p.get('plan_diagnosis') and p['diagnosis'] and p['plan']['based_on_diagnosis_version'] == p['diagnosis']['diagnosis_version']:
