@@ -32,7 +32,6 @@ def diagnosis_reply(p, skills=None):
         'required_capabilities':skills or [],'source_refs':['material:'+ref['artifact_id']+':'+str(ref['artifact_version'])],
         'acceptance_criteria':['写明有效分母和缺失人数'],'current_artifact':ref,
         'current_locator':unit['locator'],'reason':'人数必须能回到原始记录',
-        'extract_pattern':'提取可复查分母和缺失口径的证据结构，不复制外部作品内容',
         'evidence_refs':[{**ref,'locator':unit['locator'],'quote':unit['text']}],
         'micro_steps':[{'step_id':'s1','input_version':ref,'target_locator':unit['locator'],
             'action':'核对这行人数，在人数旁追加有效分母与缺失记录数','reason':'避免把缺失计为0',
@@ -101,6 +100,19 @@ class GeneralLoopTests(unittest.TestCase):
         self.p = inputs.record_capability({**self.ctx(),'member_id':'member-a','capability':{'name':'数据清洗',
             'criterion':'说明缺失与0的区别','evidence':'本人对照实际产物确认','passed':passed,
             'artifact_id':'report','artifact_version':1,'locator':'line:1','quote':'人数=3'}})
+
+    def test_evidence_context_has_a_hard_total_budget(self):
+        evidence = agent.Evidence('context-budget-test')
+        evidence.rows = [
+            {'id':'S'+str(i),'title':'source '+str(i),'url':'https://example.com/'+str(i),
+             'snippet':'snippet','text':'x'*5000,'kind':'search','readStatus':'fulltext'}
+            for i in range(1,21)
+        ]
+        context = evidence.context(max_chars=1200,max_sources=5,per_source=1000)
+        self.assertLessEqual(sum(len(row['text']) for row in context),1200)
+        self.assertLessEqual(len(context),5)
+        self.assertEqual(context[0]['id'],'S1')
+        self.assertEqual(evidence.rows[0]['text'], 'x'*5000)  # Prompt clipping must not mutate stored evidence.
 
     def test_immutable_versions_project_isolation_and_actual_reread(self):
         self.upload(); self.upload('新版人数=2',purpose='submission')
