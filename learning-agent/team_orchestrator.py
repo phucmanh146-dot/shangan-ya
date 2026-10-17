@@ -70,6 +70,454 @@ def state(identifier=None):
             return value
         return {'projects': [view(json.loads(x['body'])) for x in c.execute('SELECT body FROM team_projects ORDER BY rowid DESC LIMIT 100')]}
 
+def recover(data):
+    """Cross-session intent matching over existing project records; never creates a project."""
+    intent = required(data, 'intent')[:2400]
+    session_id = str(data.get('session_id') or data.get('sessionId') or uuid.uuid4().hex).strip()[:160]
+    if not session_id:
+        raise ValueError('session_id 不能为空')
+    with connection() as c:
+        init(c)
+        rows = c.execute('SELECT id,version,body FROM team_projects ORDER BY rowid DESC LIMIT 100').fetchall()
+    candidates = []
+    for row in rows:
+        p = json.loads(row['body'])
+        diagnosis = p.get('diagnosis') or {}
+        plan = p.get('plan') or {}
+        candidates.append({
+            'project_id': row['id'], 'version': row['version'], 'goal': str(p.get('goal') or '')[:700],
+            'mode': p.get('mode', ''), 'updated_at': p.get('updated_at', ''),
+            'stage': 'WAITING_REVIEW' if any(t.get('status') == 'pending_review' for t in plan.get('tasks', []))
+                     else ('PLAN_PREVIEW' if p.get('proposal') else ('EXECUTING' if plan else ('DIAGNOSING' if diagnosis else 'MATERIAL_READY'))),
+            'task_titles': [str(t.get('title') or '')[:120] for t in plan.get('tasks', [])[:12]],
+            'gap_titles': [str(g.get('target_result') or g.get('gap_id') or '')[:120] for g in diagnosis.get('gaps', [])[:12]],
+        })
+    if not candidates:
+        return {'ok': True, 'project': None, 'matches': [], 'match_method': 'none',
+                'session_id': session_id, 'note': '还没有可恢复的项目；请先创建真实项目。'}
+    direct = [x for x in candidates if x['project_id'] in intent or
+              (len(x['goal'].strip()) >= 5 and (x['goal'].strip() in intent or intent.strip() == x['goal'].strip()))]
+    chosen = direct[0] if len(direct) == 1 else None
+    method, confidence, reason = ('exact', 1.0, '输入包含已有项目 ID 或完整目标。') if chosen else ('none', 0.0, '')
+    if not chosen:
+        cfg = agent.rescue.config_snapshot()
+        if cfg.get('base') and cfg.get('model'):
+            prompt = ('选择最符合用户当前意图的一个已有项目。只能返回候选 project_id；如果没有足够依据，返回 NONE。'
+                      '不要创建项目，不要把仅仅主题相近的不同目标合并。严格 JSON：'
+                      '{"project_id":"候选ID或NONE","confidence":0.0,"reason":"简短依据"}\\n'
+                      '用户意图：' + intent + '\\n候选项目：' + json.dumps(candidates, ensure_ascii=False))
+            try:
+                raw = str(agent.rescue.complete([
+                    {'role': 'system', 'content': '你是跨会话项目恢复器。只匹配给定候选，不生成新项目。证据不足就返回 NONE。只返回 JSON。'},
+                    {'role': 'user', 'content': prompt}], cfg)).strip()
+                cleaned = re.sub(r'^\\s*```(?:json)?\\s*|\\s*```\\s*
+    with agent.WRITE_LOCK, connection() as c:
+        init(c)
+        c.execute('BEGIN IMMEDIATE')
+        row = c.execute('SELECT version FROM team_projects WHERE id=?', (project['project_id'],)).fetchone()
+        current = row['version'] if row else 0
+        if current != expected:
+            raise Conflict('项目已更新，请刷新后重试；旧版本未覆盖新状态')
+        project = copy.deepcopy(project)
+        project.pop('history', None)
+        project.pop('plan_stale', None)
+        project.pop('dispatch_status', None)
+        project['version'] = current + 1
+        project['updated_at'] = agent.now()
+        if write is not None:
+            write(c)
+        body = agent.dump(project)
+        c.execute('INSERT OR REPLACE INTO team_projects VALUES(?,?,?)', (project['project_id'], current+1, body))
+        c.execute('INSERT INTO team_history VALUES(?,?,?,?,?)', (project['project_id'], current+1, body, action, agent.now()))
+    return view(project)
+
+def current(data):
+    p = state(required(data, 'project_id'))
+    if integer(data, 'expected_version') != p['version']:
+        raise Conflict('项目已更新，请刷新后重试')
+    return p
+
+def create(data):
+    mode = data.get('mode', 'demo')
+    if mode not in ('demo', 'live'):
+        raise ValueError('mode 必须为 demo 或 live')
+    return commit({'schema_version':'0.1', 'project_id':uuid.uuid4().hex, 'goal':required(data,'goal'),
+                   'mode':mode, 'timezone':'Asia/Shanghai', 'diagnosis':None, 'plan':None,
+                   'proposal':None, 'feedback':[], 'live_verified':False}, 0, '创建项目')
+
+def artifact_catalog(d):
+    """Optional version catalog. These are declared references, not file inspection."""
+    if 'artifact_versions' not in d:
+        return set()
+    catalog = set()
+    for row in required(d, 'artifact_versions', list):
+        key = (required(row, 'artifact_id'), integer(row, 'artifact_version', 1))
+        required(row, 'title')
+        if key in catalog:
+            raise ValueError('材料版本重复')
+        catalog.add(key)
+    return catalog
+
+def validate_artifact_ref(value, catalog):
+    key = (required(value, 'artifact_id'), integer(value, 'artifact_version', 1))
+    if key not in catalog:
+        raise ValueError('引用了未登记的材料版本；请 A 补齐 artifact_versions')
+
+def validate_micro_steps(t, d):
+    if 'micro_steps' not in t:
+        return  # Existing v0.1 plans stay usable and visibly lack fine guidance.
+    rows = required(t, 'micro_steps', list)
+    if not rows:
+        raise ValueError('micro_steps 不能为空；尚未提供时请省略此字段')
+    unique(rows, 'step_id')
+    catalog = artifact_catalog(d)
+    sources = {x['source_id'] for x in d['sources']}
+    for row in rows:
+        validate_artifact_ref(required(row, 'input_version', dict), catalog)
+        for key in ('target_locator', 'action', 'reason', 'expected_change', 'output',
+                    'self_check', 'failure_next', 'capability_basis'):
+            required(row, key)
+        if 'source_refs' in row and not set(strings(row, 'source_refs', True)).issubset(sources):
+            raise ValueError('细步骤引用了不存在的来源')
+
+def validate_diagnosis(d):
+    integer(d, 'diagnosis_version', 1)
+    for key in ('requirements','sources','artifact_status','member_profiles','gaps','resource_candidates','unknowns'):
+        required(d,key,list)
+    sources = unique(d['sources'], 'source_id')
+    for source in d['sources']:
+        if source.get('kind') not in ('official','user_material','reference','suggestion'):
+            raise ValueError('来源 kind 必须说明官方、用户材料、参考或建议')
+        required(source,'title')
+    members = unique(d['member_profiles'],'member_id')
+    catalog = artifact_catalog(d)
+    unique(d['gaps'],'gap_id')
+    for gap in d['gaps']:
+        for key in ('current_evidence','target_result','gap_type','priority_reason','verification_status'):
+            required(gap,key)
+        strings(gap,'required_capabilities')
+        if not set(strings(gap,'related_member_ids')).issubset(members):
+            raise ValueError('差距引用了不存在的成员')
+        if not set(strings(gap,'source_refs')).issubset(sources):
+            raise ValueError('差距引用了不存在的来源')
+        if not gap['source_refs'] and gap['verification_status'] == 'verified':
+            raise ValueError('没有来源的差距不能标为已核验')
+        for key in ('current_locator', 'target_locator', 'reason', 'applicability', 'verification_method'):
+            if key in gap:
+                required(gap, key)
+        if 'current_artifact' in gap:
+            validate_artifact_ref(required(gap, 'current_artifact', dict), catalog)
+
+def diagnosis(data):
+    p = current(data)
+    d = copy.deepcopy(required(data,'diagnosis',dict))
+    validate_diagnosis(d)
+    if p.get('artifact_storage_required'):
+        import artifact_store
+        from personal_guidance import skill_status, capability_basis
+        known_members = {m['member_id']:m for m in p.get('member_task_briefs', [])}
+        for member in d['member_profiles']:
+            if member['member_id'] not in known_members:
+                raise ValueError('先登记本人任务；诊断不能新增未确认成员')
+            actual = known_members[member['member_id']]
+            member['capability_evidence'] = copy.deepcopy(actual['capability_evidence'])
+            member['verified_capabilities'] = sorted({r['capability'] for r in actual['capability_evidence'] if skill_status(actual,r['capability'])[0]=='verified'})
+        for gap in d['gaps']:
+            prior = next((g for g in (p.get('diagnosis') or {}).get('gaps', []) if g['gap_id']==gap['gap_id']),None)
+            if gap.get('status') == 'closed' and (not prior or prior.get('status')!='closed' or
+                    gap.get('confirmed_review_id') not in p.get('applied_review_ids', [])):
+                raise ValueError('关闭差距必须来自本项目已确认且已应用的成果复核')
+            if gap.get('history_only'):
+                if not prior or prior.get('status')!='closed' or prior.get('confirmed_review_id') not in p.get('applied_review_ids', []):
+                    raise ValueError('不能声明未确认的差距仅为历史而跳过证据核对')
+                continue
+            ref = required(gap,'current_artifact',dict)
+            artifact_store.references(p, gap.get('evidence_refs'), (ref['artifact_id'], ref['artifact_version']))
+            if gap.get('status') != 'closed':
+                for step in required(gap,'micro_steps',list):
+                    step['capability_basis'] = capability_basis(gap, d['member_profiles'])
+                    step['capability_basis_source'] = 'server_member_records'
+                validate_micro_steps({'micro_steps':required(gap,'micro_steps',list)},d)
+                for step in gap['micro_steps']:
+                    artifact_store.read(p, step['input_version']['artifact_id'], step['input_version']['artifact_version'])
+    if p['diagnosis'] and d['diagnosis_version'] <= p['diagnosis']['diagnosis_version']:
+        raise Conflict('诊断版本必须递增')
+    if p['plan'] and not p.get('plan_diagnosis') and p['diagnosis'] and p['plan']['based_on_diagnosis_version'] == p['diagnosis']['diagnosis_version']:
+        p['plan_diagnosis'] = copy.deepcopy(p['diagnosis'])
+    p['diagnosis'], p['proposal'] = d, None
+    p['diagnosis_needs_refresh'] = False
+    return commit(p,p['version'],'接收 A 的诊断；原计划保留并检查是否过期')
+
+def validate_plan(plan, d):
+    integer(plan,'plan_version',1)
+    if integer(plan,'based_on_diagnosis_version',1) != d['diagnosis_version']:
+        raise Conflict('计划依据的诊断已过期，请 B 更新')
+    for key in ('tasks','learning_paths','time_blocks','dependencies','unscheduled','assumptions'):
+        required(plan,key,list)
+    ids = unique(plan['tasks'],'task_id')
+    gaps = {x['gap_id'] for x in d['gaps']}
+    members = {x['member_id'] for x in d['member_profiles']}
+    sources = {x['source_id'] for x in d['sources']}
+    deps = {}
+    for t in plan['tasks']:
+        for key in ('title','deliverable','deadline'):
+            required(t,key)
+        strings(t,'steps',True); strings(t,'acceptance_criteria',True)
+        for key, allowed, needed in (('gap_ids',gaps,True),('owner_ids',members,True),('source_refs',sources,False),('depends_on',ids,False)):
+            if not set(strings(t,key,needed)).issubset(allowed):
+                raise ValueError(f'{key} 引用了不存在的对象')
+        nums = required(t,'estimate_minutes_range',list)
+        if len(nums)!=2 or any(type(n) is not int or n<1 for n in nums) or nums[0]>nums[1]:
+            raise ValueError('估时必须是有效分钟范围')
+        if t.get('status') not in ('candidate','scheduled','in_progress','pending_review','completed','blocked'):
+            raise ValueError('任务状态无效')
+        validate_micro_steps(t, d)
+        deps[t['task_id']] = t['depends_on']
+    visited = set()
+    def visit(key, path):
+        if key in visited:
+            return
+        if key in path:
+            raise ValueError('任务依赖存在循环')
+        for dep in deps[key]:
+            visit(dep,path|{key})
+        visited.add(key)
+    for key in ids:
+        visit(key,set())
+    slots = []
+    for block in plan['time_blocks']:
+        if required(block,'task_id') not in ids:
+            raise ValueError('时段引用不存在的任务')
+        owner = required(block,'member_id')
+        task = next(t for t in plan['tasks'] if t['task_id']==block['task_id'])
+        if owner not in task['owner_ids']:
+            raise ValueError('时段成员不是任务负责人')
+        try:
+            start,end = (datetime.fromisoformat(required(block,k)) for k in ('start','end'))
+        except ValueError:
+            raise ValueError('时段必须为带时区的 ISO 日期时间')
+        if not start.tzinfo or not end.tzinfo or end<=start:
+            raise ValueError('时段时区或起止顺序无效')
+        if any(who==owner and start<b and end>a for who,a,b in slots):
+            raise ValueError('同一成员时段重叠')
+        slots.append((owner,start,end))
+
+def protected(old, new):
+    previous = {t['task_id']:t for t in (old or {}).get('tasks',[])}
+    latest = {t['task_id']:t for t in new['tasks']}
+    for key,t in previous.items():
+        if t['status']!='candidate' or t.get('locked'):
+            if latest.get(key)!=t:
+                raise ValueError('重排不得覆盖已开始、已完成、待验收或锁定任务：'+key)
+    for t in new['tasks']:
+        if t['task_id'] not in previous and t['status'] not in ('candidate','scheduled'):
+            raise ValueError('新任务不能伪造执行或完成状态')
+        if t['task_id'] in previous and previous[t['task_id']]['status']=='candidate' and t['status'] not in ('candidate','scheduled'):
+            raise ValueError('排程不能代替执行和验收')
+    for block in (old or {}).get('time_blocks',[]):
+        if block.get('locked') and block not in new['time_blocks']:
+            raise ValueError('锁定时段不能被重排覆盖')
+
+def propose(data):
+    p = current(data)
+    if not p['diagnosis'] or p.get('diagnosis_needs_refresh'):
+        raise ValueError('先接收基于最新补充信息的 A 诊断')
+    plan = copy.deepcopy(required(data,'plan',dict))
+    validate_plan(plan,p['diagnosis'])
+    if p['plan'] and plan['plan_version']<=p['plan']['plan_version']:
+        raise Conflict('计划版本必须递增')
+    protected(p['plan'],plan)
+    old = {t['task_id']:t for t in (p['plan'] or {}).get('tasks',[])}
+    new = {t['task_id']:t for t in plan['tasks']}
+    p['proposal'] = {'id':uuid.uuid4().hex,'plan':plan,'reason':required(data,'reason'),
+                     'diff':{'added':sorted(new.keys()-old.keys()),'removed':sorted(old.keys()-new.keys()),
+                             'changed':[k for k in new.keys()&old.keys() if new[k]!=old[k]],
+                             'time_blocks_before':(p['plan'] or {}).get('time_blocks',[]),'time_blocks_after':plan['time_blocks']}}
+    return commit(p,p['version'],'保存 B 的计划预览，等待用户采用')
+
+def apply(data):
+    p = current(data)
+    proposal = p['proposal']
+    if not proposal or data.get('proposal_id')!=proposal['id']:
+        raise Conflict('预览已失效，请重新生成')
+    validate_plan(proposal['plan'],p['diagnosis'])
+    protected(p['plan'],proposal['plan'])
+    p['undo_plan'] = copy.deepcopy(p['plan'])
+    p['undo_at_version'] = p['version'] + 1
+    p['plan'],p['proposal'] = proposal['plan'],None
+    p['plan_diagnosis'] = copy.deepcopy(p['diagnosis'])
+    return commit(p,p['version'],'用户采用计划')
+
+def validate_criterion_results(data, task):
+    rows = required(data, 'criterion_results', list)
+    criteria = task['acceptance_criteria']
+    if len(rows) != len(criteria):
+        raise ValueError('验收必须逐条对应任务的验收条件')
+    for row, criterion in zip(rows, criteria):
+        if required(row, 'criterion') != criterion or type(row.get('passed')) is not bool:
+            raise ValueError('验收条件或通过状态无效，请刷新后重新核对')
+        required(row, 'evidence')
+    if not all(row['passed'] for row in rows):
+        raise ValueError('有验收条件未通过，请退回修改；不能标记完成')
+    return copy.deepcopy(rows)
+
+def feedback(data):
+    p = current(data)
+    if not p['plan'] or p['plan_stale']:
+        raise Conflict('没有有效计划，请先更新并采用计划')
+    if integer(data,'expected_plan_version',1)!=p['plan']['plan_version']:
+        raise Conflict('计划已更新，请刷新')
+    t = next((t for t in p['plan']['tasks'] if t['task_id']==data.get('task_id')),None)
+    if not t:
+        raise ValueError('任务不存在')
+    action = required(data,'action')
+    note = required(data,'note')
+    record = {'task_id':t['task_id'],'action':action,'note':note,'created':agent.now(),
+              'expected_plan_version':p['plan']['plan_version'], 'diagnosis_version':p['diagnosis']['diagnosis_version']}
+    if action in ('start','resume'):
+        if t['status'] not in ('candidate','scheduled','blocked'):
+            raise ValueError('当前状态不能开始')
+        if any(x['task_id'] in t['depends_on'] and x['status']!='completed' for x in p['plan']['tasks']):
+            raise ValueError('前置任务尚未验收完成')
+        if t.get('external_dependencies'):
+            raise ValueError('外部前置成果尚未交付，不能开始任务')
+        if t.get('capability_requirements'):
+            from personal_guidance import skill_status
+            members = {m['member_id']:m for m in p['diagnosis']['member_profiles']}
+            for needed in t['capability_requirements']:
+                if skill_status(members[needed['member_id']], needed['capability'])[0] != 'verified':
+                    raise ValueError('先保存当前能力的实际试做结果并更新诊断，再开始制作：'+needed['capability'])
+        t['status']='in_progress'
+    elif action=='submit':
+        if t['status']!='in_progress':
+            raise ValueError('请先开始任务')
+        record['artifact_id']=required(data,'artifact_id')
+        record['artifact_version']=integer(data,'artifact_version',1)
+        if p.get('artifact_storage_required'):
+            import artifact_store
+            artifact_store.read(p, record['artifact_id'], record['artifact_version'])
+        record['actual_minutes']=integer(data,'actual_minutes')
+        record['evidence']=required(data,'evidence')
+        t['submission']=copy.deepcopy(record)
+        t.pop('external_review', None)
+        t['status']='pending_review'
+    elif action in ('approve','reject'):
+        if t['status']!='pending_review' or not t.get('submission'):
+            raise ValueError('请先提交成果证据，再验收')
+        record['reviewer_id']=required(data,'reviewer_id')
+        record['artifact_id']=t['submission']['artifact_id']
+        record['artifact_version']=t['submission']['artifact_version']
+        if p.get('artifact_storage_required'):
+            import artifact_store
+            artifact_store.read(p, record['artifact_id'], record['artifact_version'])
+        if record['reviewer_id'] not in {m['member_id'] for m in p['diagnosis']['member_profiles']}:
+            raise ValueError('验收成员不在项目中')
+        record['evidence']=t['submission']['evidence']
+        packet = (t.get('external_review') or {}).get('packet')
+        if action == 'approve' and packet and not all(r['passed'] for r in packet['criterion_results']):
+            raise ValueError('A 复核仍有验收条件未通过，请退回修改或接收更新后的复核')
+        # Finishing a task (especially learning) is distinct from closing a gap.
+        # Keep A's remaining/unknown gap evidence even after this task passes.
+        if action == 'approve' and (packet or t.get('micro_steps') or 'criterion_results' in data):
+            record['criterion_results'] = validate_criterion_results(data, t)
+        t['status']='completed' if action=='approve' else 'in_progress'
+        t['review']=copy.deepcopy(record)
+    elif action=='block':
+        if t['status'] not in ('candidate','scheduled','in_progress'):
+            raise ValueError('当前状态不能标记卡住')
+        t['status']='blocked'; record['blocker']=note
+    elif action=='change':
+        record['unexpected_event']=data.get('unexpected_event',note)
+        record['availability_change']=data.get('availability_change',{})
+    elif action=='lock':
+        t['locked']=True
+    else:
+        raise ValueError('未知反馈动作')
+    p['feedback'].append(record)
+    p['proposal']=None
+    return commit(p,p['version'],'执行反馈：'+action)
+
+def run_handoff(data, researcher, planner):
+    """Trusted server-side callables; B receives the validated persisted A package.
+    No dynamic imports, arbitrary endpoint execution or live claim from user input.
+    """
+    p=current(data)
+    d=researcher(copy.deepcopy(p))
+    p=diagnosis({'project_id':p['project_id'],'expected_version':p['version'],'diagnosis':d})
+    plan=planner(copy.deepcopy(p['diagnosis']),copy.deepcopy(p))
+    return propose({'project_id':p['project_id'],'expected_version':p['version'],'plan':plan,'reason':'A → B 程序交接；待用户采用'})
+
+def demo(data):
+    p=current(data)
+    if p['mode']!='demo' or p['diagnosis']:
+        raise ValueError('仅空的 Demo 项目可运行示例；真实项目请接入队友接口')
+    return run_handoff(data,demo_researcher,demo_planner)
+
+def demo_researcher(context):
+    return {'diagnosis_version':(context.get('diagnosis') or {}).get('diagnosis_version',0)+1,'requirements':[context['goal']], 'sources':[{'source_id':'input','kind':'user_material','title':'本次目标'}],
+            'artifact_status':[],'member_profiles':[{'member_id':'captain','name':'队长'},{'member_id':'A','name':'诊断研究'},{'member_id':'B','name':'行动排程'}],
+            'gaps':[{'gap_id':'G1','current_evidence':'Demo：尚未提供试用记录','target_result':'一份可复核的流程记录','gap_type':'evidence',
+                     'related_member_ids':['captain'],'required_capabilities':['记录与验收'],'source_refs':['input'],'priority_reason':'先验证交接','verification_status':'demo_fixture'}],
+            'resource_candidates':[],'unknowns':['Demo 没有调用真实模型或搜索；实际差距待 A 判断']}
+
+def demo_planner(d, context):
+    return {'plan_version':(context.get('plan') or {}).get('plan_version',0)+1,'based_on_diagnosis_version':d['diagnosis_version'],
+            'tasks':[{'task_id':'T1','title':'验证一次三人交接','gap_ids':[d['gaps'][0]['gap_id']],'owner_ids':['captain'],
+                      'steps':['核对诊断与来源','记录一次操作结果','提交证据并请成员验收'],'deliverable':'操作记录',
+                      'acceptance_criteria':['记录目标、步骤、结果和卡点'],'estimate_minutes_range':[5,15],
+                      'depends_on':[],'deadline':'待成员确认','source_refs':['input'],'status':'candidate'}],
+            'learning_paths':[],'time_blocks':[],'dependencies':[],'unscheduled':['T1：尚未提供可用时段'],
+            'assumptions':['人工构造的 Demo 任务，未进行智能排期']}
+
+
+def period_replan(data):
+    p = current(data)
+    if not p['plan'] or p['plan_stale']:
+        raise Conflict('请先采用基于最新诊断的计划')
+    if integer(data,'expected_plan_version',1) != p['plan']['plan_version']:
+        raise Conflict('计划版本已变化，请刷新')
+    from period_planner import compute
+    constraints = copy.deepcopy(required(data,'constraints',dict))
+    plan = compute(p,constraints)
+    return propose({**data,'plan':plan,'reason':required(data,'reason')})
+
+
+def undo_plan(data):
+    p = current(data)
+    if not p.get('undo_plan') or p.get('undo_at_version') != p['version']:
+        raise Conflict('没有可直接撤销的安排，或采用后已有新进度；请重新预览调整，避免覆盖成果')
+    previous = copy.deepcopy(p['undo_plan'])
+    previous['plan_version'] = p['plan']['plan_version'] + 1
+    validate_plan(previous,p['diagnosis'])
+    p['plan'],p['proposal'],p['undo_plan'] = previous,None,None
+    return commit(p,p['version'],'撤销上次计划采用；保留版本历史')
+, '', raw, flags=re.I).strip()
+                obj = json.loads(cleaned)
+                project_id = str(obj.get('project_id') or '')
+                confidence = float(obj.get('confidence', 0))
+                candidate = next((x for x in candidates if x['project_id'] == project_id), None)
+                if candidate and confidence >= 0.62:
+                    chosen, method, reason = candidate, 'model_intent', str(obj.get('reason') or '')[:500]
+                else:
+                    confidence = 0.0
+            except Exception:
+                # Fail closed: model protocol errors never select a guessed project.
+                chosen, confidence = None, 0.0
+    if not chosen:
+        return {'ok': True, 'project': None, 'matches': candidates[:8], 'match_method': 'none',
+                'session_id': session_id, 'needs_confirmation': True,
+                'note': '没有足够证据自动匹配。请从候选项目中选择，避免把不同项目的上下文混在一起。'}
+    with connection() as c:
+        init(c)
+        c.execute('INSERT OR REPLACE INTO team_sessions(project_id,session_id,intent,matched_by,confidence,created) VALUES(?,?,?,?,?,?)',
+                  (chosen['project_id'], session_id, intent, method, confidence, agent.now()))
+    project = state(chosen['project_id'])
+    return {'ok': True, 'project': project, 'matches': [chosen], 'match_method': method,
+            'confidence': confidence, 'reason': reason, 'session_id': session_id,
+            'needs_confirmation': True,
+            'note': '已找到可能相关的旧项目。请确认项目和当前阶段后再继续执行；本次匹配不会自动改写项目状态。'}
+
+
 def commit(project, expected, action, write=None):
     with agent.WRITE_LOCK, connection() as c:
         init(c)
