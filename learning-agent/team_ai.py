@@ -139,12 +139,12 @@ def researcher(p):
             locator = team.required(g, 'current_locator')
             if not any(r['artifact_id'] == ref['artifact_id'] and r['artifact_version'] == ref['artifact_version'] and r['locator'] == locator for r in g['evidence_refs']):
                 raise ValueError('现状位置必须对应同一材料版本的实际引文')
-             team.required(g, 'extract_pattern')
-             source_by_id = {s['source_id']:s for s in sources}
-             for sid in g.get('source_refs', []):
-                 source = source_by_id.get(sid, {})
-                 if source.get('kind') == 'reference' and not (source.get('reference_locator') or g.get('reference_locator')):
-                     raise ValueError('参考来源必须提供原始页、段落、章节或代码位置；否则不能作为已定位参考')
+            team.required(g, 'extract_pattern')
+            source_by_id = {s['source_id']:s for s in sources}
+            for sid in g.get('source_refs', []):
+                source = source_by_id.get(sid, {})
+                if source.get('kind') == 'reference' and not (source.get('reference_locator') or g.get('reference_locator')):
+                    raise ValueError('参考来源必须提供原始页、段落、章节或代码位置；否则不能作为已定位参考')
             sid = 'material:' + ref['artifact_id'] + ':' + str(ref['artifact_version'])
             if sid not in g.get('source_refs', []):
                 raise ValueError('现状来源必须包含当前材料版本')
