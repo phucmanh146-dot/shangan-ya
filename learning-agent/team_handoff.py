@@ -108,6 +108,8 @@ def review_request(p, task_id=None, include_documents=False):
             'project_context': copy.deepcopy(p.get('project_context')),
             'member_task_briefs': copy.deepcopy(p.get('member_task_briefs', [])),
             'brief_history': copy.deepcopy(p.get('brief_history', [])),
+            'pending_commitments': copy.deepcopy([c for c in p.get('recovery', {}).get('commitments', []) if not c['task_id']]),
+            'task_recovery_summary': copy.deepcopy(p.get('recovery_summary', {})),
             'artifact_manifest': copy.deepcopy(p.get('stored_artifacts', [])),
             'diagnosis_needs_refresh': bool(p.get('diagnosis_needs_refresh')),
             'plan_stale': bool(p.get('plan_stale')),
