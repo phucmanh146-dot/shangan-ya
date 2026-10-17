@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import learning_agent as agent
 import team_orchestrator as team
-import team_recovery
+import team_sessions as team_recovery
 
 
 class CrossSessionRecoveryTests(unittest.TestCase):
@@ -22,7 +22,7 @@ class CrossSessionRecoveryTests(unittest.TestCase):
         self.db_patch.stop()
         self.tmp.cleanup()
 
-    def test_exact_goal_links_session_without_mutating_project(self):
+    def test_exact_goal_proposes_and_only_confirmation_links_session(self):
         before = team.state(self.project["project_id"])
         result = team_recovery.recover({
             "intent": "接着做：把科研项目的用户访谈证据补齐并复核",
@@ -33,7 +33,11 @@ class CrossSessionRecoveryTests(unittest.TestCase):
         self.assertEqual(result["match_method"], "exact")
         self.assertTrue(result["needs_confirmation"])
         self.assertEqual(after["version"], before["version"])
-        self.assertEqual(result["project"]["session_links"][0]["session_id"], "session-next")
+        self.assertEqual(result["project"]["session_links"], [])
+        linked = team_recovery.confirm({"project_id":self.project["project_id"],
+            "expected_version":before["version"],"session_id":"session-next","confirmed":True})
+        self.assertEqual(linked["project"]["session_links"][0]["session_id"], "session-next")
+        self.assertEqual(team.state(self.project["project_id"])["version"],before["version"])
 
     def test_model_match_must_choose_existing_candidate_and_pass_confidence(self):
         with patch.object(agent.rescue, "config_snapshot", return_value={"base": "https://example.invalid", "model": "test"}), \

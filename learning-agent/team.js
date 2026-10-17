@@ -80,6 +80,8 @@ function render(){
  $('history').replaceChildren(...(project.history||[]).map(h=>el('p',`v${h.version} · ${h.action} · ${h.created}`)));
  if(typeof handoffView==='function')handoffView();
  if(typeof inputView==='function')inputView();
+ if(typeof recoveryView==='function')recoveryView();
+ if(typeof runtimeView==='function')runtimeView().catch(e=>{$('runtime-current').textContent=e.message;});
 }
 function openFeedback(task,kind,label){
  action={task_id:task.task_id,action:kind,expected_plan_version:project.plan.plan_version,expected_version:project.version};$('feedback-form').reset();$('feedback-title').textContent=label+' · '+task.title;$('submit-fields').hidden=kind!=='submit';$('review-fields').hidden=!['approve','reject'].includes(kind);
@@ -94,16 +96,19 @@ $('recover-intent-btn').onclick=()=>safe(async()=>{
  const intent=$('recover-intent').value.trim();if(intent.length<3)throw new Error('请描述至少3个字的旧任务意图');
  const box=$('recover-results');box.replaceChildren(el('p','正在查找已有项目，不会新建项目或自动执行任务…'));
  const result=await request('/recover',{intent,sessionId:recoverySessionId});box.replaceChildren(el('p',result.note||'识别完成'));
+ async function confirmCandidate(candidate){
+  const linked=await request('/recover-confirm',{project_id:candidate.project_id,expected_version:candidate.version,
+   session_id:recoverySessionId,confirmed:true,intent});
+  await load(linked.project.project_id);$('message').textContent='已确认并载入旧项目；请核对保存的位置和下一步。任务尚未自动开始。';
+ }
  if(result.project){
   box.append(el('p','候选项目：'+result.project.goal+' · 阶段：'+(result.project.dispatch_status?.stage||'待核对')+' · '+result.match_method));
-  const open=el('button','确认这个项目并打开');open.type='button';open.onclick=()=>safe(async()=>{await load(result.project.project_id);$('message').textContent='已载入旧项目；请先核对当前版本与下一步。';});box.append(open);
+  const open=el('button','确认这个项目并打开');open.type='button';open.onclick=()=>safe(()=>confirmCandidate(result.project));box.append(open);
  }else{
   for(const candidate of (result.matches||[])){
    const row=el('div','');row.append(el('p',candidate.goal+' · '+candidate.stage+' · v'+candidate.version));
    const choose=el('button','选择并关联到本会话');choose.type='button';choose.onclick=()=>safe(async()=>{
-    const linked=await request('/recover',{intent:candidate.project_id,sessionId:recoverySessionId});
-    if(!linked.project)throw new Error(linked.note||'未能关联项目');
-    await load(linked.project.project_id);$('message').textContent='已关联旧项目；请核对当前版本与下一步。';
+    await confirmCandidate(candidate);
    });row.append(choose);box.append(row);
   }
  }

@@ -11,10 +11,12 @@ from urllib.parse import urlparse, parse_qs
 import learning_agent as agent
 import rescue_service as rescue
 import team_orchestrator as team
-import team_recovery
+import team_sessions
+import team_runtime
 import team_dispatch as dispatch
 import team_handoff as handoff
 import team_rescue
+import team_recovery
 import artifact_store
 import team_inputs
 import team_revision
@@ -74,6 +76,7 @@ class Handler(LegacyHandler):
                                                  'verified':False, 'note':'有配置不代表检索已成功；请查看每次执行记录。'},
                                        'capabilities': {'liveSearch': True, 'sourceReading': True, 'persistedRoutes': True,
                                                         'replan': True, 'ccProgress': True,
+                                                        'taskRecovery': True, 'observedAttempts': True,
                                                         'videoRenderer': bool(shutil.which('ffmpeg') and importlib.util.find_spec('PIL'))}})
             if path == '/api/agent/team/cc-board':
                 identifier = parse_qs(parsed.query).get('id', [''])[0]
@@ -82,6 +85,19 @@ class Handler(LegacyHandler):
                 return self.send_json(cc_progress.board(team.state(identifier)))
             if path == '/api/agent/team':
                 return self.send_json(team.state(parse_qs(parsed.query).get('id', [None])[0]))
+            if path == '/api/agent/team/runtime':
+                identifier = parse_qs(parsed.query).get('id', [''])[0]
+                if not identifier:
+                    raise ValueError('请提供项目 id')
+                return self.send_json(team_runtime.snapshot(team.state(identifier)))
+            if path in ('/api/agent/team/recovery-agenda', '/api/agent/team/recovery-context', '/api/agent/team/recovery-export'):
+                query = parse_qs(parsed.query)
+                p = team.state(query.get('id', [''])[0])
+                if path.endswith('recovery-agenda'):
+                    return self.send_json(team_recovery.agenda(p, query.get('member_id', [''])[0], int(query.get('minutes', ['30'])[0])))
+                if path.endswith('recovery-context'):
+                    return self.send_json(team_recovery.context_packet(p, query.get('task_id', [''])[0], query.get('action_id', [''])[0]))
+                return self.send_json(team_recovery.evaluation_export(p))
             if path == '/api/agent/team/handoff':
                 identifier = parse_qs(parsed.query).get('id', [''])[0]
                 if not identifier:
@@ -124,6 +140,8 @@ class Handler(LegacyHandler):
                            '/learning-agent.js', '/learning-agent.css', '/learning-agent-entry.js', '/team.html',
                            '/team.js', '/team-handoff.js', '/team-inputs.js', '/team-progress-dashboard.html',
                            '/team-progress-dashboard.js')
+                allowed += ('/team-recovery.js',)
+                allowed += ('/team-runtime.js',)
                 if self.path.split('?')[0] not in allowed:
                     return self.send_json({'error': '文件不可读取'}, 404)
             return super().do_GET()
@@ -175,7 +193,8 @@ class Handler(LegacyHandler):
                 return self.send_json(action_planner.replan(data['diagnosis'], data['plan'], data['settings'], data['expected_plan_version']))
             if path.startswith('/api/agent/team/'):
                 operation = path.rsplit('/',1)[-1]
-                handlers = {'recover':team_recovery.recover,'create':team.create,'diagnosis':team.diagnosis,'propose':team.propose,
+                handlers = {'recover':team_sessions.recover,'recover-confirm':team_sessions.confirm,
+                            'runtime-focus':team_runtime.focus,'create':team.create,'diagnosis':team.diagnosis,'propose':team.propose,
                             'apply':team.apply,'feedback':team.feedback,'demo':team.demo,
                             'period-replan':team.period_replan,'undo-plan':team.undo_plan,
                             'dispatch':dispatch.dispatch,'brief':dispatch.brief,
@@ -185,6 +204,9 @@ class Handler(LegacyHandler):
                             'capability':team_inputs.record_capability,'artifact-import':artifact_store.import_file,
                             'advance-review':team_revision.advance,
                             'rescue-start':team_rescue.start,'rescue-sync':team_rescue.sync,
+                            'recovery-pause':team_recovery.pause,'recovery-condition':team_recovery.signal,
+                            'recovery-resume':team_recovery.resume,'recovery-attempt':team_recovery.attempt,
+                            'recovery-commitment':team_recovery.commitment,'recovery-checkin':team_recovery.checkin,
                             'cc-register':cc_progress.register,'cc-heartbeat':cc_progress.heartbeat}
                 if operation not in handlers:
                     return self.send_json({'error':'团队接口不存在'},404)
