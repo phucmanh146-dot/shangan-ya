@@ -11,6 +11,7 @@ from urllib.parse import urlparse, parse_qs
 import learning_agent as agent
 import rescue_service as rescue
 import team_orchestrator as team
+import team_recovery
 import team_dispatch as dispatch
 import team_handoff as handoff
 import team_rescue
@@ -174,7 +175,7 @@ class Handler(LegacyHandler):
                 return self.send_json(action_planner.replan(data['diagnosis'], data['plan'], data['settings'], data['expected_plan_version']))
             if path.startswith('/api/agent/team/'):
                 operation = path.rsplit('/',1)[-1]
-                handlers = {'create':team.create,'diagnosis':team.diagnosis,'propose':team.propose,
+                handlers = {'recover':team_recovery.recover,'create':team.create,'diagnosis':team.diagnosis,'propose':team.propose,
                             'apply':team.apply,'feedback':team.feedback,'demo':team.demo,
                             'period-replan':team.period_replan,'undo-plan':team.undo_plan,
                             'dispatch':dispatch.dispatch,'brief':dispatch.brief,

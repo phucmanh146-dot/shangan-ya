@@ -191,15 +191,32 @@ def diagnosis(data):
                 if not prior or prior.get('status')!='closed' or prior.get('confirmed_review_id') not in p.get('applied_review_ids', []):
                     raise ValueError('不能声明未确认的差距仅为历史而跳过证据核对')
                 continue
-            ref = required(gap,'current_artifact',dict)
-            artifact_store.references(p, gap.get('evidence_refs'), (ref['artifact_id'], ref['artifact_version']))
             if gap.get('status') != 'closed':
-                for step in required(gap,'micro_steps',list):
-                    step['capability_basis'] = capability_basis(gap, d['member_profiles'])
-                    step['capability_basis_source'] = 'server_member_records'
-                validate_micro_steps({'micro_steps':required(gap,'micro_steps',list)},d)
-                for step in gap['micro_steps']:
-                    artifact_store.read(p, step['input_version']['artifact_id'], step['input_version']['artifact_version'])
+                if gap.get('verification_status') in ('unknown', 'blocked'):
+                    if gap.get('micro_steps'):
+                        raise ValueError('unknown/blocked 差距不能提前生成生产微动作；先补证据并重新诊断')
+                    continue
+                ref = required(gap,'current_artifact',dict)
+                artifact_store.references(p, gap.get('evidence_refs'), (ref['artifact_id'], ref['artifact_version']))
+                if gap.get('verification_status') in ('verified', 'evidence_linked_pending_confirmation'):
+                    required(gap, 'current_locator')
+                    required(gap, 'current_evidence')
+                    required(gap, 'extract_pattern')
+                    referenced = [s for s in d['sources'] if s['source_id'] in gap.get('source_refs', [])]
+                    if not referenced:
+                        raise ValueError('已核验差距必须绑定真实来源')
+                    for source in referenced:
+                        if source.get('kind') == 'reference' and not (source.get('reference_locator') or gap.get('reference_locator')):
+                            raise ValueError('参考来源必须定位到原始页、段落、章节或代码位置')
+                    steps = required(gap, 'micro_steps', list)
+                    if not steps:
+                        raise ValueError('已核验差距必须提供 grounded micro_steps')
+                    for step in steps:
+                        step['capability_basis'] = capability_basis(gap, d['member_profiles'])
+                        step['capability_basis_source'] = 'server_member_records'
+                    validate_micro_steps({'micro_steps':steps},d)
+                    for step in steps:
+                        artifact_store.read(p, step['input_version']['artifact_id'], step['input_version']['artifact_version'])
     if p['diagnosis'] and d['diagnosis_version'] <= p['diagnosis']['diagnosis_version']:
         raise Conflict('诊断版本必须递增')
     if p['plan'] and not p.get('plan_diagnosis') and p['diagnosis'] and p['plan']['based_on_diagnosis_version'] == p['diagnosis']['diagnosis_version']:
@@ -232,6 +249,9 @@ def validate_plan(plan, d):
         if t.get('status') not in ('candidate','scheduled','in_progress','pending_review','completed','blocked'):
             raise ValueError('任务状态无效')
         validate_micro_steps(t, d)
+        if t.get('kind') == 'production' and not t.get('micro_steps'):
+            if t.get('status') != 'blocked' or t.get('execution_readiness') != 'blocked_missing_grounded_micro_steps' or not t.get('external_dependencies'):
+                raise ValueError('生产任务缺少 grounded micro_steps 时必须阻塞，不能作为可执行任务')
         deps[t['task_id']] = t['depends_on']
     visited = set()
     def visit(key, path):

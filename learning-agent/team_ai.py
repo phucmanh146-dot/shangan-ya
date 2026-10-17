@@ -102,7 +102,12 @@ def researcher(p):
     sources = [{'source_id':'material:'+r['artifact_id']+':'+str(r['artifact_version']),
                 'kind':r['kind'],'title':r['title']+' v'+str(r['artifact_version'])} for r in catalog]
     courses = copy.deepcopy(personal_guidance.CATALOG)
-    sources.extend({k:r[k] for k in ('source_id','title','kind','url')} for r in courses)
+    for resource in courses:
+        source = {k:resource[k] for k in ('source_id','title','kind','url') if k in resource}
+        locator = resource.get('reference_locator') or resource.get('section') or resource.get('locator')
+        if locator:
+            source['reference_locator'] = str(locator)[:500]
+        sources.append(source)
     profiles = copy.deepcopy(members)
     for m in profiles:
         m['verified_capabilities'] = sorted({r['capability'] for r in m['capability_evidence']
@@ -116,7 +121,7 @@ def researcher(p):
                  'target_result':'这次产物目标','gap_type':'artifact/understanding/capability/environment/external_dependency',
                  'priority_reason':'依据','related_member_ids':['输入成员ID'],'required_capabilities':['当前操作技能'],
                  'source_refs':['提供的来源ID'],'acceptance_criteria':['具体条件'],'current_artifact':{'artifact_id':'输入ID','artifact_version':1},
-                 'current_locator':'原文位置','reason':'理由','evidence_refs':[{'artifact_id':'输入ID','artifact_version':1,'locator':'原文位置','quote':'原文引文'}],
+                 'current_locator':'原文位置','reason':'理由','extract_pattern':'只提取参考内容中可复用的方法/结构/证据方式，不复制原内容','reference_locator':'外部参考原始页/段/章节/代码位置','evidence_refs':[{'artifact_id':'输入ID','artifact_version':1,'locator':'原文位置','quote':'原文引文'}],
                  'micro_steps':[{'step_id':'本任务内编号','input_version':{'artifact_id':'输入ID','artifact_version':1},
                    'target_locator':'具体位置','action':'具体操作','reason':'理由','expected_change':'预期变化',
                    'output':'真实产物','self_check':'怎样核对','failure_next':'卡住后检查','capability_basis':'输入能力证据及未知'}]}],
@@ -134,6 +139,12 @@ def researcher(p):
             locator = team.required(g, 'current_locator')
             if not any(r['artifact_id'] == ref['artifact_id'] and r['artifact_version'] == ref['artifact_version'] and r['locator'] == locator for r in g['evidence_refs']):
                 raise ValueError('现状位置必须对应同一材料版本的实际引文')
+            team.required(g, 'extract_pattern')
+            source_by_id = {s['source_id']:s for s in sources}
+            for sid in g.get('source_refs', []):
+                source = source_by_id.get(sid, {})
+                if source.get('kind') == 'reference' and not (source.get('reference_locator') or g.get('reference_locator')):
+                    raise ValueError('参考来源必须提供原始页、段落、章节或代码位置；否则不能作为已定位参考')
             sid = 'material:' + ref['artifact_id'] + ':' + str(ref['artifact_version'])
             if sid not in g.get('source_refs', []):
                 raise ValueError('现状来源必须包含当前材料版本')

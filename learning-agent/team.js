@@ -1,5 +1,6 @@
 'use strict';
 const $=id=>document.getElementById(id);
+const recoverySessionId=(()=>{try{let v=sessionStorage.getItem('sy-team-session-id');if(!v){v=(crypto.randomUUID?crypto.randomUUID():('session-'+Date.now()+'-'+Math.random().toString(36).slice(2)));sessionStorage.setItem('sy-team-session-id',v);}return v;}catch{return 'session-'+Date.now();}})();
 let project=null, action=null, periodProject=null;
 const labels={candidate:'待选择',scheduled:'已排期',in_progress:'进行中',pending_review:'待验收',completed:'已验收',blocked:'卡住'};
 function el(tag,text){const node=document.createElement(tag);node.textContent=text;return node;}
@@ -89,6 +90,24 @@ function openFeedback(task,kind,label){
 }
 $('create').onsubmit=e=>{e.preventDefault();safe(async()=>{project=await request('/create',{goal:$('goal').value,mode:$('mode').value});await refresh();});};
 $('projects').onchange=()=>safe(()=>load($('projects').value));$('refresh').onclick=()=>safe(refresh);
+$('recover-intent-btn').onclick=()=>safe(async()=>{
+ const intent=$('recover-intent').value.trim();if(intent.length<3)throw new Error('请描述至少3个字的旧任务意图');
+ const box=$('recover-results');box.replaceChildren(el('p','正在查找已有项目，不会新建项目或自动执行任务…'));
+ const result=await request('/recover',{intent,sessionId:recoverySessionId});box.replaceChildren(el('p',result.note||'识别完成'));
+ if(result.project){
+  box.append(el('p','候选项目：'+result.project.goal+' · 阶段：'+(result.project.dispatch_status?.stage||'待核对')+' · '+result.match_method));
+  const open=el('button','确认这个项目并打开');open.type='button';open.onclick=()=>safe(async()=>{await load(result.project.project_id);$('message').textContent='已载入旧项目；请先核对当前版本与下一步。';});box.append(open);
+ }else{
+  for(const candidate of (result.matches||[])){
+   const row=el('div','');row.append(el('p',candidate.goal+' · '+candidate.stage+' · v'+candidate.version));
+   const choose=el('button','选择并关联到本会话');choose.type='button';choose.onclick=()=>safe(async()=>{
+    const linked=await request('/recover',{intent:candidate.project_id,sessionId:recoverySessionId});
+    if(!linked.project)throw new Error(linked.note||'未能关联项目');
+    await load(linked.project.project_id);$('message').textContent='已关联旧项目；请核对当前版本与下一步。';
+   });row.append(choose);box.append(row);
+  }
+ }
+});
 $('demo').onclick=()=>safe(()=>mutate('demo',{}));$('apply').onclick=()=>safe(()=>mutate('apply',{proposal_id:project.proposal.id}));
 $('diagnosis-form').onsubmit=e=>{e.preventDefault();safe(()=>mutate('diagnosis',{diagnosis:JSON.parse($('diagnosis-json').value)}));};
 $('plan-form').onsubmit=e=>{e.preventDefault();safe(()=>mutate('propose',{plan:JSON.parse($('plan-json').value),reason:$('reason').value}));};
