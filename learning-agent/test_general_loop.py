@@ -32,6 +32,7 @@ def diagnosis_reply(p, skills=None):
         'required_capabilities':skills or [],'source_refs':['material:'+ref['artifact_id']+':'+str(ref['artifact_version'])],
         'acceptance_criteria':['写明有效分母和缺失人数'],'current_artifact':ref,
         'current_locator':unit['locator'],'reason':'人数必须能回到原始记录',
+        'extract_pattern':'提取可复查分母和缺失口径的证据结构，不复制外部作品内容',
         'evidence_refs':[{**ref,'locator':unit['locator'],'quote':unit['text']}],
         'micro_steps':[{'step_id':'s1','input_version':ref,'target_locator':unit['locator'],
             'action':'核对这行人数，在人数旁追加有效分母与缺失记录数','reason':'避免把缺失计为0',
