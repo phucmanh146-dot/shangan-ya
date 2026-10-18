@@ -110,6 +110,10 @@ class RecoveryTests(unittest.TestCase):
         self.upload('有效分母=2；缺失人数=1',purpose='submission')
         self.event('submit','additional',artifact_id='report',artifact_version=2,actual_minutes=5,evidence='控制案例真实字节line:1')
         self.assertEqual(self.p['recovery']['checkpoints'][0]['status'],'waiting')
+        review=fixtures.GeneralLoopTests.packet(self)
+        review.update(review_id='controlled-additional-review',task_id='additional')
+        import team_handoff
+        self.p=team_handoff.receive_review({**self.ctx(),'review':review})
         self.event('approve','additional',reviewer_id='member-a',criterion_results=[{'criterion':'写明有效分母和缺失人数','passed':True,'evidence':'line:1有效分母2，缺失1'}])
         self.assertEqual(self.p['recovery']['checkpoints'][0]['status'],'ready')
         self.p=recovery.resume(self.payload(checkpoint_id=card['checkpoint_id'],note='B验收后找回A'))

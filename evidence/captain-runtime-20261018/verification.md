@@ -11,6 +11,21 @@
 
 ## 已取得的工程结果
 
+### 09:24追加核验：C复核与阻塞交接
+
+新增`test_captain_review_gates.py`，5项检查。修改前复现：直接批准跳过A收件、旧计划复核仍可批准、人工确认缺review_id，以及首次预览/已有计划重排将缺微动作的blocked改为candidate后校验失败。修改后实际输出：
+
+```text
+Ran 227 tests in 9.521s
+OK
+```
+
+新HTTP检查验证：未收A复核时feedback approve返回400，项目版本和pending_review不变；review-receive返回200且仍待确认；人工确认后保存准确review_id，状态进入待处理剩余问题。版本变更拒收、接收当前新复核后的恢复，以及两类blocked预览/采用/禁止开始均通过。
+
+`team.js`语法、相关Python文件py_compile与Git差异检查通过。旧任务接续夹具补上A实际复核收件，未放松生产验收。模型答复受控，不是实际用户成果。新代码尚未在Windows或实际浏览器中复验；下列222项为旧提交基线，按版本保留。
+
+### 早前四机制基线
+
 最终本地组合命令：python -m unittest discover -q。实际输出：
 
 ```text

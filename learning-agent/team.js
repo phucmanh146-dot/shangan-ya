@@ -69,9 +69,14 @@ function render(){
   if(t.review){fact(box,'人工验收意见',t.review.note);for(const r of t.review.criterion_results||[])fact(box,'已核对 '+r.criterion,r.evidence);}
   if(t.external_review){const packet=t.external_review.packet;fact(box,'A 的成果复核',packet.note);for(const r of packet.criterion_results)fact(box,(r.passed?'通过：':'未通过：')+r.criterion,r.evidence);for(const g of packet.gap_results)fact(box,'差距复核 '+g.gap_id+' · '+g.status,g.evidence+(g.remaining_issue?'；仍需：'+g.remaining_issue:''));if(typeof traceView==='function')traceView(box,packet.model_trace);}
   const details=el('details','');details.append(el('summary','查看完整任务、来源与证据'),el('pre',JSON.stringify(t,null,2)));box.append(details);
+  const needsAReview=project.artifact_storage_required&&!['trial','learn','practice','retest'].includes(t.kind);
+  const received=t.external_review, packet=received?.packet;
+  const currentAReview=packet&&packet.plan_version===project.plan.plan_version&&packet.diagnosis_version===project.diagnosis.diagnosis_version&&packet.task_id===t.task_id&&packet.artifact_id===t.submission?.artifact_id&&packet.artifact_version===t.submission?.artifact_version&&(project.artifact_reviews||[]).some(r=>r.review_id===received.review_id&&r.source==='A_handoff');
+  const canConfirmA=currentAReview&&packet.criterion_results.every(r=>r.passed===true);
+  if(t.status==='pending_review'&&needsAReview&&!canConfirmA)fact(box,'验收前一步',currentAReview?'A 复核仍有条件未通过，请先查看证据并退回修改。':'先调用 A 或接收其对当前计划、新版成果的实际复核，再人工确认。');
   const choices=t.status==='pending_review'?[['approve','验收通过'],['reject','退回修改']]:t.status==='completed'?[]:t.status==='in_progress'?[['submit','提交成果'],['block','遇到卡点']]:[['start','开始任务'],['block','遇到卡点']];
   choices.push(['change','临时安排反馈']);if(!t.locked)choices.push(['lock','锁定任务']);
-  for(const [kind,label]of choices){const button=el('button',label);button.disabled=project.plan_stale;button.onclick=()=>openFeedback(t,kind,label);box.append(button);}
+  for(const [kind,label]of choices){const button=el('button',label);button.disabled=project.plan_stale||(kind==='approve'&&needsAReview&&!canConfirmA);button.onclick=()=>openFeedback(t,kind,label);box.append(button);}
   if(t.status==='completed'&&t.external_review&&t.external_review.packet.diagnosis_version===project.diagnosis.diagnosis_version&&t.external_review.packet.plan_version===project.plan.plan_version&&!project.applied_review_ids?.includes(t.external_review.review_id)){const button=el('button','确认复核后更新剩余计划');button.onclick=()=>safe(()=>mutate('advance-review',{review_id:t.external_review.review_id}));box.append(button);}
   $('tasks').append(box);
  }

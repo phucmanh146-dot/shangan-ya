@@ -293,9 +293,9 @@ def protected(old, new):
             if latest.get(key)!=t:
                 raise ValueError('重排不得覆盖已开始、已完成、待验收或锁定任务：'+key)
     for t in new['tasks']:
-        if t['task_id'] not in previous and t['status'] not in ('candidate','scheduled'):
+        if t['task_id'] not in previous and t['status'] not in ('candidate','scheduled','blocked'):
             raise ValueError('新任务不能伪造执行或完成状态')
-        if t['task_id'] in previous and previous[t['task_id']]['status']=='candidate' and t['status'] not in ('candidate','scheduled'):
+        if t['task_id'] in previous and previous[t['task_id']]['status']=='candidate' and t['status'] not in ('candidate','scheduled','blocked'):
             raise ValueError('排程不能代替执行和验收')
     for block in (old or {}).get('time_blocks',[]):
         if block.get('locked') and block not in new['time_blocks']:
@@ -410,6 +410,21 @@ def feedback(data):
             raise ValueError('验收成员不在项目中')
         record['evidence']=t['submission']['evidence']
         packet = (t.get('external_review') or {}).get('packet')
+        if action == 'approve' and p.get('artifact_storage_required') and t.get('kind') not in ('trial','learn','practice','retest'):
+            # A review receipt and the human confirmation are separate events.
+            # Recheck the ledger and versions even when the task itself was protected
+            # during a later plan preview; advance() requires this exact pairing.
+            review_id = (t.get('external_review') or {}).get('review_id')
+            received = next((r for r in p.get('artifact_reviews', []) if r['review_id'] == review_id), None)
+            if not packet or not received or received.get('source') != 'A_handoff' or received['packet'] != packet:
+                raise ValueError('请先接收 A 对实际新版的逐项复核，再人工确认验收')
+            if (packet['plan_version'] != p['plan']['plan_version'] or
+                    packet['diagnosis_version'] != p['diagnosis']['diagnosis_version'] or
+                    packet['task_id'] != t['task_id'] or
+                    (packet['artifact_id'], packet['artifact_version']) !=
+                    (record['artifact_id'], record['artifact_version'])):
+                raise Conflict('A 复核对应的计划、诊断或成果版本已变化，请重新核对新版复核')
+            record['review_id'] = review_id
         if action == 'approve' and packet and not all(r['passed'] for r in packet['criterion_results']):
             raise ValueError('A 复核仍有验收条件未通过，请退回修改或接收更新后的复核')
         # Finishing a task (especially learning) is distinct from closing a gap.

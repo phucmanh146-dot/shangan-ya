@@ -77,7 +77,8 @@ def planner(diagnosis, project):
     # B marks prerequisite work blocked. Captain candidates still enforce prerequisites
     # at start; adopting a draft must never impersonate a recorded execution event.
     for task in plan['tasks']:
-        if task['task_id'] not in old_ids and task['status'] == 'blocked':
+        if (task['task_id'] not in old_ids and task['status'] == 'blocked' and
+                task.get('execution_readiness') != 'blocked_missing_grounded_micro_steps'):
             task['status'] = 'candidate'
     plan['handoff_provenance'] = {'role': 'B', 'source_commit': B_SOURCE_COMMIT,
                                   'source_commit_role':'original_B_baseline',
