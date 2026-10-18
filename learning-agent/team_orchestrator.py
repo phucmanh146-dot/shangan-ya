@@ -270,7 +270,7 @@ def protected(old, new):
             if latest.get(key)!=t:
                 raise ValueError('重排不得覆盖已开始、已完成、待验收或锁定任务：'+key)
     for t in new['tasks']:
-        if t['task_id'] not in previous and t['status'] not in ('candidate','scheduled'):
+        if t['task_id'] not in previous and t['status'] not in ('candidate','scheduled','blocked'):
             raise ValueError('新任务不能伪造执行或完成状态')
         if t['task_id'] in previous and previous[t['task_id']]['status']=='candidate' and t['status'] not in ('candidate','scheduled'):
             raise ValueError('排程不能代替执行和验收')

@@ -69,6 +69,8 @@ def generate(diagnosis, context):
             if 'capability_evidence' in members[owner] for skill in gap.get('required_capabilities', [])]
         if gap.get('manual_hold'):
             tasks[-1]['external_dependencies'] = ['当前复核判断未知；需人工核对：'+gap['gap_id']]
+            tasks[-1]['status'] = 'blocked'
+            pending.append({'task_id':tasks[-1]['task_id'], 'reason':'人工核对未完成；不可开始制作或验收'})
     ids={t['task_id'] for t in tasks}
     # Missing prerequisite is a visible external blocker, never silently removed.
     for t in tasks:

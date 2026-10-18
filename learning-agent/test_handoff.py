@@ -79,6 +79,23 @@ class HandoffTests(unittest.TestCase):
         self.event('start', task_id='G1:captain:0:learn')
         self.assertFalse(self.p['live_verified'])
 
+    def test_preview_preserves_blocked_dependencies_and_manual_hold(self):
+        d = diagnosis_fixture(skills=['接口记录'])
+        self.p = team.diagnosis({**self.ctx(), 'diagnosis': d})
+        self.p = handoff.generate(self.ctx())
+        production = next(t for t in self.p['proposal']['plan']['tasks'] if t['kind'] == 'production')
+        self.assertEqual(production['status'], 'blocked')
+
+    def test_preview_preserves_manual_hold(self):
+        d = diagnosis_fixture(skills=['接口记录'])
+        d['member_profiles'][0]['verified_capabilities'] = ['接口记录']
+        d['gaps'][0]['manual_hold'] = True
+        self.p = team.diagnosis({**self.ctx(), 'diagnosis': d})
+        self.p = handoff.generate(self.ctx())
+        production = self.p['proposal']['plan']['tasks'][0]
+        self.assertEqual(production['status'], 'blocked')
+        self.assertTrue(production['external_dependencies'])
+
     def test_verified_skill_skips_only_learning_and_external_dependency_blocks_start(self):
         d = diagnosis_fixture(skills=['接口记录'])
         d['member_profiles'][0]['verified_capabilities'] = ['接口记录']
