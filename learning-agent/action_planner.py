@@ -28,6 +28,25 @@ def generate(diagnosis, context):
         if not refs or not set(refs) <= sources or not criteria or not all(isinstance(x,str) and x.strip() for x in criteria) or not gap.get('target_result') or not owners or not set(owners) <= members.keys():
             pending.append({'gap_id':key,'reason':'补充有效来源、负责人、目标产物和验收标准后才能进入计划'})
             continue
+        micro_steps = gap.get('micro_steps')
+        if micro_steps is not None:
+            if not isinstance(micro_steps, list) or not micro_steps:
+                raise ValueError('micro_steps 必须是非空列表；没有具体动作时应阻塞生产任务')
+            step_ids = [x.get('step_id') for x in micro_steps if isinstance(x, dict)]
+            if len(step_ids) != len(micro_steps) or any(not isinstance(x, str) or not x.strip() for x in step_ids) or len(set(step_ids)) != len(step_ids):
+                raise ValueError('micro_steps 的 step_id 缺失或重复')
+            for step in micro_steps:
+                for field in ('target_locator', 'action', 'reason', 'expected_change', 'output', 'self_check', 'failure_next', 'capability_basis'):
+                    if not isinstance(step.get(field), str) or not step[field].strip():
+                        raise ValueError('微动作缺少可执行字段：' + field)
+                iv = step.get('input_version')
+                if not isinstance(iv, dict) or not isinstance(iv.get('artifact_id'), str) or not iv['artifact_id'].strip() or type(iv.get('artifact_version')) is not int or iv['artifact_version'] < 1:
+                    raise ValueError('微动作必须绑定真实输入材料版本')
+                step_refs = step.get('source_refs', [])
+                if not isinstance(step_refs, list) or any(x not in sources for x in step_refs):
+                    raise ValueError('微动作引用了不存在的来源')
+                if not step_refs and not (isinstance(step.get('reference_not_required_reason'), str) and step['reference_not_required_reason'].strip()):
+                    raise ValueError('微动作必须引用来源，或说明为什么不需要外部参考')
         previous = []
         for owner in owners:
             if 'capability_evidence' in members[owner]:
@@ -56,14 +75,23 @@ def generate(diagnosis, context):
         if not isinstance(estimate,list) or len(estimate)!=2 or any(type(n)!=int or n<1 for n in estimate) or estimate[0]>estimate[1]:
             raise ValueError('估时范围无效：'+key)
         dependencies=previous+[dep+':deliver' for dep in gap.get('depends_on_gap_ids',[])]
+        micro_steps = gap.get('micro_steps')
+        steps_ready = isinstance(micro_steps, list) and bool(micro_steps)
+        if not steps_ready:
+            reason = '缺少 A 提供的 grounded micro_steps：当前作品位置、具体动作、预期改变、产物和验收方式未齐，不能进入生产执行。'
+            pending.append({'task_id':key+':deliver','gap_id':key,'reason':reason})
         tasks.append(dict(task_id=key+':deliver',title=gap['target_result'],gap_ids=[key],owner_ids=owners,
-            steps=gap.get('steps') or ['用 5 分钟打开相关材料，定位当前缺口','完成目标产物','逐条检查验收条件并提交证据'],
+            steps=[x['action'] for x in micro_steps] if steps_ready else ['等待 A 补齐真实作品位置与可验证的微动作；当前不可执行。'],
             deliverable=gap['target_result'],acceptance_criteria=criteria,estimate_minutes_range=estimate,
             depends_on=dependencies,deadline=gap.get('deadline',context.get('deadline','待成员确认')),
-            source_refs=refs,status='blocked' if dependencies else 'candidate',kind='production',
-            estimate_basis=gap.get('estimate_basis','待校准假设：包含制作、修改与检查')))
-        if gap.get('micro_steps'):
-            tasks[-1]['micro_steps'] = deepcopy(gap['micro_steps'])
+            source_refs=refs,status='blocked' if dependencies or not steps_ready else 'candidate',kind='production',
+            estimate_basis=gap.get('estimate_basis','待校准假设：实际用时需由执行人记录')))
+        if not steps_ready:
+            tasks[-1]['execution_readiness'] = 'blocked_missing_grounded_micro_steps'
+            tasks[-1]['blocker'] = reason
+            tasks[-1]['external_dependencies'] = [reason]
+        else:
+            tasks[-1]['micro_steps'] = deepcopy(micro_steps)
         tasks[-1]['capability_requirements'] = [
             {'member_id':owner,'capability':skill} for owner in owners
             if 'capability_evidence' in members[owner] for skill in gap.get('required_capabilities', [])]
@@ -115,6 +143,9 @@ def validate(plan, diagnosis):
             if not isinstance(t.get(field),list) or not t[field] or not set(t[field])<=known or len(t[field])!=len(set(t[field])):raise ValueError('任务关联无效：'+field)
         for field in ('steps','acceptance_criteria'):
             if not isinstance(t.get(field),list) or not t[field] or not all(isinstance(x,str) and x.strip() for x in t[field]):raise ValueError('任务缺少 '+field)
+        if t.get('kind') == 'production' and not t.get('micro_steps'):
+            if t.get('status') != 'blocked' or not t.get('external_dependencies') or t.get('execution_readiness') != 'blocked_missing_grounded_micro_steps':
+                raise ValueError('生产任务缺少 grounded micro_steps 时必须保持 blocked，不得伪装成可执行任务')
         if not isinstance(t.get('depends_on'),list):raise ValueError('依赖需为列表')
         nums=t.get('estimate_minutes_range')
         if not isinstance(nums,list) or len(nums)!=2 or any(type(n)!=int or not 1<=n<=100000 for n in nums) or nums[0]>nums[1]:raise ValueError('估时范围无效')

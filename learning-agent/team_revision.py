@@ -40,7 +40,8 @@ def plan_remaining(d, project):
     draft = b.generate(active_d, context)
     if not old:
         for t in draft['tasks']:
-            t['status'] = 'candidate'
+            if t.get('execution_readiness') != 'blocked_missing_grounded_micro_steps':
+                t['status'] = 'candidate'
         return draft
     previous = {t['task_id']: t for t in old['tasks']}
     keep = {t['task_id'] for t in old['tasks'] if t['status'] != 'candidate' or t.get('locked')}
@@ -76,7 +77,8 @@ def plan_remaining(d, project):
         missing = [x for x in external if mapping.get(x, x) not in available]
         if missing:
             task['external_dependencies'] = missing
-        task['status'] = 'candidate'
+        if task.get('execution_readiness') != 'blocked_missing_grounded_micro_steps':
+            task['status'] = 'candidate'
         merged.append(task)
     draft['tasks'] = merged
     draft['plan_version'] = old['plan_version'] + 1
