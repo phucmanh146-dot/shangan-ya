@@ -75,3 +75,11 @@ A 复核新证据与相关差距；B 重算受影响安排，返回前后差异�
 4. 前置任务未完成、来源未核实、模型失败均显示相应状态。
 5. 成果验收改变差距状态，并保留所用证据版本。
 6. Demo 只验证数据传递；Live 另以真实模型与搜索记录验收。
+
+## 7. 精细指导扩展（设计提案，尚未接入运行时）
+
+对应 [三人开发任务 v2](team-tasks-v2.md)。保留 v0.1 现有字段兼容性，不宣称现有接口已校验以下字段。
+- A 补充 artifact_versions、change_impacts、reference_breakdown、capability_evidence；gap 补充 current_locator、target_locator、reason、applicability、verification_method。
+- B 在 task 中新增可选 micro_steps：step_id、input_version、target_locator、action、reason、expected_change、output、self_check、failure_next、capability_basis。上层 task 的依赖、DDL 与交付标准继续保留。
+- Feedback 补充成果版本/定位、用户自己的解释、检查证据与仍存缺口；A 给复核结论，B 给局部指导更新，队长保存确认状态。
+- 上述定位适配不同成果类型，不能写死为 PPT；未知明确标记，不能由模型虚构定位。接入时先增加兼容读取和契约测试，再启用要求这些字段的新流程。
