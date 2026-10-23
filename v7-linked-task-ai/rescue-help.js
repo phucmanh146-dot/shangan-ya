@@ -229,8 +229,9 @@
     if (controller) return;
     remember(); stopVoice();
     if (!current.question.trim()) { say('说出或写下一个具体问题。'); field('question').focus(); return; }
-    var d = dialog, entry = current, job = { signal: null }, timedOut = false;
-    controller = job; busy(true); say('正在结合当前任务、资料与公开网页搜索…');
+    var d = dialog, entry = current, job = new AbortController(); controller = job;
+    var previous = entry.result ? '上一次问题：' + entry.answeredQuestion + '\n上一次建议：' + entry.result.reply : '';
+    busy(true); say('正在结合当前任务、资料与公开网页搜索…');
     var notes = [], context = '', taskSources = [];
     try {
       var task = entry.task || {};
