@@ -124,6 +124,7 @@ def api(method,path,data=None):
  if u.path in ('/wechat/preview','/wechat/sessions'):
   result,_=read_current()
   result['sessions']=[];return result
+ if u.path=='/wechat/scroll':return scroll_older(data.get('steps',6))
  if u.path=='/groups':
   if method=='POST':
    name=str(data.get('name') or '').strip()[:160]
