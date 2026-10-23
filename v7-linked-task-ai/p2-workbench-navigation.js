@@ -16,7 +16,7 @@
        const tag=inner.querySelector('.p2-top-title span');
        if(tag)tag.textContent='工作台内置 P2';
        const status=document.getElementById('embeddedP2Status');
-       if(status)status.textContent='已嵌入原工作台 · 不读取 Obsidian';
+       if(status)status.textContent='已嵌入原工作台 · Obsidian 笔记可按需关联';
      }
    }catch(_){ }
  }
