@@ -153,7 +153,7 @@
     <p>填写飞书开放平台自建应用凭证。系统会通过官方 API 读取你有权访问的 Wiki 文档；知识库目录会递归读取子页面，单次最多 30 篇。不会读取你私人微信聊天。</p>
     <label>飞书应用 ID<input id="p2-feishu-app-id" spellcheck="false" autocomplete="off" placeholder="cli_…"></label>
     <label>飞书应用密钥<input id="p2-feishu-app-secret" type="password" autocomplete="new-password" placeholder="填写应用 App Secret，不是飞书登录密码"></label>
-    <label>测试用飞书 Wiki / 文档链接<input id="p2-feishu-test-url" spellcheck="false" placeholder="https://你的组织.feishu.cn/wiki/…"></label>
+    <label>测试用飞书 Wiki / 文档链接<input id="p2-feishu-test-url" spellcheck="false" value="https://tcnb3a3fuvtb.feishu.cn/wiki/YD6HwHCS5iXlgmkpLOoccnvon7b" placeholder="https://你的组织.feishu.cn/wiki/…"></label>
     <div class="p2-dialog-actions"><button id="p2-feishu-desktop-read" type="button">用电脑已登录的飞书读取</button><button id="p2-feishu-save" type="button">保存飞书 API 凭证</button><button id="p2-feishu-test" type="button">测试官方 API</button><button id="p2-feishu-clear" type="button">断开 API</button></div>
     <p id="p2-feishu-status" class="p2-status">可直接用电脑已登录的飞书读取；不必先申请 App Secret。也可配置官方 API。</p>
     <p class="p2-small">浏览器读取方式会在你点击后打开指定飞书链接，复制页面可见正文并作为当前对话附件；不会读取 Cookie、密码或登录令牌。过程中请勿操作键鼠。官方 API 方式仍需应用只读权限。</p>
@@ -229,6 +229,7 @@
 <script src="./p2-wechat-ai.js?v=20261023-wechat-ai" defer></script>
 <script src="./p2-config.js?v=20261023-model-discovery-v1" defer></script>
 <script src="./p2-voice-sop.js" defer></script>
+<script src="./p2-capability-audit.js?v=20261024-audit-v1" defer></script>
 <link rel="stylesheet" href="./p2-voice-sop.css">
 </body>
 </html>
