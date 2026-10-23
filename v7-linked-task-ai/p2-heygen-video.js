@@ -32,7 +32,7 @@ async function open(answer){
  const dialog=E('dialog','p2-heygen-dialog'),shell=E('div','p2-heygen-shell'),head=E('div','p2-heygen-head');
  head.append(E('div','p2-heygen-title','HeyGen · AI 回答数字人讲解'));
  const close=E('button','p2-heygen-close','关闭');close.type='button';close.onclick=()=>dialog.close();head.append(close);
- const hint=E('p','p2-heygen-hint','使用 HeyGen 生成带数字人和配音的 MP4。需配置你自己的 HeyGen API Key；提交生成可能产生费用。Key 只保存在当前访客后台进程内存中，不写入聊天记录或浏览器本地存储。');
+ const hint=E('p','p2-heygen-hint','使用 HeyGen 生成带数字人和配音的 MP4。需配置你自己的 HeyGen API Key；提交生成可能产生费用。Key 只保存在当前浏览器标签对应的后台会话内存中，不写入聊天记录或浏览器本地存储。');
  const keyLabel=E('label','p2-heygen-label','HeyGen API Key');
  const key=document.createElement('input');key.type='password';key.autocomplete='off';key.spellcheck=false;key.placeholder='粘贴 HeyGen API Key（只在本次会话使用）';keyLabel.append(key);
  const avatarLabel=E('label','p2-heygen-label','数字人 Avatar');
@@ -60,7 +60,7 @@ async function open(answer){
   if(busy)return;busy=true;test.disabled=true;state.textContent='正在验证 HeyGen API Key 并读取可用数字人…';
   try{
    const saved=await api('/api/heygen/config',{apiKey:key.value.trim(),avatarId:avatar.value,voiceId:voice.value},45000);configured=true;key.value='';
-   await loadOptions(saved);state.textContent='连接成功：真实 API 已返回 '+avatars.length+' 个数字人、'+voices.length+' 个声音。Key 只保存在本会话服务进程内存中。';
+   await loadOptions(saved);state.textContent='连接成功：真实 API 已返回 '+avatars.length+' 个数字人、'+voices.length+' 个声音。Key 只保存在当前浏览器标签对应的后台会话内存中。';
   }catch(error){state.textContent='连接失败：'+error.message;configured=false;}
   finally{busy=false;test.disabled=false;}
  }
