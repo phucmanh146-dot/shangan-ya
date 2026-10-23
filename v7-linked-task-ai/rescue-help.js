@@ -387,8 +387,26 @@
         var frame = document.getElementById('embeddedP2Frame');
         var nav = document.getElementById('aiP2Nav');
         if (!frame || !nav) { say('没有找到工作台内置 AI 区域，请刷新工作台后重试。', true); return; }
+        // Hand off the exact rescue question and current task to the embedded AI workspace.
+        // sessionStorage is same-origin and one-shot; do not put private task text in the URL.
+        try {
+          var task = current && current.task || {};
+          var taskContext = [
+            current && current.taskName ? '当前任务：' + current.taskName : '',
+            task.goal || task.description || task.requirement ? '目标/要求：' + (task.goal || task.description || task.requirement) : '',
+            task.deadline || task.dueDate || task.endDate ? '截止日期：' + (task.deadline || task.dueDate || task.endDate) : '',
+            task.acceptance || task.acceptanceCriteria ? '验收标准：' + (task.acceptance || task.acceptanceCriteria) : ''
+          ].filter(Boolean).join('\\n');
+          sessionStorage.setItem('shanganya_p2_rescue_handoff_v1', JSON.stringify({
+            question: (field('question') && field('question').value || '').trim(),
+            taskName: current && current.taskName || '',
+            taskContext: taskContext,
+            openConfig: openConfig,
+            createdAt: Date.now()
+          }));
+        } catch (_) {}
         close();
-        frame.src = './ai-p2.html?embedded=1&linkedTaskAi=20261023v8' + (openConfig ? '&openConfig=1' : '');
+        frame.src = './ai-p2.html?embedded=1&linkedTaskAi=20261023v9&handoff=1' + (openConfig ? '&openConfig=1' : '');
         nav.click();
       }
       else if (b.hasAttribute('data-rescue-ask')) ask();
