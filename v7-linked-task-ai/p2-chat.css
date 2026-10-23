@@ -99,3 +99,15 @@
 @media(max-width:1000px){.p2-model-quick{gap:5px}#p2-top-provider{max-width:165px;min-width:120px}.p2-api-doc-link{max-width:155px;overflow:hidden;text-overflow:ellipsis}}
 @media(max-width:850px){.p2-model-quick{max-width:58vw;justify-content:flex-end}.p2-top-provider-label{display:none}#p2-top-provider{min-width:0;max-width:150px}.p2-api-doc-link{display:none}}
 @media(max-width:560px){.p2-model-quick{max-width:54vw;gap:4px}#p2-top-provider{max-width:115px;padding:7px 6px;font-size:10px}.p2-model-quick .p2-config{font-size:10px;padding:7px 6px}}
+
+/* General-purpose AI workspace + explicit video-analysis control */
+.p2-top-title{font-size:17px;font-weight:850;letter-spacing:-.25px}
+.p2-top-title span{display:inline-block;margin-left:7px;padding:4px 8px;border-radius:999px;background:#edf6ef;color:#387451;font-size:10px;font-weight:750;vertical-align:middle;letter-spacing:0}
+.p2-video-analyze{border:1px solid #b8dcc8!important;background:#eaf7ef!important;color:#176544!important;font-weight:800!important}
+.p2-video-analyze:hover{background:#d8f0e2!important;border-color:#8bc7a6!important}
+.p2-video-analyze span{white-space:nowrap}
+.p2-prompts button{min-height:42px}
+#p2-text{line-height:1.65}
+.p2-disclaimer{max-width:900px;margin:8px auto 0;padding:0 18px}
+@media(max-width:850px){.p2-top-title span{display:none}}
+@media(max-width:560px){.p2-video-analyze span{display:inline}.p2-top-title{font-size:14px}}
