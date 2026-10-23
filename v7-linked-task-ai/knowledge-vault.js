@@ -89,21 +89,27 @@
 
   async function connectLocalVault() {
     if (state.busy) return;
-    if (!window.SY || typeof SY.backendCall !== 'function') { message('本机服务没有连上，请确认启动脚本正在运行。', true); return; }
-    state.busy = true; announce(); message('正在通过本机服务读取知识库，请稍等…');
+    // A hosted webpage cannot scan 127.0.0.1 unless a local bridge is actually running.
+    // If no bridge is present, open the browser's explicit read-only folder picker instead.
+    if (!window.SY || typeof SY.backendCall !== 'function') {
+      message('没有检测到可用的本机桥接服务。改用系统目录选择窗口，授权读取你的 Obsidian Vault。');
+      return connect();
+    }
+    state.busy = true; announce(); message('正在通过已连接的本机服务读取知识库…');
     try {
       var r = await SY.backendCall('/api/vault-list', { limit: 500, with_text: true }, 120000);
-      if (!r.ok) throw new Error(r.error || '本机服务没有返回知识库。');
+      if (!r || !r.ok) throw new Error((r && r.error) || '本机服务没有返回知识库。');
       var data = r.data || {};
-      if (!data.connected) throw new Error(data.note || '没有找到本机知识库目录。');
+      if (!data.connected || !Array.isArray(data.files)) throw new Error(data.note || '没有找到可读取的本机知识库目录。');
       state.handle = null; state.name = data.name; state.mode = 'local';
-      state.docs = (data.files || []).map(function (row) {
+      state.docs = data.files.map(function (row) {
         return makeDoc({ lastModified: 0, type: '' }, row.path, row.text || '', true);
       });
       state.summary = '已直连本机库「' + data.name + '」· ' + state.docs.length + ' 篇笔记。' + (data.truncated ? '已达上限，未全部载入。' : '');
       message(state.summary); clearResults();
-    } catch (error) { message(error.message || '没有读到本机知识库。', true); }
-    finally { state.busy = false; announce(); }
+    } catch (error) {
+      message('本机直连失败：' + (error.message || '没有读到本机知识库。') + '。请点击「连接 Obsidian 文件夹」授权只读访问；不会假装已连接。', true);
+    } finally { state.busy = false; announce(); }
   }
   window.SYConnectLocalVault = connectLocalVault;
 
@@ -247,7 +253,7 @@
     var upload = el('input'); upload.type = 'file'; upload.multiple = true; upload.accept = '.md,.txt,.srt,.vtt,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.gif,.bmp'; upload.hidden = true;
     upload.addEventListener('change', function () { var files = Array.from(upload.files || []); upload.value = ''; importFiles(files, false); });
     var actions = el('div', 'sykv-actions');
-    actions.append(button('⚡ 直连本机库（不用选文件夹）', function () { connectLocalVault(); }, state.mode !== 'local'), button(state.handle ? '重新选择 / 刷新知识库' : '连接 Obsidian 文件夹', connect), button('选择文档 / 图片 / PDF / Word', function () { if (!state.busy) upload.click(); }), button('只读导入文件夹', function () { if (!state.busy) folder.click(); }));
+    actions.append(button('⚡ 尝试本机直连 / 自动回退', function () { connectLocalVault(); }, state.mode !== 'local'), button(state.handle ? '重新选择 / 刷新知识库' : '连接 Obsidian 文件夹', connect), button('选择文档 / 图片 / PDF / Word', function () { if (!state.busy) upload.click(); }), button('只读导入文件夹', function () { if (!state.busy) folder.click(); }));
     var drop = el('div', 'sykv-dropzone', '把文档拖到这里，或点击上面的选择按钮'); drop.setAttribute('tabindex', '0');
     ['dragenter','dragover'].forEach(function (type) { drop.addEventListener(type, function (event) { event.preventDefault(); drop.classList.add('is-over'); }); });
     ['dragleave','drop'].forEach(function (type) { drop.addEventListener(type, function (event) { event.preventDefault(); drop.classList.remove('is-over'); }); });
