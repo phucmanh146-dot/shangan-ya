@@ -12,16 +12,32 @@ try:
 except (OSError,ValueError,TypeError):pass
 os.environ['FOCUS_VAULT_PATH']=str(vault)
 for key in list(os.environ):
- if key.startswith(('FEISHU_','OPENAI_','ANTHROPIC_','DEEPSEEK_','GLM_','FOCUS_AI_','SHANGANYA_API_')):os.environ.pop(key,None)
+ if key.startswith(('FEISHU_','OPENAI_','ANTHROPIC_','DEEPSEEK_','GLM_','FOCUS_AI_','SHANGANYA_API_','HEYGEN_')):os.environ.pop(key,None)
 import local_server
 import multi_sources
+import heygen_video
 class Worker(local_server.Handler):
  def do_GET(self):
+  path=urlparse(self.path).path
+  if path.startswith('/api/heygen/'):
+   try:return self.send_json(heygen_video.get(path))
+   except heygen_video.HeyGenError as e:return self.send_json({'error':str(e)},e.status)
+   except Exception as e:return self.send_json({'error':str(e)[:300]},503)
   if self.path=="/api/sources/status":return self.send_json(multi_sources.status())
   if self.path.startswith("/api/sources/"):return self.send_json({"error":"请使用POST"},405)
   return super().do_GET()
  def do_POST(self):
   global vault
+  path=urlparse(self.path).path
+  if path.startswith('/api/heygen/'):
+   try:
+    size=int(self.headers.get('Content-Length','0'))
+    if size<1 or size>200000:return self.send_json({'error':'请求大小无效'},413)
+    data=json.loads(self.rfile.read(size))
+    if not isinstance(data,dict):raise ValueError('请求无效')
+    return self.send_json(heygen_video.post(path,data))
+   except heygen_video.HeyGenError as e:return self.send_json({'error':str(e)},e.status)
+   except Exception as e:return self.send_json({'error':str(e)[:300]},422)
   if self.path.startswith("/api/sources/"):
    try:
     size=int(self.headers.get("Content-Length","0"))
