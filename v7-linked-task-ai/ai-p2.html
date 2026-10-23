@@ -56,7 +56,7 @@
       <div id="p2-urls" class="p2-urls"></div>
       <form id="p2-form" class="p2-composer">
         <details class="p2-task-context-box"><summary>关联现有任务 / 目标（可选）</summary><label for="p2-task-context">任务名称、要求、截止日期或验收标准</label><textarea id="p2-task-context" rows="2" placeholder="例如：上岸鸭多模态 AI 接入；目标是图片/文档/链接能解决任务并生成讲解视频"></textarea><small>只将你在此填写的任务背景发送给 AI；不会自动改动原任务或截止日期。</small></details>
-        <section class="p2-obsidian-connector" aria-label="Obsidian 知识库连接"><div class="p2-obsidian-row"><label class="p2-switch"><input type="checkbox" id="p2-use-obsidian"><span>提问时检索已连接的 Obsidian 笔记</span></label><button type="button" id="p2-obsidian-connect">检测知识库连接</button></div><p id="p2-obsidian-status" role="status">尚未验证连接。点击“检测知识库连接”后才会显示真实状态。</p><small>开启后仅检索与本次问题匹配的笔记，最多引用 3 篇相关正文片段；不会上传整个 Vault。需要你电脑上的上岸鸭本机服务正在运行（127.0.0.1:8877）。最多 3 篇匹配正文会随问题发送给当前 AI 服务商，不会上传整个 Vault。</small></section>
+        <section class="p2-obsidian-connector" aria-label="Obsidian 知识库连接"><div class="p2-obsidian-row"><label class="p2-switch"><input type="checkbox" id="p2-use-obsidian"><span>提问时检索已连接的 Obsidian 笔记</span></label><button type="button" id="p2-obsidian-connect">检测知识库连接</button><a class="p2-obsidian-open" href="obsidian://open?vault=%E9%9F%A9%E5%A5%95%E7%9F%A5%E8%AF%86%E5%A4%8D%E7%9B%98" title="在本机打开韩奕知识复盘">打开本机 Obsidian ↗</a></div><p id="p2-obsidian-status" role="status">尚未验证连接。点击“检测知识库连接”后才会显示真实状态。</p><div id="p2-obsidian-results" class="p2-obsidian-results" hidden></div><small>只检索本次问题相关的笔记，最多引用 3 篇正文片段。正文会随本轮问题发送给当前 AI 服务商；不会上传整个 Vault。通过原工作台本机服务读取，不伪造连接状态。</small></section>
         <textarea id="p2-text" placeholder="向 AI 提问，或粘贴链接 / 拖入图片、文档、视频；可连续追问…" rows="3" spellcheck="true"></textarea>
         <div class="p2-controls">
           <div class="p2-controls-left">
@@ -213,7 +213,7 @@
 <script src="./p2-heygen-video.js?v=20261023-v8" defer></script>
 <script src="./p2-view.js?v=20261023-multimodal-video" defer></script>
 <script src="./source-bridge.js" defer></script>
-<script src="./p2-chat.js?v=20261023-local-obsidian-v1" defer></script>
+<script src="./p2-chat.js?v=20261023-obsidian-vault-8892-v2" defer></script>
 <script src="./p2-linked-task-ai.js?v=20261023-linked-task-ai-v7" defer></script>
 <script src="./p2-wechat-ai.js?v=20261023-wechat-ai" defer></script>
 <script src="./p2-config.js?v=20261023-ai-workspace-v2" defer></script>
