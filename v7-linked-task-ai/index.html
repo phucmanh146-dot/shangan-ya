@@ -541,7 +541,7 @@
       </section>
       <section class="app-view app-ai-chat-view" data-view="ai-p2" id="view-ai-p2" hidden>
         <div class="embedded-p2-head"><div><strong>连接 AI</strong><span>在同一工作区提问、上传资料，并按需读取已连接的 Obsidian 知识库</span></div><span class="embedded-p2-ready" id="embeddedP2Status">等待真实连接检测</span></div>
-        <iframe id="embeddedP2Frame" title="上岸鸭连接 AI" src="./ai-p2.html?embedded=1&linkedTaskAi=20261023v11" allow="clipboard-write; microphone" loading="lazy"></iframe>
+        <iframe id="embeddedP2Frame" title="上岸鸭连接 AI" src="./ai-p2.html?embedded=1&linkedTaskAi=20261023v12" allow="clipboard-write; microphone" loading="lazy"></iframe>
       </section>
       <section class="app-view" data-view="knowledge" id="view-knowledge" hidden>
         <div id="knowledgeBody"></div>
@@ -1001,7 +1001,7 @@
 <link rel="stylesheet" href="./voyage-scene.css">
 <script src="./voyage-scene.js"></script>
 <link rel="stylesheet" href="./knowledge-vault.css">
-<script src="./knowledge-vault.js?v=20261023-obsidian-jump-v3"></script>
+<script src="./knowledge-vault.js?v=20261023-obsidian-jump-v4"></script>
 <link rel="stylesheet" href="./page-polish.css">
 <script src="./page-polish.js"></script>
 <link rel="stylesheet" href="./screen-gallery.css">
@@ -1028,7 +1028,7 @@
 <link rel="stylesheet" href="./p2-embedded-in-workbench.css">
 <script src="./p2-workbench-navigation.js"></script>
 <link rel="stylesheet" href="./obsidian-direct-links.css">
-<script src="./obsidian-direct-links.js"></script>
+<script src="./obsidian-direct-links.js?v=20261023-obsidian-jump-v4"></script>
 <link rel="stylesheet" href="./source-workflow.css">
 <script src="./source-workflow.js?v=20261023-feishu-categories-v12"></script>
 <link rel="stylesheet" href="./workbench-readable-ui.css?v=20261015-2248">
@@ -1057,7 +1057,7 @@
     nav.addEventListener('click',function(){
       window.setTimeout(function(){
         var frame=document.getElementById('embeddedP2Frame');
-        if(frame)frame.src='./ai-p2.html?embedded=1&linkedTaskAi=20261023v10#wechat-ai';
+        if(frame)frame.src='./ai-p2.html?embedded=1&linkedTaskAi=20261023v12#wechat-ai';
       },120);
     });
   }
