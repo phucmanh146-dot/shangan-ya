@@ -13,6 +13,8 @@ import rescue_service as rescue
 import team_orchestrator as team
 import team_sessions
 import team_runtime
+import team_intervention
+import team_evidence_score
 import team_dispatch as dispatch
 import team_handoff as handoff
 import team_rescue
@@ -85,6 +87,12 @@ class Handler(LegacyHandler):
                 return self.send_json(cc_progress.board(team.state(identifier)))
             if path == '/api/agent/team':
                 return self.send_json(team.state(parse_qs(parsed.query).get('id', [None])[0]))
+            if path in ('/api/agent/team/interventions', '/api/agent/team/evidence-score'):
+                identifier = parse_qs(parsed.query).get('id', [''])[0]
+                if not identifier:
+                    raise ValueError('请提供项目 id')
+                p = team.state(identifier)
+                return self.send_json(team_intervention.report(p) if path.endswith('/interventions') else team_evidence_score.report(p))
             if path == '/api/agent/team/runtime':
                 identifier = parse_qs(parsed.query).get('id', [''])[0]
                 if not identifier:
@@ -142,6 +150,7 @@ class Handler(LegacyHandler):
                            '/team-progress-dashboard.js')
                 allowed += ('/team-recovery.js',)
                 allowed += ('/team-runtime.js',)
+                allowed += ('/team-intervention.js',)
                 if self.path.split('?')[0] not in allowed:
                     return self.send_json({'error': '文件不可读取'}, 404)
             return super().do_GET()
@@ -193,7 +202,10 @@ class Handler(LegacyHandler):
                 return self.send_json(action_planner.replan(data['diagnosis'], data['plan'], data['settings'], data['expected_plan_version']))
             if path.startswith('/api/agent/team/'):
                 operation = path.rsplit('/',1)[-1]
-                handlers = {'recover':team_sessions.recover,'recover-confirm':team_sessions.confirm,
+                handlers = {'intervention-checkin':team_intervention.checkin,
+                            'intervention-respond':team_intervention.respond,
+                            'intervention-feedback':team_intervention.feedback,
+                            'recover':team_sessions.recover,'recover-confirm':team_sessions.confirm,
                             'runtime-focus':team_runtime.focus,'create':team.create,'diagnosis':team.diagnosis,'propose':team.propose,
                             'apply':team.apply,'feedback':team.feedback,'demo':team.demo,
                             'period-replan':team.period_replan,'undo-plan':team.undo_plan,
