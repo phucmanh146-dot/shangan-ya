@@ -88,3 +88,14 @@
 @media(max-width:600px){.p2-team-grid{grid-template-columns:1fr}.p2-dialog{padding:17px}}
 
 .p2-dialog{width:min(780px,calc(100vw - 32px))}
+
+/* AI workspace: visible provider configuration */
+.p2-model-quick{gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.p2-top-provider-label{font-size:11px;font-weight:750;color:#64756a;white-space:nowrap}
+#p2-top-provider{max-width:205px;min-width:145px;border:1px solid #cbd8cf;border-radius:10px;background:#fff;color:#23392b;padding:9px 10px;font-size:12px;font-weight:650}
+.p2-api-doc-link{display:inline-flex;align-items:center;justify-content:center;border:1px solid #d5e2d8;background:#f3f8f4;color:#2d6844;border-radius:10px;padding:9px 10px;font-size:11px;font-weight:750;text-decoration:none;white-space:nowrap}
+.p2-api-doc-link:hover{background:#e6f2e9;text-decoration:underline}
+.p2-model-quick .p2-config{white-space:nowrap}
+@media(max-width:1000px){.p2-model-quick{gap:5px}#p2-top-provider{max-width:165px;min-width:120px}.p2-api-doc-link{max-width:155px;overflow:hidden;text-overflow:ellipsis}}
+@media(max-width:850px){.p2-model-quick{max-width:58vw;justify-content:flex-end}.p2-top-provider-label{display:none}#p2-top-provider{min-width:0;max-width:150px}.p2-api-doc-link{display:none}}
+@media(max-width:560px){.p2-model-quick{max-width:54vw;gap:4px}#p2-top-provider{max-width:115px;padding:7px 6px;font-size:10px}.p2-model-quick .p2-config{font-size:10px;padding:7px 6px}}
