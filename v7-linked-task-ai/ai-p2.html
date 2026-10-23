@@ -45,6 +45,7 @@
           <button data-q="请阅读我上传的文件或图片：先总结整体内容，再提取关键细节、问题、证据和下一步行动。">📄 图片 / 文档分析</button>
           <button data-q="请对我上传的视频按时间顺序分析场景、人物或物体动作、画面文字和关键变化；把观察事实与推测分开，并说明无法读取的部分。" data-video="1">▶ 视频逐段解析</button>
           <button data-q="请把本轮问题和材料整理成层级清楚的思维导图，保留关键细节，并给出可执行清单。">🧠 思维导图</button>
+           <button data-q="请根据本轮已读取的飞书、Obsidian、网页链接、视频或上传文件，以及前面的对话，写一份可直接制作成复盘讲解视频的中文方案：先明确本次目标与背景，再用大白话解释做了什么、取得哪些有证据支持的结果、哪些问题还没解决、经验教训和下一步行动。请输出：①事实与来源（未读取的资料明确写未读取）；②1—3分钟口播稿（自然语言、首次术语解释）；③按镜头顺序排列的字幕分镜，每镜头一个重点；④需要补充的素材。严格区分已证实事实和建议，不要编造成果、个人经历、聊天记录或视频画面。">🎬 写复盘视频</button>
           <button data-q="请检查这段代码或技术问题，先定位原因，再给出可复制的修复方案、验证步骤和可能副作用。">💻 编程 / 排错</button>
         </div>
       </div>
@@ -70,7 +71,7 @@
           <button id="p2-send" class="p2-send" type="submit" aria-label="发送问题">↑</button>
         </div>
       </form>
-      <p class="p2-disclaimer">回答支持继续追问，并可转成思维导图或讲解视频。视频解析会检查实际抽取到的画面；只有勾选“同时转写语音”才额外尝试音频转写。效果取决于当前模型与服务能力，不会把未读取的内容说成已读取。</p>
+      <p class="p2-disclaimer">回答支持继续追问、生成复盘口播稿、分镜和思维导图；确认后可制作视频。视频解析会检查实际抽取到的画面；只有勾选“同时转写语音”才额外尝试音频转写。效果取决于当前模型与服务能力，不会把未读取的内容说成已读取。</p>
     </div>
   </div>
 </div>
@@ -217,9 +218,9 @@
     <p class="p2-small">两种 AI 都只处理你主动选中的消息。上岸鸭当前 AI 会使用本网页已配置模型，并在回答中标注未读链接；本机 AI 使用单独配置的服务商。只有读取到正文的链接才会作为正文证据。</p>
   </div>
 </dialog>
-<script src="./p2-video-presenter.js?v=20261023-multimodal-video" defer></script>
+<script src="./p2-video-presenter.js?v=20261023-recap-v1" defer></script>
 <script src="./p2-answer-mindmap.js?v=20261023-v8" defer></script>
-<script src="./p2-heygen-video.js?v=20261023-v8" defer></script>
+<script src="./p2-heygen-video.js?v=20261023-recap-v1" defer></script>
 <script src="./p2-view.js?v=20261023-multimodal-video" defer></script>
 <script src="./source-bridge.js" defer></script>
 <script src="./p2-chat.js?v=20261023-local-folder-picker-v5" defer></script>
