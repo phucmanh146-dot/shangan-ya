@@ -12,7 +12,12 @@ function applyProvider(){
  $('#p2-protocol').value=current.protocol||'chat';
  const docs=$('#p2-api-docs');
  docs.hidden=!current.docs;
+ docs.target='_blank';
+ docs.rel='noopener noreferrer';
+ docs.textContent=current.docs?'打开 '+(current.name||current.id)+' 官方 API 文档 ↗':'该服务商暂无官方文档链接';
+ docs.title=current.docs?'跳转到 '+(current.name||current.id)+' 官方 API 文档':'请在服务商官网查找 API 文档';
  if(current.docs)docs.href=current.docs;
+ else docs.removeAttribute('href');
  const list=$('#p2-model-list');list.replaceChildren(new Option('选择已读取的模型',''));list.hidden=true;
  modelMessage('模型列表会通过你填写的服务商 API 实时读取；不支持列表的代理可手动填模型 ID。');
 }
