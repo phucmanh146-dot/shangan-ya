@@ -217,23 +217,47 @@ async function openCandidate() {
     renderPreview(d);
   } catch (e) { status('打开候选失败：' + e.message + '。没有读取或分析消息。', true); }
 }
+function normalizeOcrRows(rows, group) {
+  return (Array.isArray(rows) ? rows : []).filter(r => String(r.text || '').trim()).map(r => ({
+    group, time: '屏幕位置 y=' + (r.y === undefined ? '?' : r.y),
+    sender: 'OCR ' + (r.confidence === undefined ? '' : Math.round(Number(r.confidence) * 100) + '%'),
+    text: String(r.text || '').trim()
+  }));
+}
+function messageKey(m) {
+  return [String(m.group || ''), String(m.sender || '').replace(/OCR\s*\d+%/i, 'OCR'), String(m.text || '').replace(/\s+/g, ' ').trim()].join('|').toLocaleLowerCase();
+}
 async function readVisible() {
   try {
     if (!token()) throw new Error('请先填写并验证本机桥接令牌。');
     status('正在读取当前微信窗口的可见画面并执行 OCR…');
     const d = await bridgeApi('/api/wechat/preview', {}, 90000);
-    const rows = Array.isArray(d.rows) ? d.rows : [];
     const group = currentGroup || byId('p2-wechat-group-query').value.trim() || '微信当前可见画面';
-    messages = rows.filter(r => String(r.text || '').trim()).map((r, i) => ({
-      group, time: '屏幕位置 y=' + (r.y === undefined ? '?' : r.y),
-      sender: 'OCR ' + (r.confidence === undefined ? '' : Math.round(Number(r.confidence) * 100) + '%'),
-      text: String(r.text || '').trim()
-    }));
-    byId('p2-wechat-more').disabled = true;
+    messages = normalizeOcrRows(d.rows, group);
+    byId('p2-wechat-more').disabled = !messages.length;
     renderMessages(); renderPreview(d);
     if (!messages.length) throw new Error('OCR 没有识别到可用文字；请把微信目标群打开并显示消息后重试。');
-    status('已取得当前画面 OCR 共 ' + messages.length + ' 条文字片段。注意：这是可见画面，不代表完整群历史；请在下方核对后再交给 AI。' + (d.note ? '\n' + d.note : ''), false);
+    status('已读取当前可见画面 ' + messages.length + ' 条文字片段。点击“继续读取更多”可向上滚动采集更早的可见消息；OCR 结果请先核对，不代表完整历史。' + (d.note ? '\n' + d.note : ''), false);
   } catch (e) { status('读取当前画面失败：' + e.message, true); }
+}
+async function readMore() {
+  if (!token()) { status('请先填写并验证本机桥接令牌。', true); return; }
+  if (!currentGroup && !byId('p2-wechat-group-query').value.trim()) { status('请先搜索并核对目标微信群，再读取历史。', true); return; }
+  const button = byId('p2-wechat-more');
+  button.disabled = true;
+  try {
+    status('正在把微信会话向上滚动并采集更早的可见消息…');
+    const d = await bridgeApi('/api/wechat/scroll', { steps: 6 }, 90000);
+    const group = currentGroup || byId('p2-wechat-group-query').value.trim() || '微信当前可见画面';
+    const batch = normalizeOcrRows(d.rows, group);
+    const known = new Set(messages.map(messageKey));
+    const added = batch.filter(m => !known.has(messageKey(m)) && known.add(messageKey(m)));
+    messages = messages.concat(added);
+    renderMessages(); renderPreview(d);
+    status('本次识别 ' + batch.length + ' 条，新增去重后 ' + added.length + ' 条；累计 ' + messages.length + ' 条。若连续没有新增，请确认会话窗口和滚动位置。只采集当前可见界面，不声称已覆盖完整历史。' + (d.note ? '\n' + d.note : ''), false);
+  } catch (e) {
+    status('继续读取失败：' + e.message + '。原批次已保留；请确认微信目标会话仍在前台后重试。', true);
+  } finally { button.disabled = messages.length === 0; }
 }
 async function readHistory() {
   if (bridgeHealth && bridgeHealth.wxautoInstalled) {
@@ -242,8 +266,9 @@ async function readHistory() {
     try {
       const d = await bridgeApi('/api/wechat/read', { group, limit: 250 }, 90000);
       messages = (d.messages || []).map(m => normalizeMessage(m, group)).filter(m => m.text);
+      byId('p2-wechat-more').disabled = !messages.length;
       renderMessages();
-      status('读取器返回 ' + messages.length + ' 条消息。请核对返回范围；不能据此认定已读取全部历史。', false);
+      status('读取器返回 ' + messages.length + ' 条消息。可继续点击“继续读取更多”采集当前界面上方的旧消息；请核对返回范围，不能据此认定已读取全部历史。', false);
       return;
     } catch (e) { status('读取器历史读取失败：' + e.message, true); return; }
   }
@@ -391,6 +416,7 @@ function mount() {
   byId('p2-wechat-search-groups').addEventListener('click', searchGroups);
   byId('p2-wechat-open-group').addEventListener('click', openCandidate);
   byId('p2-wechat-read-history').addEventListener('click', readHistory);
+  byId('p2-wechat-more').addEventListener('click', readMore);
   byId('p2-wechat-more').disabled = true;
   byId('p2-wechat-file').addEventListener('change', importFile);
   byId('p2-wechat-analyze').addEventListener('click', sendToMainAI);
