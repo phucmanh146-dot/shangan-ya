@@ -280,6 +280,7 @@ def ask(payload):
                 break
         if wechat_used_count<len(wechat_rows):wechat_truncated=True
     transcribe=bool(payload.get('transcribeVideo',False))
+    video_analysis=bool(payload.get('videoAnalysis',False))
     for row in files:
         if not row:continue
         name=row['name']
@@ -395,6 +396,8 @@ def ask(payload):
     if media_info:
         extra.append('此次图片或视频解析状态：'+repr(media_info))
         if transcribe:extra.append('视频转写状态：'+repr(transcript_status))
+    if video_analysis:
+        extra.append('【用户明确请求视频解析】只分析本轮实际抽取并传入模型的画面帧及实际获得的转写文本。按可见顺序总结场景、动作、主体、画面文字与关键变化；把直接观察和推测分开。若帧数为0、字幕/转写不可用或画面不清，明确指出缺口；不得伪造时间戳、对话、声音内容或未读取的场景。')
     last='当前用户问题：'+question+ ('\n\n'+'\n\n'.join(extra) if extra else '')
     user=([{'type':'text','text':last}]+[{'type':'image_url','image_url':{'url':'data:image/jpeg;base64,'+image}} for image in images]) if images else last
     upstream=[{'role':'system','content':system}]+messages+[{'role':'user','content':user}]
@@ -455,7 +458,7 @@ def ask(payload):
     return {'ok':True,'reply':reply.strip(),'model':cfg['model'],'modelRole':model_role,
             'modelFallback':model_fallback,'mode':mode,
             'sources':sources,'searchError':search_error,'searchProvider':provider,
-            'sourceDocuments':doc_sources,'media':media_info,'transcripts':transcript_status,
+            'sourceDocuments':doc_sources,'media':media_info,'transcripts':transcript_status,'videoAnalysis':video_analysis,
             'evidenceChars':sum(len(s) for s in documents+link_documents+wechat_documents),'usedObsidian':False,
             'usedWechat':bool(wechat_documents),'wechatGroup':wechat_group if wechat_documents else '',
             'wechatMessageCount':wechat_used_count,'wechatContextChars':wechat_context_chars,
