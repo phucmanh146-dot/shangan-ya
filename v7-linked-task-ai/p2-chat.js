@@ -72,6 +72,7 @@ async function checkObsidianConnection(){
   if(parentKB){try{const state=parentKB.getStatus();if(state&&state.connected){set('工作台已连接本机知识库「'+(state.vaultName||parentKB.vaultName||'Obsidian')+'」：'+state.count+' 篇资料。');if($('#p2-use-obsidian'))$('#p2-use-obsidian').checked=true;return;}}catch(_){}}
   const backend=getLocalVaultBridge();
   if(backend){const response=await backend('/api/vault-list',{limit:500,with_text:false},20000);if(response&&response.ok&&(response.data||{}).connected){const data=response.data;set('本机 Obsidian 已连接：'+(data.name||'韩奕知识复盘')+'；发现 '+Number(data.total||data.count||(data.files||[]).length||0)+' 篇笔记。');if($('#p2-use-obsidian'))$('#p2-use-obsidian').checked=true;return;}}
+  if(parentKB&&typeof parentKB.open==='function'){set('请在工作台弹出的知识库窗口中点击“连接 Obsidian”，选择本机 Vault 文件夹。');parentKB.open();return;}
   if(typeof window.showDirectoryPicker!=='function')throw Error('当前浏览器不支持直接选择本机文件夹。请用最新版 Chrome/Edge 打开 HTTPS 工作台。');
   set('请选择本机 Obsidian Vault 文件夹；只读取 Markdown，不上传整个目录。');
   const handle=await window.showDirectoryPicker({id:'shanganya-obsidian-vault',mode:'read'});
