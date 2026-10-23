@@ -18,35 +18,44 @@ function deleteChat(id){if(sending)return;if(!confirm('删除此对话的本机�
 function renameChat(id){const t=threads.find(x=>x.id===id);if(!t)return;const title=prompt('重命名对话',t.title);if(!title?.trim())return;t.title=title.trim().slice(0,70);persist();draw();}
 function restore(){try{const data=JSON.parse(localStorage.getItem(STORAGE)||'{}');threads=Array.isArray(data.threads)?data.threads.filter(x=>x&&Array.isArray(x.messages)).slice(0,50):[];activeId=data.activeId||'';}catch(e){}if(!threads.length){newChat();return;}if(!threads.some(t=>t.id===activeId))activeId=threads[0].id;draw();}
 async function jsonApi(url,data,timeout=155000){const ctrl=new AbortController(),tm=setTimeout(()=>ctrl.abort(),timeout);try{const r=await fetch(url,{method:data===undefined?'GET':'POST',headers:data===undefined?{}:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data),signal:ctrl.signal,cache:'no-store'});const j=await r.json().catch(()=>({error:'接口未返回有效 JSON'}));if(!r.ok||j.error)throw Error(j.error||'HTTP '+r.status);return j;}finally{clearTimeout(tm);}}
+async function localObsidianApi(path,data,timeout=12000){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);
+ try{
+  const response=await fetch('http://127.0.0.1:8877'+path,{method:data===undefined?'GET':'POST',headers:data===undefined?{}:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data),signal:controller.signal,cache:'no-store',mode:'cors'});
+  const result=await response.json().catch(()=>({error:'本机 Obsidian 桥接没有返回有效 JSON'}));
+  if(!response.ok||result.error||result.connected===false)throw Error(result.error||'HTTP '+response.status);
+  return result;
+ }finally{clearTimeout(timer);}
+}
 async function retrieveObsidianContext(query){
  const statusNode=$('#p2-obsidian-status');
  const set=(text,bad=false)=>{if(statusNode){statusNode.textContent=text;statusNode.classList.toggle('error',!!bad)}};
- set('正在检测 Obsidian 知识库并检索相关笔记…');
- const found=await jsonApi('/api/pm/tutorials?q='+encodeURIComponent(String(query||'').slice(0,400)),undefined,25000);
+ set('正在直连本机 127.0.0.1:8877，检索当前 Obsidian Vault…');
+ const found=await localObsidianApi('/api/pm/tutorials?q='+encodeURIComponent(String(query||'').slice(0,400)),undefined,18000);
  const notes=Array.isArray(found.notes)?found.notes:[];
- if(!notes.length){set('已连接「'+(found.name||'Obsidian 知识库')+'」，但没有找到与本次问题匹配的笔记。',false);return {context:'',count:0,name:found.name||'Obsidian 知识库'};}
+ if(!notes.length){set('本机 Vault「'+(found.name||'Obsidian')+'」已连接，但没有匹配到相关 Markdown 笔记。',false);return {context:'',count:0,name:found.name||'Obsidian Vault'};}
  const selected=notes.slice(0,3),parts=[];
  for(const note of selected){
   if(!note||!note.path)continue;
-  const detail=await jsonApi('/api/pm/tutorial-links',{path:note.path},25000);
+  const detail=await localObsidianApi('/api/pm/tutorial-links',{path:note.path},18000);
   if(detail&&detail.content){
-   parts.push('【Obsidian 笔记：'+String(detail.title||note.title||note.path).slice(0,180)+'】\n路径：'+String(detail.path||note.path).slice(0,300)+'\n正文片段：\n'+String(detail.content).slice(0,2600));
+   parts.push('【本机 Obsidian 笔记：'+String(detail.title||note.title||note.path).slice(0,180)+'】\n路径：'+String(detail.path||note.path).slice(0,300)+'\n正文片段：\n'+String(detail.content).slice(0,2600));
   }
  }
  const context=parts.join('\n\n').slice(0,7800);
- set('已真实读取 '+parts.length+' 篇匹配笔记（'+(found.name||'Obsidian')+'）。本轮只发送这些相关片段。',parts.length===0);
- return {context,count:parts.length,name:found.name||'Obsidian 知识库'};
+ set('已从本机 Obsidian Vault「'+(found.name||'Obsidian')+'」读取 '+parts.length+' 篇匹配笔记。本轮仅发送相关片段。',parts.length===0);
+ return {context,count:parts.length,name:found.name||'Obsidian Vault'};
 }
 async function checkObsidianConnection(){
  const button=$('#p2-obsidian-connect');if(button)button.disabled=true;
+ const statusNode=$('#p2-obsidian-status');
  try{
-  const result=await jsonApi('/api/pm/tutorials?q=',undefined,25000);
-  const statusNode=$('#p2-obsidian-status');
-  if(statusNode){statusNode.textContent='连接成功：'+(result.name||'Obsidian 知识库')+'；检测到 '+Number(result.total||0)+' 篇可检索笔记。';statusNode.classList.remove('error');}
+  const result=await localObsidianApi('/api/pm/tutorials?q=',undefined,12000);
+  const total=Number(result.total||0);
+  if(statusNode){statusNode.textContent='本机 Obsidian 已连接：Vault「'+(result.name||'Obsidian')+'」，发现 '+total+' 篇可检索笔记。';statusNode.classList.remove('error');}
   if($('#p2-use-obsidian'))$('#p2-use-obsidian').checked=true;
  }catch(e){
-  const statusNode=$('#p2-obsidian-status');
-  if(statusNode){statusNode.textContent='连接失败：'+e.message+'。没有读取到本机笔记；请先在工作台后端配置 Obsidian 读取桥接。';statusNode.classList.add('error');}
+  if(statusNode){statusNode.textContent='没有连上本机 Obsidian：'+(e.name==='AbortError'?'本机桥接响应超时。':e.message+'。')+'请确认电脑上的上岸鸭本机服务已启动（127.0.0.1:8877），并允许浏览器访问本地网络。当前未读取任何本机笔记。';statusNode.classList.add('error');}
  }finally{if(button)button.disabled=false;}
 }
 async function checkStatus(){try{const r=await jsonApi('/api/p2/status',undefined,16000),ai=r.ai||{},roles=r.modelTeam?.roles||{},active=Object.values(roles).filter(x=>x.configured).length,suffix=active?' · '+active+'个专家模型':'';$('#p2-model-status').textContent=(ai.verified?'● 已验证：'+ai.model:ai.configured?'○ 模型尚未验证：'+ai.model:'● 尚未连接模型，请配置 API')+suffix;$('#p2-model-status').style.color=ai.verified?'#377951':'#a66a32';}catch(e){$('#p2-model-status').textContent='● 本机后端不可用：'+e.message;$('#p2-model-status').style.color='#b85247';}}
