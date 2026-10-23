@@ -1653,7 +1653,7 @@
           '<div class="app-task-menu" hidden>' +
             '<button type="button" data-act="edit">编辑</button>' +
             '<button type="button" data-act="quest">' + (getTaskSteps(t).length ? '🎮 看关卡' : '🎮 拆成小关') + '</button>' +
-            '<button type="button" data-act="notes">' + (hasNotes ? '📝 编辑笔记' : '📝 写笔记') + '</button>' +
+            '<button type="button" data-act="help-ai">🤖 遇到困难 · 关联 AI</button><button type="button" data-act="notes">' + (hasNotes ? '📝 编辑笔记' : '📝 写笔记') + '</button>' +
             '<button type="button" data-act="cases">🏢 大厂是怎么干的</button>' +
             '<button type="button" data-act="toggle-important">' + (t.important ? '✓ 重要' : '标记重要') + '</button>' +
             '<button type="button" data-act="toggle-urgent">' + (t.urgent ? '✓ 紧急' : '标记紧急') + '</button>' +
@@ -1757,6 +1757,17 @@
         else if(act === 'toggle-important') toggleTaskImportant(id);
         else if(act === 'toggle-urgent') toggleTaskUrgent(id);
         else if(act === 'toggle-delegate') toggleTaskDelegated(id);
+        else if(act === 'help-ai') {
+          try { sessionStorage.setItem('shanganya_task_ai_pending_v1', String(id || '')); } catch(_e) {}
+          var frame = document.getElementById('embeddedP2Frame');
+          var aiView = document.getElementById('view-ai-p2');
+          if(aiView && frame) {
+            document.querySelectorAll('.app-view').forEach(function(view){view.hidden=view!==aiView;});
+            aiView.hidden = false;
+            frame.src = './ai-p2.html?embedded=1&linkedTaskAi=20261023v16&task=' + encodeURIComponent(id);
+            try{frame.scrollIntoView({behavior:'smooth',block:'start'});}catch(_e){}
+          } else location.href='./ai-p2.html?task='+encodeURIComponent(id);
+        }
         else if(act === 'notes') openTaskNotesModal(id);
         else if(act === 'quest') openQuest(id);
         else if(act === 'cases'){

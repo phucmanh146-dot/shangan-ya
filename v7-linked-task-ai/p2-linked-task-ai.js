@@ -483,6 +483,18 @@ function init() {
   renderTaskPicker();
   refreshTasks();
   addTodoAction();
+  try {
+    const pending=new URLSearchParams(location.search).get('task') || sessionStorage.getItem('shanganya_task_ai_pending_v1');
+    if(pending){
+      const select=$('#p2-linked-task-select');
+      if(select && Array.from(select.options).some(option=>option.value===pending)){
+        select.value=pending;
+        updateTaskPreview();
+        attachSelectedTask();
+        sessionStorage.removeItem('shanganya_task_ai_pending_v1');
+      }
+    }
+  }catch(error){console.warn('任务关联启动失败',error);}
   window.addEventListener('storage', function (event) {
     if (event.key === APP_DATA_KEY) refreshTasks();
   });
