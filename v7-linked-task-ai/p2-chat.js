@@ -77,7 +77,7 @@ async function checkObsidianConnection(){
   set('请选择本机 Obsidian Vault 文件夹；只读取 Markdown，不上传整个目录。');
   const handle=await window.showDirectoryPicker({id:'shanganya-obsidian-vault',mode:'read'});
   const found=[];let visited=0,truncated=false;
-  async function walk(dir,prefix,depth){if(depth>16){truncated=true;return;}for await(const entry of dir.values()){if(++visited>10000||found.length>=500){truncated=true;return;}if(entry.name.startsWith('.'))continue;const path=prefix+entry.name;if(entry.kind==='directory'){await walk(entry,path+'/',depth+1);continue;}if(!/\\.md$/i.test(entry.name))continue;try{const file=await entry.getFile();if(file.size>5*1024*1024)continue;found.push({path,text:await file.text(),title:entry.name.replace(/\\.md$/i,'')});}catch(_){}}}
+  async function walk(dir,prefix,depth){if(depth>16){truncated=true;return;}for await(const entry of dir.values()){if(++visited>10000||found.length>=500){truncated=true;return;}if(entry.name.startsWith('.'))continue;const path=prefix+entry.name;if(entry.kind==='directory'){await walk(entry,path+'/',depth+1);continue;}if(!/\.md$/i.test(entry.name))continue;try{const file=await entry.getFile();if(file.size>5*1024*1024)continue;found.push({path,text:await file.text(),title:entry.name.replace(/\.md$/i,'')});}catch(_){}}}
   await walk(handle,'',0);if(!found.length)throw Error('已选择「'+handle.name+'」，但没有读到可读取的 Markdown 笔记。');
   browserVault={name:handle.name,files:found,truncated};
   set('已真实读取本机文件夹「'+handle.name+'」：'+found.length+' 篇 Markdown 笔记。'+(truncated?'已达到 500 篇/扫描上限，未读取部分不会进入搜索。':'')+' 笔记仅保留在当前页面内存中。');
