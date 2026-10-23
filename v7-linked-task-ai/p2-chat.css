@@ -121,3 +121,6 @@
 /* Obsidian knowledge connector lives inside the Connect AI composer. */
 .p2-obsidian-connector{margin:8px 0;padding:11px 13px;border:1px solid #cbded0;border-radius:12px;background:#f4faf5;color:#254c39}.p2-obsidian-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.p2-obsidian-row .p2-switch{margin:0}.p2-obsidian-row button{padding:7px 11px;border:1px solid #9bbba5;border-radius:9px;background:#fff;color:#24563d;cursor:pointer;font-weight:700}.p2-obsidian-row button:disabled{opacity:.6;cursor:wait}.p2-obsidian-connector p{margin:7px 0 3px;font-size:12px;color:#416752}.p2-obsidian-connector p.error{color:#a42e2e}.p2-obsidian-connector small{display:block;color:#60776a;font-size:11px;line-height:1.5}
 body.p2-embedded .p2-top-title{font-size:16px}
+
+/* Direct jump to the user's local Obsidian vault and relevant source notes. */
+.p2-obsidian-open,.p2-obsidian-result-link{display:inline-flex;align-items:center;gap:5px;border:1px solid #9bbba5;border-radius:9px;padding:7px 10px;background:#fff;color:#24563d;text-decoration:none;font-size:12px;font-weight:650}.p2-obsidian-open:hover,.p2-obsidian-result-link:hover{text-decoration:underline;background:#edf7ef}.p2-obsidian-results{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}.p2-obsidian-results[hidden]{display:none}
