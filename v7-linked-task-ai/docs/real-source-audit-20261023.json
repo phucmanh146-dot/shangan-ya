@@ -1,0 +1,10 @@
+{
+  "real_document": "D:\\上岸鸭竞品拆解与过程干预方案（含大模型技术分析）-3.docx",
+  "sha256": "316ff612ad17384fc6234eb10aa3232853e4287a92af0d007620c7370cfd08ee",
+  "chars": 18271,
+  "sections": 5,
+  "coverage_exact": true,
+  "offsets_exact": true,
+  "empty_source_rejected": true,
+  "model_status": "尚未配置可用模型，不能启动 Agent 循环。"
+}

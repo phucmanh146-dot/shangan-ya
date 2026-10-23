@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="referrer" content="no-referrer">
+<title>上岸鸭 P2 · AI 深度问答</title>
+<link rel="stylesheet" href="./p2-chat.css">
+<link rel="stylesheet" href="./p2-embedded-child.css">
+<link rel="stylesheet" href="./p2-conversation-refresh.css">
+<link rel="stylesheet" href="./workbench-readable-ui.css?v=20261015-2248">
+</head>
+<body>
+<div class="p2-shell" id="p2-app">
+  <aside class="p2-side" id="p2-side" aria-label="对话列表">
+    <div class="p2-brand"><span class="p2-duck">◈</span><span>上岸鸭 <b>P2</b></span><button class="p2-menu mobile-only" id="p2-close-side" aria-label="关闭侧栏">×</button></div>
+    <button class="p2-new" id="p2-new">＋ 新建对话</button>
+    <div class="p2-side-label">最近对话</div>
+    <div class="p2-history" id="p2-history" aria-label="历史对话"></div>
+    <div class="p2-side-bottom">
+       <a href="./index.html" class="p2-back">← 返回上岸鸭工作台</a>
+       <p>独立 AI 工作区。对话记录保存在本机浏览器，不读取 Obsidian、微信或任务数据。</p>
+    </div>
+  </aside>
+  <div class="p2-main">
+    <header class="p2-topbar">
+      <div class="p2-top-left"><button class="p2-menu" id="p2-open-side" aria-label="打开对话列表">☰</button>
+      <div><div class="p2-top-title">AI 深度问答 <span>独立空间</span></div><div class="p2-model-status" id="p2-model-status">正在检查真实模型连接…</div></div></div>
+      <div class="p2-actions"><button id="p2-open-config" class="p2-config">⚙ 模型 API</button><a class="p2-workbench" href="./index.html">工作台 ↗</a></div>
+    </header>
+    <section id="p2-timeline" class="p2-timeline" aria-live="polite">
+      <div id="p2-welcome" class="p2-welcome">
+        <div class="p2-orb">✦</div>
+        <h1>有什么想深入了解的？</h1>
+        <p>像 ChatGPT / Claude 一样独立对话。你可以让我联网查证、分析文档、理解截图和视频关键画面，或一起拆解复杂问题。</p>
+        <div class="p2-prompts">
+          <button data-q="帮我深入研究最新的AI Agent评估方法：给出有来源的对比和实际落地步骤。" data-web="1">🔎 深度研究 Agent 评估</button>
+          <button data-q="我上传了一份材料，请先梳理全文结构，再指出关键问题和改进建议。">📄 分析我的文件</button>
+          <button data-q="分析这张截图里的报错，告诉我如何复现、定位和解决。">🖼 理解截图与报错</button>
+          <button data-q="我需要比较三个方案，请列出维度、权衡、风险和推荐依据。">⚖️ 对比方案</button>
+        </div>
+      </div>
+      <div id="p2-messages" class="p2-messages"></div>
+    </section>
+    <div class="p2-composer-wrap">
+      <div id="p2-status" class="p2-status" role="status"></div>
+      <div id="p2-attachments" class="p2-attachments"></div>
+      <div id="p2-urls" class="p2-urls"></div>
+      <form id="p2-form" class="p2-composer">
+        <textarea id="p2-text" placeholder="发消息或粘贴链接，上传图片、文件、视频；也可以直接粘贴截图…" rows="3" spellcheck="true"></textarea>
+        <div class="p2-controls">
+          <div class="p2-controls-left">
+            <label class="p2-upload" title="上传资料">＋<input id="p2-files" type="file" multiple accept=".pdf,.doc,.docx,.pptx,.pptm,.xlsx,.xlsm,.txt,.md,.csv,.json,.html,.png,.jpg,.jpeg,.webp,.gif,.bmp,.mp4,.mov,.webm,.mkv,.mp3,.wav,.m4a,.aac,.ogg,.flac,.opus,.aiff,.srt,.vtt" aria-label="上传文件"></label>
+            <button type="button" id="p2-add-url" class="p2-link" title="读取网页地址">🔗 <span>网页链接</span></button>
+            <label class="p2-switch" title="更有层次、引用更多来源"><input type="checkbox" id="p2-deep" checked><span>✦ 深入分析</span></label>
+            <label class="p2-switch" title="调用真实搜索引擎并引用来源"><input type="checkbox" id="p2-search" checked><span>⌕ 联网搜索</span></label>
+            <label class="p2-switch" title="本机识别就绪时无需 Key；若已启用转写 API，会发送音频并可能计费"><input type="checkbox" id="p2-transcribe"><span>视频语音转写</span></label>
+          </div>
+          <button id="p2-send" class="p2-send" type="submit" aria-label="发送问题">↑</button>
+        </div>
+      </form>
+      <p class="p2-disclaimer">AI 可能犯错。搜索失败会如实提示；图片和视频能否被完整理解取决于当前连接的模型能力。视频语音目前不默认转写。</p>
+    </div>
+  </div>
+</div>
+<dialog id="p2-config-dialog" class="p2-dialog">
+  <form method="dialog"><button class="p2-dialog-x" aria-label="关闭">×</button></form>
+  <h2>接入真实 AI 模型</h2>
+  <p>本机已连接的模型可直接使用。更换服务商需要你自己的 API Key，点击测试后才能启用。</p>
+  <label>服务商<select id="p2-provider"></select></label>
+  <label>模型 ID<input id="p2-model" placeholder="先读取可用模型，或手动填写准确的模型 ID"></label>
+  <div class="p2-model-picker"><button id="p2-load-models" type="button">读取可用模型列表</button><select id="p2-model-list" aria-label="选择已读取的模型" hidden><option value="">选择一个已读取的模型</option></select></div>
+  <p class="p2-small" id="p2-model-list-status">模型列表会通过你填写的服务商 API 实时读取；不支持列表的代理可手动填模型 ID。</p>
+  <label>API 地址<input id="p2-base" spellcheck="false"></label>
+  <label>API Key<input type="password" id="p2-key" autocomplete="new-password" placeholder="填写该服务商的 API Key；不要填写登录密码"></label>
+  <label>接口类型<select id="p2-protocol"><option value="chat">OpenAI 兼容 Chat</option><option value="responses">OpenAI Responses</option><option value="anthropic">Anthropic Claude</option></select></label>
+  <div class="p2-dialog-actions"><button id="p2-test-model" type="button">实际测试并连接</button><a id="p2-api-docs" rel="noopener noreferrer" target="_blank" href="https://platform.openai.com/docs">打开服务商 API 文档 ↗</a></div>
+  <p class="p2-small">密钥不会回显或写入聊天记录；请只在可信设备配置自己的 API Key。连接是否可用以真实测试结果为准，服务重启后可能需要重新配置。</p>
+  <p id="p2-config-status" class="p2-status"></p>
+<details id="p2-team-settings" class="p2-team-settings">
+    <summary>配置多模型分工（可选）</summary>
+    <p>主模型负责普通对话；为下面的角色配置独立 API 地址和模型 ID。未配置或未验证的角色自动回退到主模型。每个角色保存时都会真实调用一次 API，服务商可能计费。</p>
+    <div class="p2-team-grid">
+      <fieldset class="p2-role-card"><legend>深度推理</legend>
+        <label>API 地址<input id="p2-role-reasoning-base" spellcheck="false" placeholder="https://…/v1"></label>
+        <label>模型 ID<input id="p2-role-reasoning-model" placeholder="推理模型 ID"></label>
+        <div class="p2-model-picker"><button type="button" data-role-load="reasoning">读取模型列表</button><select data-role-model-list="reasoning" hidden><option value="">选择模型</option></select></div>
+        <label>API Key<input id="p2-role-reasoning-key" type="password" autocomplete="new-password" placeholder="独立模型密钥，可留空沿用已保存密钥"></label>
+        <label>接口类型<select id="p2-role-reasoning-protocol"><option value="chat">OpenAI 兼容 Chat</option><option value="responses">OpenAI Responses</option><option value="anthropic">Anthropic Claude</option></select></label>
+        <p class="p2-small" data-role-status="reasoning">复杂分析、规划和多步骤推理</p>
+      </fieldset>
+      <fieldset class="p2-role-card"><legend>联网研究与证据综合</legend>
+        <label>API 地址<input id="p2-role-research-base" spellcheck="false" placeholder="https://…/v1"></label>
+        <label>模型 ID<input id="p2-role-research-model" placeholder="研究模型 ID"></label>
+        <div class="p2-model-picker"><button type="button" data-role-load="research">读取模型列表</button><select data-role-model-list="research" hidden><option value="">选择模型</option></select></div>
+        <label>API Key<input id="p2-role-research-key" type="password" autocomplete="new-password" placeholder="独立模型密钥，可留空沿用已保存密钥"></label>
+        <label>接口类型<select id="p2-role-research-protocol"><option value="chat">OpenAI 兼容 Chat</option><option value="responses">OpenAI Responses</option><option value="anthropic">Anthropic Claude</option></select></label>
+        <p class="p2-small" data-role-status="research">联网搜索后整理证据和引用</p>
+      </fieldset>
+      <fieldset class="p2-role-card"><legend>图片与视频画面理解</legend>
+        <label>API 地址<input id="p2-role-vision-base" spellcheck="false" placeholder="https://…/v1"></label>
+        <label>模型 ID<input id="p2-role-vision-model" placeholder="支持视觉输入的模型 ID"></label>
+        <div class="p2-model-picker"><button type="button" data-role-load="vision">读取模型列表</button><select data-role-model-list="vision" hidden><option value="">选择模型</option></select></div>
+        <label>API Key<input id="p2-role-vision-key" type="password" autocomplete="new-password" placeholder="独立模型密钥，可留空沿用已保存密钥"></label>
+        <label>接口类型<select id="p2-role-vision-protocol"><option value="chat">OpenAI 兼容 Chat</option><option value="responses">OpenAI Responses</option><option value="anthropic">Anthropic Claude</option></select></label>
+        <p class="p2-small" data-role-status="vision">必须选支持图片输入的模型；视频按可读取画面处理</p>
+      </fieldset>
+      <fieldset class="p2-role-card"><legend>代码分析与修复</legend>
+        <label>API 地址<input id="p2-role-coding-base" spellcheck="false" placeholder="https://…/v1"></label>
+        <label>模型 ID<input id="p2-role-coding-model" placeholder="代码模型 ID"></label>
+        <div class="p2-model-picker"><button type="button" data-role-load="coding">读取模型列表</button><select data-role-model-list="coding" hidden><option value="">选择模型</option></select></div>
+        <label>API Key<input id="p2-role-coding-key" type="password" autocomplete="new-password" placeholder="独立模型密钥，可留空沿用已保存密钥"></label>
+        <label>接口类型<select id="p2-role-coding-protocol"><option value="chat">OpenAI 兼容 Chat</option><option value="responses">OpenAI Responses</option><option value="anthropic">Anthropic Claude</option></select></label>
+        <p class="p2-small" data-role-status="coding">编程、API、报错诊断和代码修改</p>
+      </fieldset>
+    </div>
+    <div class="p2-dialog-actions"><button id="p2-save-team" type="button">保存并真实测试分工模型</button><button id="p2-clear-team" type="button">清除独立模型</button></div>
+    <p id="p2-team-status" class="p2-status"></p>
+    <p class="p2-small">密钥只在当前服务进程内存中保存，不回显、不写入聊天记录；服务重启后需要重新配置。公网多用户部署前应先完成账号隔离，不能共用访客 API Key。</p>
+  </details>
+  <details id="p2-feishu-settings" class="p2-team-settings">
+    <summary>连接飞书知识库（读取正文与目录）</summary>
+    <p>填写飞书开放平台自建应用凭证。系统会通过官方 API 读取你有权访问的 Wiki 文档；知识库目录会递归读取子页面，单次最多 30 篇。不会读取你私人微信聊天。</p>
+    <label>飞书应用 ID<input id="p2-feishu-app-id" spellcheck="false" autocomplete="off" placeholder="cli_…"></label>
+    <label>飞书应用密钥<input id="p2-feishu-app-secret" type="password" autocomplete="new-password" placeholder="填写应用 App Secret，不是飞书登录密码"></label>
+    <label>测试用飞书 Wiki / 文档链接<input id="p2-feishu-test-url" spellcheck="false" placeholder="https://你的组织.feishu.cn/wiki/…"></label>
+    <div class="p2-dialog-actions"><button id="p2-feishu-save" type="button">保存飞书连接</button><button id="p2-feishu-test" type="button">保存并测试读取</button><button id="p2-feishu-clear" type="button">断开</button></div>
+    <p id="p2-feishu-status" class="p2-status">尚未检查飞书连接状态。</p>
+    <p class="p2-small">应用需开通 Wiki、云文档只读权限，并被添加到对应知识空间/文档的协作者中。凭证仅保存在当前账号的服务会话中，不会回显到网页。</p>
+  </details>
+</dialog>
+<dialog id="p2-link-dialog" class="p2-dialog">
+  <form method="dialog"><button class="p2-dialog-x" aria-label="关闭">×</button></form>
+  <h2>添加网页资料</h2>
+  <p>只读取你主动提交的网址。对需要登录的飞书或付费内容，无法读取就会如实说明。</p>
+  <label>网址<input id="p2-link-input" placeholder="https://…" inputmode="url"></label>
+  <div class="p2-dialog-actions"><button type="button" id="p2-confirm-link">加入本次问题</button></div>
+  <p id="p2-link-status" class="p2-status"></p>
+</dialog>
+<script src="./p2-view.js" defer></script>
+<script src="./source-bridge.js" defer></script>
+<script src="./p2-chat.js" defer></script>
+<script src="./p2-config.js" defer></script>
+<script src="./p2-voice-sop.js" defer></script>
+<link rel="stylesheet" href="./p2-voice-sop.css">
+</body>
+</html>
