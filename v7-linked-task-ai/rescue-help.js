@@ -396,7 +396,7 @@
             task.goal || task.description || task.requirement ? '目标/要求：' + (task.goal || task.description || task.requirement) : '',
             task.deadline || task.dueDate || task.endDate ? '截止日期：' + (task.deadline || task.dueDate || task.endDate) : '',
             task.acceptance || task.acceptanceCriteria ? '验收标准：' + (task.acceptance || task.acceptanceCriteria) : ''
-          ].filter(Boolean).join('\\n');
+          ].filter(Boolean).join('\n');
           sessionStorage.setItem('shanganya_p2_rescue_handoff_v1', JSON.stringify({
             question: (field('question') && field('question').value || '').trim(),
             taskName: current && current.taskName || '',
