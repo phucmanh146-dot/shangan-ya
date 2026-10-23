@@ -36,7 +36,7 @@ class Handler(SimpleHTTPRequestHandler):
         # and are called only after the user explicitly enables knowledge retrieval in Connect AI.
         public_origin = origin == 'https://shanganya-full-public-20261017-production.up.railway.app'
         public_bridge_origin = public_origin and path == '/api/feishu/desktop-read'
-        public_obsidian_origin = public_origin and path in ('/api/pm/tutorials', '/api/pm/tutorial-links')
+        public_obsidian_origin = public_origin and path in ('/api/pm/tutorials', '/api/pm/tutorial-links', '/api/vault', '/api/vault-list', '/api/vault-search', '/api/vault-read')
         return self.headers.get('Host', '') in hosts and (local_origin or public_bridge_origin or public_obsidian_origin)
     def end_headers(self):
         origin = self.headers.get('Origin')
