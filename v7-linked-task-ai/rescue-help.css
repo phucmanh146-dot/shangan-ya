@@ -182,3 +182,12 @@ dialog.sy-rescue-dialog::backdrop { background: #092920b3; backdrop-filter: blur
 .sy-rescue-config-shortcut{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:12px 0;padding:11px 13px;border:1px solid #d7e5dc;border-radius:11px;background:#f5faf7;color:#4c685a;font-size:12px;line-height:1.6}
 .sy-rescue-config-shortcut a{display:inline-flex;align-items:center;justify-content:center;border:1px solid #cbded4;border-radius:8px;padding:7px 10px;background:#fff;color:#1f5b42;font-weight:750;text-decoration:none;white-space:nowrap}
 .sy-rescue-config-shortcut a:hover{background:#e8f4ed}
+
+
+/* One clear route from the blocker rescue modal to the embedded full AI workspace */
+.sy-rescue-config-shortcut{margin:18px 0 0;padding:14px 16px;border:1px solid #d8e8dd;border-radius:14px;background:#f5faf6;color:#4e6d5d;line-height:1.65}
+.sy-rescue-config-shortcut p{margin:0 0 10px}
+.sy-rescue-ai-entry-actions{display:flex;flex-wrap:wrap;gap:9px}
+.sy-rescue-ai-entry-actions button{border:1px solid #b9d5c3;border-radius:10px;background:#fff;color:#205741;padding:10px 14px;font-weight:750;cursor:pointer}
+.sy-rescue-ai-entry-actions button:first-child{background:#8fe0c5;border-color:#8fe0c5;color:#103f35}
+.sy-rescue-ai-entry-actions button:hover{filter:brightness(.97);transform:translateY(-1px)}
