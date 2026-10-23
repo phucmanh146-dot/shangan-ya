@@ -119,6 +119,26 @@ async function loadModels(){
   modelMessage('读取失败：'+e.message+'。请核对 API 地址、Key、接口类型和服务商模型权限；也可按官方文档手动填写模型 ID。',true);
  }finally{btn.disabled=false;}
 }
+async function discoverModels(){
+ const button=$('#p2-discovery-fetch'),select=$('#p2-discovery-results'),status=$('#p2-discovery-status');
+ const q=$('#p2-discovery-query').value.trim(),provider=$('#p2-discovery-provider').value.trim();
+ button.disabled=true;status.classList.remove('error');status.textContent='正在抓取公开模型目录；首次请求可能需要十几秒…';
+ try{
+  const params=new URLSearchParams({q,provider,limit:'300'});
+  const r=await P2App.api('/api/model-discovery?'+params.toString(),undefined,50000);
+  const models=Array.isArray(r.models)?r.models:[];
+  select.replaceChildren();
+  models.forEach(m=>{
+   const caps=Array.isArray(m.capabilities)&&m.capabilities.length?' · '+m.capabilities.join('/'):'';
+   const ctx=m.context?' · '+Number(m.context).toLocaleString()+' tokens':'';
+   select.append(new Option((m.provider||'未知厂商')+' · '+m.name+' ['+m.id+']'+caps+ctx,m.id));
+  });
+  if(!models.length)select.append(new Option('没有匹配结果',''));
+  const src=(r.sources||[]).map(s=>s.name+': '+(s.ok?'抓取 '+s.count+' 条':'失败')).join('；');
+  status.textContent='目录结果 '+Number(r.count||0)+' 条，本次显示 '+models.length+' 条。'+src+'。'+(r.errors&&r.errors.length?' 部分来源异常：'+r.errors.join('；'):'')+' 仅为目录发现，不代表已接通。';
+ }catch(e){select.replaceChildren(new Option('抓取失败：请查看状态',''));status.textContent='模型目录抓取失败：'+e.message+'。没有用预设名称补位。';status.classList.add('error');}
+ finally{button.disabled=false;}
+}
 async function verify(){
  const btn=$('#p2-test-model'),base=$('#p2-base').value.trim(),model=$('#p2-model').value.trim(),key=$('#p2-key').value.trim(),protocol=$('#p2-protocol').value;
  if(!base||!model){message('请填写 API 地址和准确的模型 ID。可先点击“读取可用模型列表”。',true);return;}
@@ -293,6 +313,8 @@ $('#p2-top-provider').addEventListener('change',e=>{const id=e.target.value;upda
 $('#p2-provider').addEventListener('change',applyProvider);
 loadTopProviders();
 $('#p2-load-models').addEventListener('click',loadModels);
+ $('#p2-discovery-fetch').addEventListener('click',discoverModels);
+ $('#p2-discovery-results').addEventListener('change',e=>{if(e.target.value){$('#p2-model').value=e.target.value;modelMessage('已填入目录中的模型 ID；这不是连接成功。请按官方文档配置 API 地址/Key，并点击“实际测试并连接”。');}});
 $('#p2-model-list').addEventListener('change',e=>{if(e.target.value)$('#p2-model').value=e.target.value;});
 $('#p2-test-model').addEventListener('click',verify);
 $('#p2-save-team').addEventListener('click',saveTeam);
