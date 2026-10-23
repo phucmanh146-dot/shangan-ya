@@ -106,3 +106,14 @@
 @media(max-width:1000px){.p2-model-quick{gap:5px}#p2-top-provider{max-width:165px;min-width:120px}.p2-api-doc-link{max-width:155px;overflow:hidden;text-overflow:ellipsis}}
 @media(max-width:850px){.p2-model-quick{max-width:58vw;justify-content:flex-end}.p2-top-provider-label{display:none}#p2-top-provider{min-width:0;max-width:150px}.p2-api-doc-link{display:none}.p2-top-title span{display:none}}
 @media(max-width:560px){.p2-top-title{font-size:14px}.p2-video-analyze span{display:inline}.p2-top-provider-label{display:none}#p2-top-provider{max-width:115px;padding:7px 6px;font-size:10px}.p2-model-quick .p2-config{font-size:10px;padding:7px 6px}}
+
+
+/* GPT-like AI workspace: task starters and media-first workflow */
+.p2-welcome>p{max-width:760px;line-height:1.85}
+.p2-prompts{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px!important;max-width:850px;margin:22px auto 0}
+.p2-prompts button{min-height:68px!important;padding:14px 16px!important;border:1px solid #d9e5dd!important;border-radius:16px!important;background:#fff!important;color:#25382c!important;text-align:left!important;font-size:13px!important;font-weight:700!important;line-height:1.5;box-shadow:0 3px 12px rgba(20,60,35,.04);transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease}
+.p2-prompts button:hover{transform:translateY(-2px);border-color:#83b99a!important;box-shadow:0 7px 18px rgba(20,60,35,.09)}
+.p2-prompts button.p2-prompt-primary{background:#eaf7ef!important;border-color:#b5ddc3!important;color:#176544!important}
+.p2-disclaimer{max-width:900px;margin:8px auto 0;line-height:1.6}
+@media(max-width:720px){.p2-prompts{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px!important}.p2-prompts button{min-height:60px!important;padding:10px!important;font-size:12px!important}}
+@media(max-width:420px){.p2-prompts{grid-template-columns:1fr}.p2-prompts button{min-height:48px!important}}
