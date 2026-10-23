@@ -111,7 +111,7 @@ def _voices(key):
         seen.add(ident)
         out.append({"id": ident, "name": str(item.get("name") or item.get("voice_name") or ident)[:100],
                     "language": str(item.get("language") or item.get("language_code") or "")[:40],
-                    "gender": str(item.get("gender") or "")[:20})
+                    "gender": str(item.get("gender") or "")[:20]})
     return out[:300]
 
 
