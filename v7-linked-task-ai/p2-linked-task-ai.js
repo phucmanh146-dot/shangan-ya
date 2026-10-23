@@ -207,7 +207,7 @@ async function readLocalObsidianForTask(task) {
       try {
         const url = new URL(item.url);
         const path = url.searchParams.get('file') || url.searchParams.get('path') || '';
-        if (path) paths.push(decodeURIComponent(path).replace(/^\/+/, ''));
+        if (path) paths.push(path.replace(/^\/+/, ''));
       } catch (_) {}
     });
     let candidates = paths.map(path => ({ path }));
@@ -494,3 +494,4 @@ function init() {
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
 else init();
 })();
+
