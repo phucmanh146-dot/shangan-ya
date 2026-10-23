@@ -2,6 +2,26 @@
 'use strict';
 const $=s=>document.querySelector(s);
 let providers=[];
+function updateTopDocs(providerId){
+ const current=providers.find(x=>x.id===providerId),docs=$('#p2-top-docs');
+ if(!docs)return;
+ if(current&&current.docs){docs.href=current.docs;docs.hidden=false;docs.textContent='打开 '+(current.name||current.id)+' 官方文档 ↗';docs.title=current.docs;}
+ else{docs.removeAttribute('href');docs.hidden=false;docs.textContent='该服务商暂无文档链接';docs.title='请通过服务商官网查找 API 文档';}
+}
+async function loadTopProviders(){
+ const select=$('#p2-top-provider');if(!select)return;
+ try{
+  const list=await P2App.api('/api/ai-providers',undefined,15000);
+  const publicHost=!['localhost','127.0.0.1','::1'].includes(location.hostname);
+  providers=(list.providers||[]).filter(x=>x&&x.id&&!(publicHost&&/^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/)/i.test(x.base||'')));
+  select.replaceChildren();
+  providers.forEach(x=>select.append(new Option(x.name||x.id,x.id)));
+  const config=await P2App.api('/api/ai-config',undefined,15000).catch(()=>({}));
+  const match=providers.find(x=>x.base&&x.base===config.base);
+  select.value=match?.id||(providers.some(x=>x.id==='custom')?'custom':providers[0]?.id||'');
+  updateTopDocs(select.value);
+ }catch(e){select.replaceChildren(new Option('无法读取供应商列表',''));const docs=$('#p2-top-docs');if(docs){docs.textContent='供应商列表读取失败';docs.removeAttribute('href');}}
+}
 let searchSettings={provider:'auto',defaultEnabled:true};
 function message(text,bad=false){const node=$('#p2-config-status');if(node){node.textContent=text;node.classList.toggle('error',!!bad);}}
 function modelMessage(text,bad=false){const node=$('#p2-model-list-status');if(node){node.textContent=text;node.classList.toggle('error',!!bad);}}
@@ -17,7 +37,7 @@ function applyProvider(){
  const list=$('#p2-model-list');list.replaceChildren(new Option('选择已读取的模型',''));list.hidden=true;
  modelMessage('模型列表会通过你填写的服务商 API 实时读取；不支持列表的代理可手动填模型 ID。');
 }
-async function open(){
+async function open(preferredProvider){
  P2App.showDialog('#p2-config-dialog');
  message('正在读取当前模型连接状态…');
  try{
@@ -264,12 +284,14 @@ async function clearTeam(){
  finally{button.disabled=false;}
 }
 
-$('#p2-open-config').addEventListener('click',open);
+$('#p2-open-config').addEventListener('click',()=>open($('#p2-top-provider')?.value||undefined));
 $('#p2-search-save').addEventListener('click',saveSearchSettings);
 $('#p2-search-test').addEventListener('click',testSearchSettings);
 initSearchDefault();
 if(new URLSearchParams(location.search).get('openConfig')==='1')open();
+$('#p2-top-provider').addEventListener('change',e=>{const id=e.target.value;updateTopDocs(id);if(providers.some(x=>x.id===id)){const modal=$('#p2-provider');modal.value=id;applyProvider();}});
 $('#p2-provider').addEventListener('change',applyProvider);
+loadTopProviders();
 $('#p2-load-models').addEventListener('click',loadModels);
 $('#p2-model-list').addEventListener('change',e=>{if(e.target.value)$('#p2-model').value=e.target.value;});
 $('#p2-test-model').addEventListener('click',verify);
