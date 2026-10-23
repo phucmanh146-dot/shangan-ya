@@ -727,6 +727,99 @@ def provider_catalog():
     return {"providers": AI_PROVIDERS, "modelSource": "live"}
 
 
+# Public model discovery is deliberately separate from connection/configuration.
+# It indexes published catalogs only; it never claims a model is connected.
+_MODEL_DISCOVERY_CACHE = {"at": 0.0, "models": [], "sources": [], "errors": []}
+_MODEL_DISCOVERY_LOCK = threading.Lock()
+
+def _read_public_model_catalog(url, source, timeout=14):
+    req = Request(url, headers={"User-Agent": "Shanganya-Model-Discovery/1.0", "Accept": "application/json"})
+    with build_opener().open(req, timeout=timeout) as response:
+        raw = response.read(12 * 1024 * 1024 + 1)
+    if len(raw) > 12 * 1024 * 1024:
+        raise ValueError("catalog response exceeds 12 MB")
+    payload = json.loads(raw.decode("utf-8", "replace"))
+    if isinstance(payload, list):
+        rows = payload
+    elif isinstance(payload, dict):
+        rows = next((payload.get(k) for k in ("data", "models", "items", "model_catalog", "results") if isinstance(payload.get(k), list)), [])
+    else:
+        rows = []
+    result = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        model_id = str(row.get("model_id") or row.get("model_name") or row.get("id") or row.get("model") or "").strip()
+        if not model_id or len(model_id) > 300:
+            continue
+        provider = str(row.get("litellm_provider") or row.get("provider") or row.get("provider_name") or row.get("owned_by") or "").strip()
+        if not provider and "/" in model_id:
+            provider = model_id.split("/", 1)[0]
+        name = str(row.get("name") or row.get("display_name") or row.get("model_name") or model_id).strip()
+        context = row.get("context_window") or row.get("context_length") or row.get("max_input_tokens")
+        capabilities = []
+        for key, label in (("supports_vision", "视觉"), ("supports_function_calling", "工具调用"), ("supports_reasoning", "推理"), ("supports_audio", "音频"), ("supports_embedding", "向量")):
+            if row.get(key) is True:
+                capabilities.append(label)
+        result.append({
+            "id": model_id, "name": name[:220], "provider": provider[:100] or "未知厂商",
+            "context": context if isinstance(context, (int, float)) else None,
+            "capabilities": capabilities, "source": source,
+            "docs": str(row.get("documentation") or row.get("documentation_url") or row.get("source_url") or "")[:500]
+        })
+    return result
+
+def discover_model_catalog(query="", provider="", limit=100):
+    """Fetch a broad public model directory. This is discovery metadata, not a live connection."""
+    now = __import__("time").time()
+    with _MODEL_DISCOVERY_LOCK:
+        if now - _MODEL_DISCOVERY_CACHE["at"] > 1800 or not _MODEL_DISCOVERY_CACHE["models"]:
+            sources, errors, merged = [], [], {}
+            tasks = [
+                ("LiteLLM 公共模型目录", "https://models.litellm.ai/model_catalog"),
+                ("OpenRouter 公共模型目录", "https://openrouter.ai/api/v1/models"),
+            ]
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                futures = [(label, pool.submit(_read_public_model_catalog, url, label)) for label, url in tasks]
+                for label, future in futures:
+                    try:
+                        rows = future.result(timeout=18)
+                        sources.append({"name": label, "count": len(rows), "ok": True})
+                        for row in rows:
+                            key = row["id"].lower()
+                            if key not in merged:
+                                merged[key] = row
+                            else:
+                                old = merged[key]
+                                old["capabilities"] = sorted(set(old.get("capabilities", []) + row.get("capabilities", [])))
+                                if not old.get("context") and row.get("context"):
+                                    old["context"] = row["context"]
+                    except Exception as exc:
+                        errors.append(label + ": " + str(exc)[:180])
+                        sources.append({"name": label, "count": 0, "ok": False})
+            if merged:
+                _MODEL_DISCOVERY_CACHE.update({"at": now, "models": list(merged.values()), "sources": sources, "errors": errors})
+            elif not _MODEL_DISCOVERY_CACHE["models"]:
+                raise RescueError("公开模型目录暂时抓取失败；没有返回伪造模型。请稍后重试。", "MODEL_CATALOG_UNAVAILABLE", 503, sources=sources, errors=errors)
+        rows = list(_MODEL_DISCOVERY_CACHE["models"])
+        sources = list(_MODEL_DISCOVERY_CACHE["sources"])
+        errors = list(_MODEL_DISCOVERY_CACHE["errors"])
+    q = str(query or "").strip().lower()[:180]
+    provider_q = str(provider or "").strip().lower()[:100]
+    if q:
+        rows = [r for r in rows if q in r["id"].lower() or q in r["name"].lower() or q in r["provider"].lower() or any(q in x.lower() for x in r["capabilities"])]
+    if provider_q:
+        rows = [r for r in rows if provider_q in r["provider"].lower() or provider_q in r["source"].lower()]
+    rows.sort(key=lambda r: (r["provider"].lower(), r["id"].lower()))
+    try:
+        limit = max(1, min(300, int(limit)))
+    except (TypeError, ValueError):
+        limit = 100
+    return {"models": rows[:limit], "count": len(rows), "returned": min(len(rows), limit),
+            "sources": sources, "errors": errors, "catalogOnly": True,
+            "note": "目录发现不代表该模型已接通或你的账号有权限。实际使用需配置服务商/网关 API，并通过真实连接测试。"}
+
+
 def config_snapshot():
     with CONFIG_LOCK:
         return dict(CONFIG)
