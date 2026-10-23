@@ -2,11 +2,34 @@
 'use strict';
 const $=s=>document.querySelector(s);
 let providers=[];
+function updateTopDocs(providerId){
+ const current=providers.find(x=>x.id===providerId);
+ const docs=$('#p2-top-docs');
+ if(!docs)return;
+ if(current&&current.docs){docs.href=current.docs;docs.hidden=false;docs.textContent='打开 '+(current.name||current.id)+' 官方文档 ↗';docs.title=current.docs;}
+ else{docs.removeAttribute('href');docs.hidden=false;docs.textContent='该服务商暂无文档链接';docs.title='请通过服务商官网查找 API 文档';}
+}
+async function loadTopProviders(){
+ const select=$('#p2-top-provider');if(!select)return;
+ try{
+  const list=await P2App.api('/api/ai-providers',undefined,15000);
+  const publicHost=!['localhost','127.0.0.1','::1'].includes(location.hostname);
+  providers=(list.providers||[]).filter(x=>x&&x.id&&!(publicHost&&/^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::|\/)/i.test(x.base||'')));
+  select.replaceChildren();
+  providers.forEach(x=>select.append(new Option(x.name||x.id,x.id)));
+  const config=await P2App.api('/api/ai-config',undefined,15000).catch(()=>({}));
+  const match=providers.find(x=>x.base&&x.base===config.base);
+  select.value=match?.id||(providers.some(x=>x.id==='custom')?'custom':providers[0]?.id||'');
+  updateTopDocs(select.value);
+ }catch(e){select.replaceChildren(new Option('无法读取供应商列表',''));const docs=$('#p2-top-docs');if(docs){docs.textContent='供应商列表读取失败';docs.removeAttribute('href');}}
+}
 function message(text,bad=false){const node=$('#p2-config-status');if(node){node.textContent=text;node.classList.toggle('error',!!bad);}}
 function modelMessage(text,bad=false){const node=$('#p2-model-list-status');if(node){node.textContent=text;node.classList.toggle('error',!!bad);}}
 function applyProvider(){
  const select=$('#p2-provider'),current=providers.find(x=>x.id===select.value);
  if(!current)return;
+ const topSelect=$('#p2-top-provider');if(topSelect)topSelect.value=current.id;
+ updateTopDocs(current.id);
  // Custom endpoints must be editable instead of silently retaining a different provider URL.
  $('#p2-base').value=current.id==='custom'?'':(current.base||'');
  $('#p2-protocol').value=current.protocol||'chat';
@@ -21,7 +44,7 @@ function applyProvider(){
  const list=$('#p2-model-list');list.replaceChildren(new Option('选择已读取的模型',''));list.hidden=true;
  modelMessage('模型列表会通过你填写的服务商 API 实时读取；不支持列表的代理可手动填模型 ID。');
 }
-async function open(){
+async function open(preferredProvider){
  P2App.showDialog('#p2-config-dialog');
  message('正在读取当前模型连接状态…');
  try{
@@ -31,11 +54,12 @@ async function open(){
   const select=$('#p2-provider');select.replaceChildren();
   providers.forEach(x=>select.append(new Option(x.name||x.id,x.id)));
   const match=providers.find(x=>x.base&&x.base===config.base);
-  select.value=match?match.id:(providers.some(x=>x.id==='custom')?'custom':providers[0]?.id||'');
+  select.value=(preferredProvider&&providers.some(x=>x.id===preferredProvider))?preferredProvider:(match?match.id:(providers.some(x=>x.id==='custom')?'custom':providers[0]?.id||''));
   applyProvider();
-  if(config.base)$('#p2-base').value=config.base;
-  if(config.model)$('#p2-model').value=config.model;
-  if(config.protocol)$('#p2-protocol').value=config.protocol;
+  if(!preferredProvider&&config.base)$('#p2-base').value=config.base;
+  if(!preferredProvider&&config.model)$('#p2-model').value=config.model;
+  else if(preferredProvider&&(!match||match.id!==preferredProvider))$('#p2-model').value='';
+  if(!preferredProvider&&config.protocol)$('#p2-protocol').value=config.protocol;
   $('#p2-key').value='';
   await loadTeamConfig();
   await loadFeishuConfig();
@@ -226,8 +250,14 @@ async function clearTeam(){
  finally{button.disabled=false;}
 }
 
-$('#p2-open-config').addEventListener('click',open);
+$('#p2-open-config').addEventListener('click',()=>open($('#p2-top-provider')?.value||undefined));
+$('#p2-top-provider').addEventListener('change',e=>{
+ const id=e.target.value;updateTopDocs(id);
+ const modalSelect=$('#p2-provider');
+ if(providers.some(x=>x.id===id)){modalSelect.value=id;applyProvider();}
+});
 $('#p2-provider').addEventListener('change',applyProvider);
+loadTopProviders();
 $('#p2-load-models').addEventListener('click',loadModels);
 $('#p2-model-list').addEventListener('change',e=>{if(e.target.value)$('#p2-model').value=e.target.value;});
 $('#p2-test-model').addEventListener('click',verify);
