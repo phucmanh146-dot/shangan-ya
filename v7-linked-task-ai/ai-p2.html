@@ -82,6 +82,15 @@
   <label>模型 ID<input id="p2-model" placeholder="先读取可用模型，或手动填写准确的模型 ID"></label>
   <div class="p2-model-picker"><button id="p2-load-models" type="button">读取可用模型列表</button><select id="p2-model-list" aria-label="选择已读取的模型" hidden><option value="">选择一个已读取的模型</option></select></div>
   <p class="p2-small" id="p2-model-list-status">模型列表会通过你填写的服务商 API 实时读取；不支持列表的代理可手动填模型 ID。</p>
+  <details id="p2-model-discovery" class="p2-team-settings">
+    <summary>发现更多可接入模型（公开目录爬取）</summary>
+    <p>从公开模型目录抓取并合并可发现的模型；这里只提供目录信息和模型 ID，不直接接入、不代表账号有权限，也不会自动更换当前模型。选中模型后仍需按官方文档配置对应服务商或网关，再做真实连接测试。</p>
+    <label>搜索模型 / 厂商 / 能力<input id="p2-discovery-query" placeholder="例如 Qwen、Claude、vision、reasoning"></label>
+    <label>筛选来源 / 厂商<input id="p2-discovery-provider" placeholder="例如 OpenRouter、Google、DeepSeek"></label>
+    <div class="p2-dialog-actions"><button id="p2-discovery-fetch" type="button">爬取 / 刷新模型目录</button></div>
+    <label>抓取到的模型<select id="p2-discovery-results" size="6" aria-label="公开模型目录结果"><option value="">点击爬取模型目录</option></select></label>
+    <p class="p2-small" id="p2-discovery-status" role="status">尚未抓取；结果会注明来源，公开目录不等于已连接。</p>
+  </details>
   <label>API 地址<input id="p2-base" spellcheck="false"></label>
   <label>API Key<input type="password" id="p2-key" autocomplete="new-password" placeholder="填写该服务商的 API Key；不要填写登录密码"></label>
   <label>接口类型<select id="p2-protocol"><option value="chat">OpenAI 兼容 Chat</option><option value="responses">OpenAI Responses</option><option value="anthropic">Anthropic Claude</option></select></label>
@@ -216,7 +225,7 @@
 <script src="./p2-chat.js?v=20261023-local-folder-picker-v5" defer></script>
 <script src="./p2-linked-task-ai.js?v=20261023-linked-task-ai-v7" defer></script>
 <script src="./p2-wechat-ai.js?v=20261023-wechat-ai" defer></script>
-<script src="./p2-config.js?v=20261023-real-provider-status-v5" defer></script>
+<script src="./p2-config.js?v=20261023-model-discovery-v1" defer></script>
 <script src="./p2-voice-sop.js" defer></script>
 <link rel="stylesheet" href="./p2-voice-sop.css">
 </body>
