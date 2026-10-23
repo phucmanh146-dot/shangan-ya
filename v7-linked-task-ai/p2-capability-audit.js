@@ -23,7 +23,8 @@ function ensurePanel(){
  const check=document.createElement('button');check.type='button';check.textContent='检查全部连接';
  const models=document.createElement('button');models.type='button';models.textContent='测试公开模型目录';
  const config=document.createElement('button');config.type='button';config.textContent='打开 API 配置';
- actions.append(check,models,config);panel.append(actions);
+ const continueOld=document.createElement('button');continueOld.type='button';continueOld.textContent='载入历史需求，继续优化';
+ actions.append(check,models,config,continueOld);panel.append(actions);
  const grid=document.createElement('div');grid.className='p2-capability-grid';grid.setAttribute('aria-live','polite');grid.textContent='点击“检查全部连接”读取实时状态。';panel.append(grid);
  const note=document.createElement('p');note.className='p2-capability-note';note.textContent='隐私边界：不会读取浏览器密码或 Cookie；不会自动修改任务、发送微信消息或上传整个 Obsidian 库。';panel.append(note);
  header.insertAdjacentElement('afterend',panel);
@@ -52,8 +53,18 @@ function ensurePanel(){
   models.disabled=false;
  });
  config.addEventListener('click',()=>{const b=$('#p2-open-config');if(b)b.click();else grid.textContent='未找到现有 API 配置入口，请检查页面脚本是否加载。';});
+ continueOld.addEventListener('click',()=>{
+  const box=$('#p2-text'),ctx=$('#p2-task-context');
+  if(!box)return;
+  const wiki='https://tcnb3a3fuvtb.feishu.cn/wiki/YD6HwHCS5iXlgmkpLOoccnvon7b';
+  box.value='请继续优化我现有的上岸鸭 v7 学习工作台，不要另起炉灶。请先读取并分析这个飞书 Wiki 的目录、子页面和正文：'+wiki+'。再基于当前仓库代码和已有页面，按“已实现 / 部分实现 / 未配置 / 测试失败”核对历史需求，并优先修复真实阻塞点。\n\n必须保留原首页布局、已有交互、任务清单、截止日期、重要/紧急分类、历史数据和现有 /data 持久化内容；不重复创建任务、不覆盖原任务、不把未读取内容说成已读取。\n\n按顺序核对：1) AI 多轮对话与各服务商官方 API、Key 配置、模型目录发现、账号实际可调用性、失败重试与主模型回退；2) 普通网页、飞书 Wiki 目录/子页、B站/YouTube/其他链接正文或字幕读取；3) 本机 Obsidian「韩奕知识复盘」真实搜索、原文来源与 obsidian:// 跳转，普通问答不依赖知识库；4) 已登录微信的本机桥接、真实群搜索与可见消息读取，清楚区分局部画面和完整历史；5) Word/PDF/表格/图片/音频/视频上传、OCR/字幕/抽帧、通俗讲解视频、思维导图；6) 将结果关联原任务，列出失败接口、根因、修复、验证结果和下一步。不要只增加说明按钮或静态 UI。先做只读检查，再增量修改并运行测试。';
+  if(ctx)ctx.value='项目：上岸鸭 v7 学习工作台。目标：在原有版本上修复真实连接并整合历史需求。保留原任务、截止日期、重要/紧急清单、历史数据、页面交互与 /data。优先：AI 官方 API/模型发现与回退；指定飞书 Wiki 及目录子页读取；本机 Obsidian 韩奕知识复盘；授权微信桥接；通用链接、文档、图片、视频、语音解析；回答转思维导图和通俗讲解视频。每项需给出真实状态与可复现验证，不得假装成功。';
+  const search=$('#p2-search'),deep=$('#p2-deep');if(search)search.checked=true;if(deep)deep.checked=true;
+  box.dispatchEvent(new Event('input',{bubbles:true}));box.focus();statusNote('已载入历史需求和指定飞书 Wiki。发送后会按当前接口能力尝试读取；尚未验证的内容不会自动标记完成。');
+ });
+
 }
-function addCard(host,label,state,text,detail){
+function statusNote(text){const n=$('#p2-status');if(n)n.textContent=text;}\nfunction addCard(host,label,state,text,detail){
  const card=document.createElement('section');card.className='p2-capability-card';
  const h=document.createElement('strong');h.textContent=label;const status=document.createElement('span');status.className='p2-capability-state '+state;status.textContent=text;
  const p=document.createElement('p');p.textContent=detail||'';card.append(h,status,p);host.append(card);return card;
