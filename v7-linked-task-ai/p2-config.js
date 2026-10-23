@@ -20,7 +20,7 @@ async function loadTopProviders(){
   const match=providers.find(x=>x.base&&x.base===config.base);
   select.value=match?.id||(providers.some(x=>x.id==='custom')?'custom':providers[0]?.id||'');
   updateTopDocs(select.value);
- }catch(e){select.replaceChildren(new Option('无法读取供应商列表',''));const docs=$('#p2-top-docs');if(docs){docs.textContent='供应商列表读取失败';docs.removeAttribute('href');}}
+ }catch(e){select.replaceChildren(new Option('供应商 API 读取失败（点此配置）',''));select.title='未能从工作台 API 读取供应商列表；没有显示伪造的模型。';select.addEventListener('click',()=>open(),{once:true});const docs=$('#p2-top-docs');if(docs){docs.textContent='供应商列表读取失败';docs.removeAttribute('href');}const node=$('#p2-model-status');if(node)node.textContent='真实供应商列表读取失败：'+e.message+'。请打开“配置 / 测试 API”检查工作台 API。';}
 }
 let searchSettings={provider:'auto',defaultEnabled:true};
 function message(text,bad=false){const node=$('#p2-config-status');if(node){node.textContent=text;node.classList.toggle('error',!!bad);}}
