@@ -107,6 +107,11 @@ $('#p2-text').oninput=e=>{e.target.style.height='auto';e.target.style.height=Mat
 $('.p2-prompts button').forEach(button=>button.onclick=()=>{const box=$('#p2-text');box.value=button.dataset.q||'';if(button.dataset.web)$('#p2-search').checked=true;if(button.dataset.video)$('#p2-video-files').click();box.focus();});
 $('#p2-form').ondragover=e=>{if([...e.dataTransfer?.types||[]].includes('Files'))e.preventDefault();};$('#p2-form').ondrop=e=>{if(e.dataTransfer?.files?.length){e.preventDefault();uploadBatch(e.dataTransfer.files);}};
 async function attachText(name,text){const safeName=(String(name||'飞书文档').replace(/[\\/:*?"<>|]/g,'_').slice(0,90)||'飞书文档')+'.txt';await uploadFile(new File([String(text||'')],safeName,{type:'text/plain;charset=utf-8'}));if(!files.some(x=>x.name===safeName&&x.id))throw Error('文档正文已读取，但上传为对话附件失败。');const box=$('#p2-text');if(!box.value.trim())box.value='请基于刚读取的飞书文档，先梳理内容目录、关键问题，再按优先级给出可执行的修改方案。';box.dispatchEvent(new Event('input',{bubbles:true}));}
+window.P2LocalVaultStatus=function(){
+ if(browserVault)return {connected:true,name:browserVault.name,count:browserVault.files.length,truncated:!!browserVault.truncated,source:'browser-folder-picker'};
+ try{const kb=getParentKnowledge();if(kb&&typeof kb.getStatus==='function'){const state=kb.getStatus();if(state&&state.connected)return {connected:true,name:state.vaultName||kb.vaultName||'韩奕知识复盘',count:Number(state.count||0),source:'workbench-knowledge-bridge'};}}catch(_){}
+ return {connected:false,name:'韩奕知识复盘',count:0,source:'not-authorized'};
+};
 window.P2App={api:jsonApi,checkStatus,showDialog,attachText};
 restore();
 (function consumeRescueHandoff(){
