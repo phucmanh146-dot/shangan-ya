@@ -95,7 +95,7 @@ class Public(SimpleHTTPRequestHandler):
   except Exception as e:self.message({'error':str(e)},503)
  def do_GET(self):
   if urlsplit(self.path).path=='/auth/claim':return cloud_accounts.handle(self)
-  if self.path=='/public-health':return self.message({'ok':True,'product':'shanganya-original-complete'})
+  if urlsplit(self.path).path in ('/public-health','/publichealth'):return self.message({'ok':True,'product':'shanganya-original-complete'})
   if self.path.startswith('/api/'):return self.api()
   path=unquote(urlsplit(self.path).path)
   if path in ('/','/index.html') or path.endswith('.html'):self.identity()
