@@ -31,19 +31,21 @@
   <div class="p2-main">
     <header class="p2-topbar">
       <div class="p2-top-left"><button class="p2-menu" id="p2-open-side" aria-label="打开对话列表">☰</button>
-      <div><div class="p2-top-title">AI 工作区 <span>通用对话 · 文件 · 联网 · 视频解析</span></div><div class="p2-model-status" id="p2-model-status">正在检查真实模型连接…</div></div></div>
+      <div><div class="p2-top-title">AI 工作区 <span>通用 AI 对话 · 图片/文档/链接 · 联网研究 · 视频解析</span></div><div class="p2-model-status" id="p2-model-status">正在检查真实模型连接…</div></div></div>
       <div class="p2-actions p2-model-quick"><label class="p2-top-provider-label" for="p2-top-provider">AI 模型</label><select id="p2-top-provider" aria-label="选择 AI 模型供应商"><option value="">正在读取模型列表…</option></select><a id="p2-top-docs" class="p2-api-doc-link" href="https://platform.openai.com/docs" target="_blank" rel="noopener noreferrer">官方 API 文档 ↗</a><button id="p2-open-config" class="p2-config">配置 / 测试 API</button><a class="p2-workbench" href="./index.html">工作台 ↗</a></div>
     </header>
     <section id="p2-timeline" class="p2-timeline" aria-live="polite">
       <div id="p2-welcome" class="p2-welcome">
         <div class="p2-orb">✦</div>
         <h1>有什么可以帮你？</h1>
-        <p>通用 AI 对话工作区。可直接提问、上传文件和图片、读取网页链接、联网研究，也可单独启动视频画面解析。关联任务是可选项，不会强制套用任务模板。</p>
+        <p>像通用 AI 助手一样直接提问、连续追问和分析资料。支持图片理解、文档阅读、网页链接、联网研究与代码排查；额外提供视频逐段解析、可选语音转写，以及回答转思维导图 / 讲解视频。关联任务完全可选。</p>
         <div class="p2-prompts">
-          <button data-q="帮我深入研究最新的 AI Agent 评估方法，列出可靠来源、对比维度和落地步骤。" data-web="1">🔎 联网研究</button>
-          <button data-q="请分析我上传的材料，先概括全文，再列出重点、问题和建议。">📄 文件分析</button>
-          <button data-q="请分析我上传的图片或截图，说明看到了什么、关键细节和可能的问题。">🖼 图片理解</button>
-          <button data-q="请比较这些方案的优缺点、成本、风险，并说明推荐依据。">⚖️ 方案比较</button>
+          <button data-q="请先直接回答我的问题，再用通俗语言解释原因、步骤和注意事项；不确定的地方明确说明。" class="p2-prompt-primary">✦ 直接问 AI</button>
+          <button data-q="帮我深入研究这个问题，交叉核对可靠来源，给出结论、证据、不同观点和可执行步骤。" data-web="1">🔎 联网研究</button>
+          <button data-q="请阅读我上传的文件或图片：先总结整体内容，再提取关键细节、问题、证据和下一步行动。">📄 图片 / 文档分析</button>
+          <button data-q="请对我上传的视频按时间顺序分析场景、人物或物体动作、画面文字和关键变化；把观察事实与推测分开，并说明无法读取的部分。" data-video="1">▶ 视频逐段解析</button>
+          <button data-q="请把本轮问题和材料整理成层级清楚的思维导图，保留关键细节，并给出可执行清单。">🧠 思维导图</button>
+          <button data-q="请检查这段代码或技术问题，先定位原因，再给出可复制的修复方案、验证步骤和可能副作用。">💻 编程 / 排错</button>
         </div>
       </div>
       <div id="p2-messages" class="p2-messages"></div>
@@ -54,7 +56,7 @@
       <div id="p2-urls" class="p2-urls"></div>
       <form id="p2-form" class="p2-composer">
         <details class="p2-task-context-box"><summary>关联现有任务 / 目标（可选）</summary><label for="p2-task-context">任务名称、要求、截止日期或验收标准</label><textarea id="p2-task-context" rows="2" placeholder="例如：上岸鸭多模态 AI 接入；目标是图片/文档/链接能解决任务并生成讲解视频"></textarea><small>只将你在此填写的任务背景发送给 AI；不会自动改动原任务或截止日期。</small></details>
-        <textarea id="p2-text" placeholder="发消息或粘贴链接，上传图片、文件、视频；也可以直接粘贴截图…" rows="3" spellcheck="true"></textarea>
+        <textarea id="p2-text" placeholder="向 AI 提问，或粘贴链接 / 拖入图片、文档、视频；可连续追问…" rows="3" spellcheck="true"></textarea>
         <div class="p2-controls">
           <div class="p2-controls-left">
             <label class="p2-upload" title="上传资料">＋<input id="p2-files" type="file" multiple accept=".pdf,.doc,.docx,.pptx,.pptm,.xlsx,.xlsm,.txt,.md,.csv,.json,.html,.png,.jpg,.jpeg,.webp,.gif,.bmp,.mp4,.mov,.webm,.mkv,.mp3,.wav,.m4a,.aac,.ogg,.flac,.opus,.aiff,.srt,.vtt" aria-label="上传文件"></label>
@@ -67,7 +69,7 @@
           <button id="p2-send" class="p2-send" type="submit" aria-label="发送问题">↑</button>
         </div>
       </form>
-      <p class="p2-disclaimer">视频解析默认检查实际抽取到的画面；勾选“同时转写语音”才额外尝试音频转写。效果取决于当前视觉模型与转写服务，不会把未读取的内容说成已读取。</p>
+      <p class="p2-disclaimer">回答支持继续追问，并可转成思维导图或讲解视频。视频解析会检查实际抽取到的画面；只有勾选“同时转写语音”才额外尝试音频转写。效果取决于当前模型与服务能力，不会把未读取的内容说成已读取。</p>
     </div>
   </div>
 </div>
