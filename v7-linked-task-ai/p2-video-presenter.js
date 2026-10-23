@@ -47,7 +47,7 @@ function paint(ctx,w,h,scene,index,total,progress,title){
  ctx.font='18px "Microsoft YaHei",sans-serif';ctx.fillStyle='#a9c2c3';ctx.fillText(title.slice(0,32),w-420,h-52);
 }
 function createButton(text){
- const b=E('button','p2-video-create','▶ 生成结果讲解视频');b.type='button';
+ const b=E('button','p2-video-create','▶ 生成字幕复盘视频');b.type='button';
  b.addEventListener('click',()=>makeVideo(text,b));return b;
 }
 async function makeVideo(text,button){
@@ -55,7 +55,7 @@ async function makeVideo(text,button){
  if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){alert('当前浏览器不支持视频录制，请使用新版 Chrome 或 Edge。');return;}
  const parts=scenesFrom(text);if(!parts.length){alert('这条回答没有足够的文字内容生成视频。');return;}
  const dialog=E('dialog','p2-video-dialog');activeDialog=dialog;
- const head=E('div','p2-video-head');head.append(E('div','p2-video-title','AI 回答 · 视频呈现'),E('button','p2-video-close','关闭'));head.lastChild.type='button';head.lastChild.onclick=()=>{dialog.close();dialog.remove();activeDialog=null;};
+ const head=E('div','p2-video-head');head.append(E('div','p2-video-title','AI 复盘 · 字幕视频'),E('button','p2-video-close','关闭'));head.lastChild.type='button';head.lastChild.onclick=()=>{dialog.close();dialog.remove();activeDialog=null;};
  const hint=E('p','p2-video-hint','正在把回答转换为 16:9 动态字幕分镜。此版本生成无声 WebM，不会伪称已生成数字人配音。');
  const progress=E('progress','p2-video-progress');progress.max=parts.length;progress.value=0;
  const state=E('p','p2-video-state','准备生成…');const preview=E('video','p2-video-preview');preview.controls=true;preview.playsInline=true;
@@ -75,7 +75,7 @@ async function makeVideo(text,button){
   }
   recorder.stop();await finished;stream.getTracks().forEach(t=>t.stop());
   const blob=new Blob(chunks,{type:recorder.mimeType||'video/webm'});if(!blob.size)throw Error('生成的视频文件为空');
-  url=URL.createObjectURL(blob);preview.src=url;download.href=url;download.download='上岸鸭-AI结果讲解-'+new Date().toISOString().slice(0,10)+'.webm';download.hidden=false;
+  url=URL.createObjectURL(blob);preview.src=url;download.href=url;download.download='上岸鸭-AI复盘视频-'+new Date().toISOString().slice(0,10)+'.webm';download.hidden=false;
   state.textContent='生成完成：'+parts.length+' 个分镜，'+(blob.size/1024/1024).toFixed(2)+' MB。可预览或下载。';hint.textContent='已生成真实可播放的 WebM 文件。当前版本为动态字幕画面，不含配音；视频中的结论仍需核对原文。';
  }catch(e){try{if(recorder&&recorder.state!=='inactive')recorder.stop();}catch(_){}stream.getTracks().forEach(t=>t.stop());state.textContent='视频生成失败：'+e.message;hint.textContent='可以关闭后重试；浏览器可能不支持当前录制格式。';}
  dialog.addEventListener('close',()=>{if(url)URL.revokeObjectURL(url);dialog.remove();activeDialog=null;});
