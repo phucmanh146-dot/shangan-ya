@@ -27,10 +27,10 @@ function plainScript(text){
  let value=String(text||'').replace(/\u0060{3}[\s\S]*?\u0060{3}/g,'代码片段已省略，请对照原回答查看。').replace(/!\[[^\]]*\]\([^)]*\)/g,'').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/https?:\/\/\S+/g,'').replace(/^#{1,6}\s*/gm,'').replace(/^\s*[-*•]\s+/gm,'').replace(/^\s*\d+[.)、]\s+/gm,'').replace(/[*_>#]/g,'').replace(/\u0060/g,'').replace(/\n{3,}/g,'\n\n').trim();
  return value.slice(0,5800);
 }
-function createButton(text){const b=E('button','p2-heygen-create','🎬 生成通俗讲解视频');b.type='button';b.addEventListener('click',()=>open(text));return b;}
+function createButton(text){const b=E('button','p2-heygen-create','🎬 生成有声复盘视频');b.type='button';b.addEventListener('click',()=>open(text));return b;}
 async function open(answer){
  const dialog=E('dialog','p2-heygen-dialog'),shell=E('div','p2-heygen-shell'),head=E('div','p2-heygen-head');
- head.append(E('div','p2-heygen-title','生成通俗讲解视频'));
+ head.append(E('div','p2-heygen-title','生成有声复盘视频'));
  const close=E('button','p2-heygen-close','关闭');close.type='button';close.onclick=()=>dialog.close();head.append(close);
  const hint=E('p','p2-heygen-hint','先把当前 AI 回答改写成小白能听懂的口播稿，再生成带数字人和配音的 MP4。请先检查口播稿；生成会把文字发送给 HeyGen，可能消耗账户额度。API Key 只保存在当前标签对应的后台会话内存中。');
  const keyLabel=E('label','p2-heygen-label','HeyGen API Key');
@@ -91,7 +91,7 @@ async function open(answer){
   if(!confirm('将把口播稿发送给 HeyGen，并可能消耗账户额度。确认生成数字人视频吗？'))return;
   busy=true;generate.disabled=true;rewrite.disabled=true;test.disabled=true;preview.hidden=true;download.hidden=true;
   try{
-   const job=await api('/api/heygen/generate',{script:script.value.trim(),avatarId:avatar.value,voiceId:voice.value,title:'上岸鸭 AI 回答讲解'},60000);
+   const job=await api('/api/heygen/generate',{script:script.value.trim(),avatarId:avatar.value,voiceId:voice.value,title:'上岸鸭 AI 复盘讲解'},60000);
    state.textContent='HeyGen 已接受任务，正在渲染视频（通常需要数分钟）…任务 ID：'+job.videoId;
    let done=false;
    for(let i=0;i<45;i++){
