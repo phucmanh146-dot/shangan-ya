@@ -60,6 +60,7 @@ async function retrieveObsidianContext(query){
  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||b.hits-a.hits||a.path.localeCompare(b.path)).slice(0,3);
  if(!ranked.length){
   set('本机 Vault「'+(data.name||'韩奕知识复盘')+'」已读取，共 '+files.length+' 篇笔记；没有找到与本次问题匹配的内容。');
+  const resultBox=$('#p2-obsidian-results');if(resultBox){resultBox.replaceChildren();resultBox.hidden=true;}
   return {context:'',count:0,name:data.name||'韩奕知识复盘',total:files.length};
  }
  const parts=ranked.map(note=>{
@@ -68,7 +69,8 @@ async function retrieveObsidianContext(query){
   return '【本机 Obsidian 来源：'+note.title+'】\\n相对路径：'+note.path+'\\n原笔记跳转：'+uri+'\\n匹配正文：\\n'+excerpt;
  });
  const context=parts.join('\\n\\n').slice(0,9000);
- set('本机 Obsidian 已连接：'+(data.name||'韩奕知识复盘')+'；共检索 '+files.length+' 篇，命中 '+ranked.length+' 篇。回答中的 obsidian:// 来源可跳回原笔记。');
+ set('本机 Obsidian 已连接：'+(data.name||'韩奕知识复盘')+'；共检索 '+files.length+' 篇，命中 '+ranked.length+' 篇。可点击下方来源直接跳回原笔记。');
+ const resultBox=$('#p2-obsidian-results');if(resultBox){resultBox.replaceChildren();resultBox.hidden=false;ranked.forEach(note=>{const a=document.createElement('a');a.href=obsidianDeepLink(data.name||'韩奕知识复盘',note.path);a.textContent='↗ '+note.title+' · '+note.path;a.className='p2-obsidian-result-link';resultBox.appendChild(a);});}
  return {context,count:ranked.length,name:data.name||'韩奕知识复盘',total:files.length};
 }
 async function checkObsidianConnection(){
