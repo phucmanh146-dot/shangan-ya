@@ -18,44 +18,73 @@ function deleteChat(id){if(sending)return;if(!confirm('删除此对话的本机�
 function renameChat(id){const t=threads.find(x=>x.id===id);if(!t)return;const title=prompt('重命名对话',t.title);if(!title?.trim())return;t.title=title.trim().slice(0,70);persist();draw();}
 function restore(){try{const data=JSON.parse(localStorage.getItem(STORAGE)||'{}');threads=Array.isArray(data.threads)?data.threads.filter(x=>x&&Array.isArray(x.messages)).slice(0,50):[];activeId=data.activeId||'';}catch(e){}if(!threads.length){newChat();return;}if(!threads.some(t=>t.id===activeId))activeId=threads[0].id;draw();}
 async function jsonApi(url,data,timeout=155000){const ctrl=new AbortController(),tm=setTimeout(()=>ctrl.abort(),timeout);try{const r=await fetch(url,{method:data===undefined?'GET':'POST',headers:data===undefined?{}:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data),signal:ctrl.signal,cache:'no-store'});const j=await r.json().catch(()=>({error:'接口未返回有效 JSON'}));if(!r.ok||j.error)throw Error(j.error||'HTTP '+r.status);return j;}finally{clearTimeout(tm);}}
-async function localObsidianApi(path,data,timeout=12000){
- const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);
+function getLocalVaultBridge(){
  try{
-  const response=await fetch('http://127.0.0.1:8877'+path,{method:data===undefined?'GET':'POST',headers:data===undefined?{}:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data),signal:controller.signal,cache:'no-store',mode:'cors'});
-  const result=await response.json().catch(()=>({error:'本机 Obsidian 桥接没有返回有效 JSON'}));
-  if(!response.ok||result.error||result.connected===false)throw Error(result.error||'HTTP '+response.status);
-  return result;
- }finally{clearTimeout(timer);}
+  const host=window.parent&&window.parent!==window?window.parent:window;
+  if(host.SY&&typeof host.SY.backendCall==='function')return host.SY.backendCall.bind(host.SY);
+ }catch(_){}
+ return null;
+}
+function obsidianDeepLink(vault,path){
+ return 'obsidian://open?'+new URLSearchParams({vault:String(vault||'韩奕知识复盘'),file:String(path||'')}).toString();
+}
+function queryTokens(query){
+ const raw=String(query||'').toLowerCase();
+ const chunks=raw.match(/[a-z0-9_+.-]{2,}|[\\u3400-\\u9fff]{2,}/g)||[];
+ const out=[];
+ chunks.forEach(part=>{
+  if(/[\\u3400-\\u9fff]/.test(part)&&part.length>2){for(let i=0;i<part.length-1;i++){const t=part.slice(i,i+2);if(!out.includes(t))out.push(t);}}
+  else if(!out.includes(part))out.push(part);
+ });
+ return out.filter(t=>!['这个','那个','怎么','如何','可以','我们','你们','一下','帮我','请你','进行','然后','什么','哪些','已经','希望','需要','问题'].includes(t)).slice(0,24);
 }
 async function retrieveObsidianContext(query){
  const statusNode=$('#p2-obsidian-status');
  const set=(text,bad=false)=>{if(statusNode){statusNode.textContent=text;statusNode.classList.toggle('error',!!bad)}};
- set('正在直连本机 127.0.0.1:8877，检索当前 Obsidian Vault…');
- const found=await localObsidianApi('/api/pm/tutorials?q='+encodeURIComponent(String(query||'').slice(0,400)),undefined,18000);
- const notes=Array.isArray(found.notes)?found.notes:[];
- if(!notes.length){set('本机 Vault「'+(found.name||'Obsidian')+'」已连接，但没有匹配到相关 Markdown 笔记。',false);return {context:'',count:0,name:found.name||'Obsidian Vault'};}
- const selected=notes.slice(0,3),parts=[];
- for(const note of selected){
-  if(!note||!note.path)continue;
-  const detail=await localObsidianApi('/api/pm/tutorial-links',{path:note.path},18000);
-  if(detail&&detail.content){
-   parts.push('【本机 Obsidian 笔记：'+String(detail.title||note.title||note.path).slice(0,180)+'】\n路径：'+String(detail.path||note.path).slice(0,300)+'\n正文片段：\n'+String(detail.content).slice(0,2600));
-  }
+ const backend=getLocalVaultBridge();
+ if(!backend)throw Error('工作台未提供本机服务桥接；请在原工作台先连接本机知识库服务。');
+ set('正在通过上岸鸭本机服务读取「韩奕知识复盘」并检索相关正文…');
+ const response=await backend('/api/vault-list',{limit:500,with_text:true},30000);
+ if(!response||!response.ok)throw Error(response&&response.error||'本机服务未返回成功状态');
+ const data=response.data||{};
+ if(!data.connected)throw Error(data.note||'本机服务没有识别到 Obsidian Vault');
+ const files=Array.isArray(data.files)?data.files:[];
+ if(!files.length)throw Error('本机服务已响应，但没有返回可读取的笔记；未假装读取成功');
+ const words=queryTokens(query);
+ const ranked=files.map(row=>{
+  const path=String(row.path||''),body=String(row.text||''),title=path.split(/[\\/]/).pop().replace(/\\.md$/i,'');
+  const hay=(path+'\\n'+body).toLowerCase();let score=0,hits=0,first=-1;
+  words.forEach(w=>{let at=hay.indexOf(w);if(at>=0){hits++;score+=path.toLowerCase().includes(w)?12:2;if(first<0)first=at;}});
+  if(!words.length)score=0;
+  return {path,body,title,score,hits,first};
+ }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score||b.hits-a.hits||a.path.localeCompare(b.path)).slice(0,3);
+ if(!ranked.length){
+  set('本机 Vault「'+(data.name||'韩奕知识复盘')+'」已读取，共 '+files.length+' 篇笔记；没有找到与本次问题匹配的内容。');
+  return {context:'',count:0,name:data.name||'韩奕知识复盘',total:files.length};
  }
- const context=parts.join('\n\n').slice(0,7800);
- set('已从本机 Obsidian Vault「'+(found.name||'Obsidian')+'」读取 '+parts.length+' 篇匹配笔记。本轮仅发送相关片段。',parts.length===0);
- return {context,count:parts.length,name:found.name||'Obsidian Vault'};
+ const parts=ranked.map(note=>{
+  const from=Math.max(0,note.first-260),excerpt=note.body.slice(from,from+3000);
+  const uri=obsidianDeepLink(data.name||'韩奕知识复盘',note.path);
+  return '【本机 Obsidian 来源：'+note.title+'】\\n相对路径：'+note.path+'\\n原笔记跳转：'+uri+'\\n匹配正文：\\n'+excerpt;
+ });
+ const context=parts.join('\\n\\n').slice(0,9000);
+ set('本机 Obsidian 已连接：'+(data.name||'韩奕知识复盘')+'；共检索 '+files.length+' 篇，命中 '+ranked.length+' 篇。回答中的 obsidian:// 来源可跳回原笔记。');
+ return {context,count:ranked.length,name:data.name||'韩奕知识复盘',total:files.length};
 }
 async function checkObsidianConnection(){
  const button=$('#p2-obsidian-connect');if(button)button.disabled=true;
  const statusNode=$('#p2-obsidian-status');
  try{
-  const result=await localObsidianApi('/api/pm/tutorials?q=',undefined,12000);
-  const total=Number(result.total||0);
-  if(statusNode){statusNode.textContent='本机 Obsidian 已连接：Vault「'+(result.name||'Obsidian')+'」，发现 '+total+' 篇可检索笔记。';statusNode.classList.remove('error');}
+  const backend=getLocalVaultBridge();
+  if(!backend)throw Error('原工作台未提供本机服务桥接');
+  const response=await backend('/api/vault-list',{limit:500,with_text:false},20000);
+  if(!response||!response.ok)throw Error(response&&response.error||'本机服务连接失败');
+  const data=response.data||{};
+  if(!data.connected)throw Error(data.note||'没有识别到本机 Obsidian Vault');
+  if(statusNode){statusNode.textContent='本机 Obsidian 已连接：'+(data.name||'韩奕知识复盘')+'；发现 '+Number(data.total||data.count||(data.files||[]).length||0)+' 篇笔记。';statusNode.classList.remove('error');}
   if($('#p2-use-obsidian'))$('#p2-use-obsidian').checked=true;
  }catch(e){
-  if(statusNode){statusNode.textContent='没有连上本机 Obsidian：'+(e.name==='AbortError'?'本机桥接响应超时。':e.message+'。')+'请确认电脑上的上岸鸭本机服务已启动（127.0.0.1:8877），并允许浏览器访问本地网络。当前未读取任何本机笔记。';statusNode.classList.add('error');}
+  if(statusNode){statusNode.textContent='尚未连接本机 Obsidian：'+e.message+'。普通 AI 问答仍可继续；知识库检索会跳过，不会伪称已读取。';statusNode.classList.add('error');}
  }finally{if(button)button.disabled=false;}
 }
 async function checkStatus(){try{const r=await jsonApi('/api/p2/status',undefined,16000),ai=r.ai||{},roles=r.modelTeam?.roles||{},active=Object.values(roles).filter(x=>x.configured).length,suffix=active?' · '+active+'个专家模型':'';$('#p2-model-status').textContent=(ai.verified?'● 已验证：'+ai.model:ai.configured?'○ 模型尚未验证：'+ai.model:'● 尚未连接模型，请配置 API')+suffix;$('#p2-model-status').style.color=ai.verified?'#377951':'#a66a32';}catch(e){$('#p2-model-status').textContent='● 本机后端不可用：'+e.message;$('#p2-model-status').style.color='#b85247';}}
@@ -66,7 +95,7 @@ async function uploadBatch(batch){for(const file of [...batch])await uploadFile(
 function questionLinks(question){const found=question.match(/https?:\/\/[^\s<>\]\uFF09\u3002\uFF0C\uFF1B]+/g)||[];const result=[...urls];for(let value of found){value=value.replace(/[).,;!?]+$/,'');try{const u=new URL(value);if(!u.username&&!u.password&&!result.includes(u.href))result.push(u.href);}catch{}}if(result.length>20)throw Error('本次包含超过20个链接，请按群聊或关键词分批提交；已明确提示，不会静默跳过链接。');return result;}
 $('#p2-search').addEventListener('change',()=>{$('#p2-search').dataset.userTouched='1';});
 $('#p2-text').addEventListener('paste',e=>{const pasted=[...(e.clipboardData?.items||[])].filter(x=>x.kind==='file').map(x=>x.getAsFile()).filter(Boolean);if(pasted.length){e.preventDefault();uploadBatch(pasted);}});
-async function send(){if(sending)return;const textarea=$('#p2-text'),question=textarea.value.trim();if(!question)return status('请输入问题。',true);if(uploading)return status('附件还在上传，请等文件处理完成。',true);const wechat=window.P2WechatAI?.getPendingContext?.()||null;let requestUrls;let taskContext=($('#p2-task-context')?.value||'').trim().slice(0,5000);if($('#p2-use-obsidian')?.checked){try{const kb=await retrieveObsidianContext(question+' '+taskContext);if(kb.context)taskContext=(taskContext+'\n\n【用户已授权关联的 Obsidian 知识库相关笔记】\n'+kb.context).slice(0,13500);}catch(e){status('已勾选 Obsidian 知识库，但读取失败，已停止发送以免假装读取成功：'+e.message,true);return;}}try{requestUrls=questionLinks(question+'\n'+taskContext);if(wechat){requestUrls=[...new Set([...requestUrls,...(Array.isArray(wechat.urls)?wechat.urls:[])])];if(requestUrls.length>20)throw Error('本轮合并后超过20个链接，请缩小微信消息范围或分批分析；不会静默跳过链接。');}}catch(e){return status(e.message,true);}const thread=current()||newChat();const ready=files.filter(x=>x.id);const history=thread.messages.slice(-12).map(m=>({role:m.role,content:m.content})).filter(x=>['user','assistant'].includes(x.role));const user={role:'user',content:question+(wechat?'\n\n【已关联微信原始数据：'+wechat.group+'，'+wechat.messages.length+'条】':''),files:ready.map(x=>x.name)};const payload={question,history,fileIds:ready.map(x=>x.id),urls:requestUrls,deep:$('#p2-deep').checked,search:$('#p2-search').checked,transcribeVideo:!!$('#p2-transcribe')?.checked,videoAnalysis:videoIntent||ready.some(x=>/\.(mp4|mov|webm|mkv|avi|m4v)$/i.test(x.name))||requestUrls.some(x=>/(youtube\.com|youtu\.be|bilibili\.com|b23\.tv|douyin\.com|vimeo\.com)/i.test(x)),taskContext:taskContext.slice(0,14000),wechatAnalysis:!!wechat,wechatGroup:wechat?.group||'',wechatMessages:wechat?.messages||[],wechatPrompt:wechat?.prompt||''};sending=true;$('#p2-send').disabled=true;$('#p2-send').textContent='…';status(payload.search?'联网搜索真实来源，正在深入分析…':'正在等待模型实际回答…');
+async function send(){if(sending)return;const textarea=$('#p2-text'),question=textarea.value.trim();if(!question)return status('请输入问题。',true);if(uploading)return status('附件还在上传，请等文件处理完成。',true);const wechat=window.P2WechatAI?.getPendingContext?.()||null;let requestUrls;let taskContext=($('#p2-task-context')?.value||'').trim().slice(0,5000);if($('#p2-use-obsidian')?.checked){try{const kb=await retrieveObsidianContext(question+' '+taskContext);if(kb.context)taskContext=(taskContext+'\n\n【用户已授权关联的 Obsidian 知识库相关笔记】\n'+kb.context).slice(0,13500);}catch(e){const sn=$('#p2-obsidian-status');if(sn){sn.textContent='本轮知识库读取失败：'+e.message+'。已跳过本机笔记，普通 AI 问答继续。';sn.classList.add('error');}}}try{requestUrls=questionLinks(question+'\n'+taskContext);if(wechat){requestUrls=[...new Set([...requestUrls,...(Array.isArray(wechat.urls)?wechat.urls:[])])];if(requestUrls.length>20)throw Error('本轮合并后超过20个链接，请缩小微信消息范围或分批分析；不会静默跳过链接。');}}catch(e){return status(e.message,true);}const thread=current()||newChat();const ready=files.filter(x=>x.id);const history=thread.messages.slice(-12).map(m=>({role:m.role,content:m.content})).filter(x=>['user','assistant'].includes(x.role));const user={role:'user',content:question+(wechat?'\n\n【已关联微信原始数据：'+wechat.group+'，'+wechat.messages.length+'条】':''),files:ready.map(x=>x.name)};const payload={question,history,fileIds:ready.map(x=>x.id),urls:requestUrls,deep:$('#p2-deep').checked,search:$('#p2-search').checked,transcribeVideo:!!$('#p2-transcribe')?.checked,videoAnalysis:videoIntent||ready.some(x=>/\.(mp4|mov|webm|mkv|avi|m4v)$/i.test(x.name))||requestUrls.some(x=>/(youtube\.com|youtu\.be|bilibili\.com|b23\.tv|douyin\.com|vimeo\.com)/i.test(x)),taskContext:taskContext.slice(0,14000),wechatAnalysis:!!wechat,wechatGroup:wechat?.group||'',wechatMessages:wechat?.messages||[],wechatPrompt:wechat?.prompt||''};sending=true;$('#p2-send').disabled=true;$('#p2-send').textContent='…';status(payload.search?'联网搜索真实来源，正在深入分析…':'正在等待模型实际回答…');
 thread.messages.push(user);persist();draw();
 try{const r=await jsonApi('/api/p2/ask',payload,180000);thread.messages.push({role:'assistant',content:r.reply,model:r.model,modelRole:r.modelRole||'general',modelFallback:!!r.modelFallback,mode:r.mode,sources:r.sources||[],sourceDocuments:r.sourceDocuments||[],searchError:r.searchError||'',media:r.media||[],transcripts:r.transcripts||[]});if(thread.title==='新对话')thread.title=question.slice(0,28);threads=[thread,...threads.filter(x=>x.id!==thread.id)].slice(0,50);window.P2WechatAI?.clearPendingContext?.();textarea.value='';videoIntent=false;clearMedia();persist();draw();const failed=(r.sourceDocuments||[]).filter(x=>x.status&&!['read','sampled-frames'].includes(x.status));const videoNotes=(r.sourceDocuments||[]).filter(x=>x.status==='sampled-frames').map(x=>x.note||'已读取采样画面');const speech=(r.transcripts||[]).map(x=>'语音：'+x.status+(x.note?'，'+x.note:''));const mediaFailures=(r.media||[]).filter(x=>['image','video','video-link'].includes(x.type)&&!(Number(x.frames)>0)).map(x=>(x.name||x.type)+' 未提取到有效画面，不能视为已解析'+(x.warning?'：'+x.warning:''));status('模型已实际回答。角色：'+({general:'主模型',reasoning:'深度推理',research:'联网研究',vision:'视觉理解',coding:'代码分析'}[r.modelRole||'general']||'主模型')+(r.modelFallback?'（专家模型失败，已回退主模型）':'')+'。'+(r.usedWechat?'已关联微信原始消息 '+r.wechatMessageCount+' 条。':'')+[...videoNotes,...speech,...mediaFailures].join('；')+(r.searchError?' 搜索受限：'+r.searchError:'')+(failed.length?' '+failed.length+' 条提交的链接未读到正文，请打开原文或上传文档。':''),failed.length>0||mediaFailures.length>0);}catch(e){thread.messages=thread.messages.filter(m=>m!==user);persist();draw();status('本次回答失败：'+e.message+'。问题和附件仍保留，可重试。',true);}finally{sending=false;$('#p2-send').disabled=false;$('#p2-send').textContent='↑';}}
 function showDialog(id){const d=$(id);if(d&&!d.open)d.showModal();}
