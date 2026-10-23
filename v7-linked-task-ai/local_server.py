@@ -19,7 +19,7 @@ import source_workflow as sourceflow
 from public_link_reader import research as source_research
 from local_integrations import initialize, ccswitch_catalog, connect_ccswitch, connect_local_gateway
 from local_tools import vault_info, vault_list, vault_search, vault_read, vault_save, screen_ocr
-from rescue_service import RescueError, ask_ai, extract, extract_uploaded, extract_video, preview_url, read_feishu, search_web, search_config_snapshot, set_search_config, public_config, set_config, test_connection, observe_frame, list_models, provider_catalog, team_public_config, set_team_config
+from rescue_service import RescueError, ask_ai, extract, extract_uploaded, extract_video, preview_url, read_feishu, search_web, search_config_snapshot, set_search_config, public_config, set_config, test_connection, observe_frame, list_models, provider_catalog, discover_model_catalog, team_public_config, set_team_config
 from desktop_feishu_reader import read_feishu_via_browser
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -111,6 +111,9 @@ class Handler(SimpleHTTPRequestHandler):
         if path == '/api/pm/wx/status': return self.send_json(wxdesk.status())
         if path == '/api/pm/events': return self.send_json(pm.obsidian_bridge_events(__import__('urllib.parse',fromlist=['parse_qs']).parse_qs(urlparse(self.path).query).get('after',['0'])[0]))
         if path == '/api/ai-providers': return self.send_json(provider_catalog())
+        if path == '/api/model-discovery':
+            q=parse_qs(urlparse(self.path).query)
+            return self.send_json(discover_model_catalog(q.get('q',[''])[0], q.get('provider',[''])[0], q.get('limit',['100'])[0]))
         if path == '/api/cc-switch': return self.send_json(ccswitch_catalog())
         if path.startswith('/api/'): return self.send_json({'error':'接口不存在'},404)
         if path.endswith(('.py','.pyc','.cmd','.ps1','.env','.log','.zip','.json','.sqlite','.sqlite3','.db','.sqlite3-wal','.sqlite3-shm')) or any(p.startswith('.') for p in path.split('/') if p):
