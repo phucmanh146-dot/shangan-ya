@@ -117,3 +117,7 @@
 .p2-disclaimer{max-width:900px;margin:8px auto 0;line-height:1.6}
 @media(max-width:720px){.p2-prompts{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px!important}.p2-prompts button{min-height:60px!important;padding:10px!important;font-size:12px!important}}
 @media(max-width:420px){.p2-prompts{grid-template-columns:1fr}.p2-prompts button{min-height:48px!important}}
+
+/* Obsidian knowledge connector lives inside the Connect AI composer. */
+.p2-obsidian-connector{margin:8px 0;padding:11px 13px;border:1px solid #cbded0;border-radius:12px;background:#f4faf5;color:#254c39}.p2-obsidian-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.p2-obsidian-row .p2-switch{margin:0}.p2-obsidian-row button{padding:7px 11px;border:1px solid #9bbba5;border-radius:9px;background:#fff;color:#24563d;cursor:pointer;font-weight:700}.p2-obsidian-row button:disabled{opacity:.6;cursor:wait}.p2-obsidian-connector p{margin:7px 0 3px;font-size:12px;color:#416752}.p2-obsidian-connector p.error{color:#a42e2e}.p2-obsidian-connector small{display:block;color:#60776a;font-size:11px;line-height:1.5}
+body.p2-embedded .p2-top-title{font-size:16px}
