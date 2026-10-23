@@ -20,7 +20,7 @@ class Worker(local_server.Handler):
  def do_GET(self):
   path=urlparse(self.path).path
   if path.startswith('/api/heygen/'):
-   try:return self.send_json(heygen_video.get(path))
+   try:return self.send_json(heygen_video.get(path,self.headers.get('X-SY-Session','')))
    except heygen_video.HeyGenError as e:return self.send_json({'error':str(e)},e.status)
    except Exception as e:return self.send_json({'error':str(e)[:300]},503)
   if self.path=="/api/sources/status":return self.send_json(multi_sources.status())
@@ -35,7 +35,7 @@ class Worker(local_server.Handler):
     if size<1 or size>200000:return self.send_json({'error':'请求大小无效'},413)
     data=json.loads(self.rfile.read(size))
     if not isinstance(data,dict):raise ValueError('请求无效')
-    return self.send_json(heygen_video.post(path,data))
+    return self.send_json(heygen_video.post(path,data,self.headers.get('X-SY-Session','')))
    except heygen_video.HeyGenError as e:return self.send_json({'error':str(e)},e.status)
    except Exception as e:return self.send_json({'error':str(e)[:300]},422)
   if self.path.startswith("/api/sources/"):

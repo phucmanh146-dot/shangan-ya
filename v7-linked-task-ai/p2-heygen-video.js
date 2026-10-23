@@ -2,9 +2,26 @@
 'use strict';
 const E=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+let cachedSessionId='';
+function sessionId(){
+ if(cachedSessionId)return cachedSessionId;
+ try{
+  cachedSessionId=sessionStorage.getItem('sy_heygen_session_id')||'';
+  if(!/^[a-f0-9]{32,64}$/.test(cachedSessionId)){
+   const bytes=new Uint8Array(16);window.crypto.getRandomValues(bytes);
+   cachedSessionId=Array.from(bytes,x=>x.toString(16).padStart(2,'0')).join('');
+   sessionStorage.setItem('sy_heygen_session_id',cachedSessionId);
+  }
+ }catch(_){
+  const bytes=new Uint8Array(16);window.crypto.getRandomValues(bytes);
+  cachedSessionId=Array.from(bytes,x=>x.toString(16).padStart(2,'0')).join('');
+ }
+ return cachedSessionId;
+}
 async function api(path,data,timeout=45000){
  const ctrl=new AbortController(),timer=setTimeout(()=>ctrl.abort(),timeout);
- try{const response=await fetch(path,{method:data===undefined?'GET':'POST',headers:data===undefined?{}:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data),cache:'no-store',signal:ctrl.signal});const result=await response.json().catch(()=>({error:'接口未返回有效 JSON'}));if(!response.ok||result.error)throw Error(result.error||('HTTP '+response.status));return result;}finally{clearTimeout(timer);}
+ const headers={'X-SY-Session':sessionId()};if(data!==undefined)headers['Content-Type']='application/json';
+ try{const response=await fetch(path,{method:data===undefined?'GET':'POST',headers,body:data===undefined?undefined:JSON.stringify(data),cache:'no-store',signal:ctrl.signal});const result=await response.json().catch(()=>({error:'接口未返回有效 JSON'}));if(!response.ok||result.error)throw Error(result.error||('HTTP '+response.status));return result;}finally{clearTimeout(timer);}
 }
 function plainScript(text){
  let value=String(text||'').replace(/\u0060{3}[\s\S]*?\u0060{3}/g,'代码片段已省略，请对照原回答查看。').replace(/!\[[^\]]*\]\([^)]*\)/g,'').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/https?:\/\/\S+/g,'').replace(/^#{1,6}\s*/gm,'').replace(/^\s*[-*•]\s+/gm,'').replace(/^\s*\d+[.)、]\s+/gm,'').replace(/[*_>#]/g,'').replace(/\u0060/g,'').replace(/\n{3,}/g,'\n\n').trim();
