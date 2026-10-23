@@ -64,7 +64,8 @@ function ensurePanel(){
  });
 
 }
-function statusNote(text){const n=$('#p2-status');if(n)n.textContent=text;}\nfunction addCard(host,label,state,text,detail){
+function statusNote(text){const n=$('#p2-status');if(n)n.textContent=text;}
+function addCard(host,label,state,text,detail){
  const card=document.createElement('section');card.className='p2-capability-card';
  const h=document.createElement('strong');h.textContent=label;const status=document.createElement('span');status.className='p2-capability-state '+state;status.textContent=text;
  const p=document.createElement('p');p.textContent=detail||'';card.append(h,status,p);host.append(card);return card;
