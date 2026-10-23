@@ -11,7 +11,7 @@ function draw(){P2View.renderThreads(threads,activeId,selectChat,deleteChat,rena
 function drawAttachments(){P2View.renderAttachments(files,urls,removeFile,removeUrl);}
 function removeFile(file){if(file.preview)URL.revokeObjectURL(file.preview);files=files.filter(x=>x!==file);drawAttachments();}
 function removeUrl(url){urls=urls.filter(x=>x!==url);drawAttachments();}
-function clearMedia(){files.forEach(f=>{if(f.preview)URL.revokeObjectURL(f.preview);});files=[];urls=[];drawAttachments();}
+function clearMedia(){files.forEach(f=>{if(f.preview)URL.revokeObjectURL(f.preview);});files=[];urls=[];videoIntent=false;drawAttachments();}
 function newChat(){if(sending)return status('先等待这一轮回答结束。',true);clearMedia();const t={id:uid(),title:'新对话',messages:[],createdAt:Date.now()};threads.unshift(t);activeId=t.id;persist();draw();$('#p2-text').focus();return t;}
 function selectChat(id){if(sending)return status('先等待当前回答结束。',true);if(!threads.some(t=>t.id===id))return;clearMedia();activeId=id;persist();draw();$('#p2-side').classList.remove('open');}
 function deleteChat(id){if(sending)return;if(!confirm('删除此对话的本机历史记录？'))return;threads=threads.filter(x=>x.id!==id);if(activeId===id)activeId=threads[0]?.id||'';if(!activeId){newChat();return;}persist();draw();}
