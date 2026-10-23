@@ -78,7 +78,7 @@ function renderMessages(thread){
    const body=E('div','p2-rich');rich(body,msg.content);bubble.append(body);
    sources(bubble,msg.sources||[],msg.searchError);
    documentSources(bubble,msg.sourceDocuments||[]);
-   if(window.P2VideoPresenter)bubble.append(window.P2VideoPresenter.createButton(msg.content||''));
+   const answerActions=E('div','p2-answer-actions');if(window.P2MindMap)answerActions.append(window.P2MindMap.createButton(msg.content||''));if(window.P2VideoPresenter)answerActions.append(window.P2VideoPresenter.createButton(msg.content||''));if(window.P2HeyGenVideo)answerActions.append(window.P2HeyGenVideo.createButton(msg.content||''));if(answerActions.childNodes.length)bubble.append(answerActions);
    if((msg.media||[]).some(x=>x.warning))bubble.append(E('p','p2-meta','提醒：当前模型可能不支持图像视觉输入，仅根据可读取文字回答。'));
   }else{
    if(msg.files?.length){const head=E('div','p2-msg-files');msg.files.forEach(f=>head.append(E('span','','📎 '+f)));bubble.append(head);}
