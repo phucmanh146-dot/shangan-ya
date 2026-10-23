@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light">
 <meta name="referrer" content="no-referrer">
-<title>上岸鸭 · AI 工作区</title>
+<title>上岸鸭 · 连接 AI</title>
 <link rel="stylesheet" href="./p2-chat.css?v=20261023-gpt-workspace-v3">
 <link rel="stylesheet" href="./p2-wechat-ai.css?v=20261023-wechat-ai">
 <link rel="stylesheet" href="./p2-video-presenter.css?v=20261023-multimodal-video">
@@ -25,19 +25,19 @@
     <div class="p2-history" id="p2-history" aria-label="历史对话"></div>
     <div class="p2-side-bottom">
        <a href="./index.html" class="p2-back">← 返回上岸鸭工作台</a>
-       <p>独立 AI 工作区。对话记录保存在本机浏览器；可从原工作台选择现有任务，自动带入任务背景与资料链接；原任务不会自动被覆盖。</p>
+       <p>这是上岸鸭工作台内置的 AI 助手。对话记录保存在当前浏览器；可按需关联任务、Obsidian 笔记和上传资料；不会自动改动原任务。</p>
     </div>
   </aside>
   <div class="p2-main">
     <header class="p2-topbar">
       <div class="p2-top-left"><button class="p2-menu" id="p2-open-side" aria-label="打开对话列表">☰</button>
-      <div><div class="p2-top-title">AI 工作区 <span>通用 AI 对话 · 图片/文档/链接 · 联网研究 · 视频解析</span></div><div class="p2-model-status" id="p2-model-status">正在检查真实模型连接…</div></div></div>
+      <div><div class="p2-top-title">连接 AI <span>工作台内置助手 · 图片/文档/链接 · 联网研究 · 视频解析</span></div><div class="p2-model-status" id="p2-model-status">正在检查真实模型连接…</div></div></div>
       <div class="p2-actions p2-model-quick"><label class="p2-top-provider-label" for="p2-top-provider">AI 模型</label><select id="p2-top-provider" aria-label="选择 AI 模型供应商"><option value="">正在读取模型列表…</option></select><a id="p2-top-docs" class="p2-api-doc-link" href="https://platform.openai.com/docs" target="_blank" rel="noopener noreferrer">官方 API 文档 ↗</a><button id="p2-open-config" class="p2-config">配置 / 测试 API</button><a class="p2-workbench" href="./index.html">工作台 ↗</a></div>
     </header>
     <section id="p2-timeline" class="p2-timeline" aria-live="polite">
       <div id="p2-welcome" class="p2-welcome">
         <div class="p2-orb">✦</div>
-        <h1>有什么可以帮你？</h1>
+        <h1>连接 AI，直接解决问题</h1>
         <p>像通用 AI 助手一样直接提问、连续追问和分析资料。支持图片理解、文档阅读、网页链接、联网研究与代码排查；额外提供视频逐段解析、可选语音转写，以及回答转思维导图 / 讲解视频。关联任务完全可选。</p>
         <div class="p2-prompts">
           <button data-q="请先直接回答我的问题，再用通俗语言解释原因、步骤和注意事项；不确定的地方明确说明。" class="p2-prompt-primary">✦ 直接问 AI</button>
@@ -56,6 +56,7 @@
       <div id="p2-urls" class="p2-urls"></div>
       <form id="p2-form" class="p2-composer">
         <details class="p2-task-context-box"><summary>关联现有任务 / 目标（可选）</summary><label for="p2-task-context">任务名称、要求、截止日期或验收标准</label><textarea id="p2-task-context" rows="2" placeholder="例如：上岸鸭多模态 AI 接入；目标是图片/文档/链接能解决任务并生成讲解视频"></textarea><small>只将你在此填写的任务背景发送给 AI；不会自动改动原任务或截止日期。</small></details>
+        <section class="p2-obsidian-connector" aria-label="Obsidian 知识库连接"><div class="p2-obsidian-row"><label class="p2-switch"><input type="checkbox" id="p2-use-obsidian"><span>提问时检索已连接的 Obsidian 笔记</span></label><button type="button" id="p2-obsidian-connect">检测知识库连接</button></div><p id="p2-obsidian-status" role="status">尚未验证连接。点击“检测知识库连接”后才会显示真实状态。</p><small>开启后仅检索与本次问题匹配的笔记，最多引用 3 篇相关正文片段；不会上传整个 Vault。需要工作台后端已配置本机 Obsidian 读取桥接。</small></section>
         <textarea id="p2-text" placeholder="向 AI 提问，或粘贴链接 / 拖入图片、文档、视频；可连续追问…" rows="3" spellcheck="true"></textarea>
         <div class="p2-controls">
           <div class="p2-controls-left">
