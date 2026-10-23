@@ -40,6 +40,23 @@ $('#p2-text').oninput=e=>{e.target.style.height='auto';e.target.style.height=Mat
 $('.p2-prompts button').forEach(button=>button.onclick=()=>{const box=$('#p2-text');box.value=button.dataset.q||'';if(button.dataset.web)$('#p2-search').checked=true;if(button.dataset.video)$('#p2-video-files').click();box.focus();});
 $('#p2-form').ondragover=e=>{if([...e.dataTransfer?.types||[]].includes('Files'))e.preventDefault();};$('#p2-form').ondrop=e=>{if(e.dataTransfer?.files?.length){e.preventDefault();uploadBatch(e.dataTransfer.files);}};
 async function attachText(name,text){const safeName=(String(name||'飞书文档').replace(/[\\/:*?"<>|]/g,'_').slice(0,90)||'飞书文档')+'.txt';await uploadFile(new File([String(text||'')],safeName,{type:'text/plain;charset=utf-8'}));if(!files.some(x=>x.name===safeName&&x.id))throw Error('文档正文已读取，但上传为对话附件失败。');const box=$('#p2-text');if(!box.value.trim())box.value='请基于刚读取的飞书文档，先梳理内容目录、关键问题，再按优先级给出可执行的修改方案。';box.dispatchEvent(new Event('input',{bubbles:true}));}
-window.P2App={api:jsonApi,checkStatus,showDialog,attachText};restore();checkStatus();
+window.P2App={api:jsonApi,checkStatus,showDialog,attachText};
+restore();
+(function consumeRescueHandoff(){
+ try{
+  const raw=sessionStorage.getItem('shanganya_p2_rescue_handoff_v1');
+  if(!raw)return;
+  sessionStorage.removeItem('shanganya_p2_rescue_handoff_v1');
+  const handoff=JSON.parse(raw);
+  const box=$('#p2-text'),context=$('#p2-task-context');
+  if(!box)return;
+  if(handoff.question)box.value=handoff.question;
+  if(context&&handoff.taskContext)context.value=handoff.taskContext.slice(0,5000);
+  box.dispatchEvent(new Event('input',{bubbles:true}));
+  box.focus();
+  status('已从卡点救援站带入问题'+(handoff.taskName?'和任务「'+handoff.taskName+'」':'')+'。请检查材料后点击发送；不会自动改动原任务。');
+ }catch(e){status('卡点问题转交失败：'+e.message,true);}
+})();
+checkStatus();
 })();
 
