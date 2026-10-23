@@ -27,11 +27,11 @@ def _uri(root,path):
     return 'obsidian://open?'+urlencode({'vault':root.name,'file':path})
 def _query_terms(query):
     raw=str(query or '').casefold()
-    chunks=re.findall(r'[a-z0-9][a-z0-9_+.-]*|[\\u4e00-\\u9fff]+',raw)
+    chunks=re.findall(r'[a-z0-9][a-z0-9_+.-]*|[\u4e00-\u9fff]+',raw)
     stop={'这个','那个','怎么','如何','可以','我们','你们','好不','不好','一下','帮我','请你','进行','然后','什么','哪些','一下','已经','希望','需要'}
     terms=[]
     for chunk in chunks:
-        if re.fullmatch(r'[\\u4e00-\\u9fff]+',chunk):
+        if re.fullmatch(r'[\u4e00-\u9fff]+',chunk):
             if len(chunk)==2:candidates=[chunk]
             else:candidates=[chunk[i:i+2] for i in range(len(chunk)-1)]
         else:candidates=[chunk] if len(chunk)>=2 else []
@@ -49,7 +49,7 @@ def catalog(query=''):
     for rel,p in notes:
         try:body=_text(p) if words else ''
         except OSError:continue
-        combined=(rel+'\\n'+body).casefold()
+        combined=(rel+'\n'+body).casefold()
         hits=[w for w in words if w in combined]
         if words and not hits:continue
         snippets=[]
