@@ -173,3 +173,5 @@ dialog.sy-rescue-dialog::backdrop { background: #092920b3; backdrop-filter: blur
   .sy-rescue-dialog h2 { font-size: 24px; }
   .sy-rescue-dialog .sy-rescue-intro { font-size: 18px; }
 }
+
+.sy-rescue-dialog .sy-rescue-video-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0 4px;padding:10px 12px;border:1px solid #d7dfcd;border-radius:12px;background:#f6f7ed}.sy-rescue-dialog .sy-rescue-video-actions[hidden]{display:none}.sy-rescue-dialog .sy-rescue-video-actions .p2-mindmap-create,.sy-rescue-dialog .sy-rescue-video-actions .p2-video-create,.sy-rescue-dialog .sy-rescue-video-actions .p2-heygen-create{font:inherit;font-size:13px;line-height:1.4}

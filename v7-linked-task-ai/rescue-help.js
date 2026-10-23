@@ -63,6 +63,16 @@
     field('answer').textContent = result ? result.reply : '';
     renderSources(result && result.sources || []);
     renderLocal(result && result.localSources || []);
+    var videoActions = field('video-actions');
+    if (videoActions) {
+      videoActions.replaceChildren();
+      if (result && result.reply) {
+        if (window.P2MindMap) videoActions.append(window.P2MindMap.createButton(result.reply));
+        if (window.P2VideoPresenter) videoActions.append(window.P2VideoPresenter.createButton(result.reply));
+        if (window.P2HeyGenVideo) videoActions.append(window.P2HeyGenVideo.createButton(result.reply));
+      }
+      videoActions.hidden = !videoActions.childNodes.length;
+    }
     field('result-actions').hidden = !result;
     field('save').textContent = current.savedReply === (result && result.reply) ? '已存入任务笔记' : '保存答案与来源';
     field('save').disabled = !current.taskId || current.savedReply === (result && result.reply);
@@ -216,26 +226,63 @@
     finally { setupBusy(false); }
   }
   async function ask() {
-    if (controller || configBusy) return;
+    if (controller) return;
     remember(); stopVoice();
     if (!current.question.trim()) { say('说出或写下一个具体问题。'); field('question').focus(); return; }
-    var d = dialog, entry = current, job = new AbortController(); controller = job;
-    var previous = entry.result ? '上一次问题：' + entry.answeredQuestion + '\n上一次建议：' + entry.result.reply : '';
-    busy(true); say('正在搜索公开网页、读取可访问的正文，再让 AI 结合这项任务分析。');
+    var d = dialog, entry = current, job = { signal: null }, timedOut = false;
+    controller = job; busy(true); say('正在结合当前任务、资料与公开网页搜索…');
+    var notes = [], context = '', taskSources = [];
     try {
-      var notes = [], context = '';
+      var task = entry.task || {};
+      var taskSteps = Array.isArray(task.steps) ? task.steps.map(function (x) {
+        return typeof x === 'string' ? x : (x && (x.text || x.title || x.name || x.label) || '');
+      }).filter(Boolean) : [];
+      var rawLinks = (Array.isArray(task.materials) ? task.materials : []).map(function (x) {
+        return typeof x === 'string' ? x : (x && (x.url || x.href || x.link) || '');
+      }).concat([task.sourceUrl, task.url, task.feishuUrl, task.obsidianUrl]).filter(Boolean);
+      var taskUrls = [];
+      rawLinks.forEach(function (raw) {
+        try { var u = new URL(String(raw)); if (['http:', 'https:'].includes(u.protocol) && !u.username && !u.password && taskUrls.indexOf(u.href) < 0) taskUrls.push(u.href); } catch (_) {}
+      });
+      taskUrls = taskUrls.slice(0, 6);
+      context = [
+        '【关联任务，只读上下文】',
+        '任务 ID：' + String(task.id || '未关联'),
+        '任务名称：' + String(task.name || entry.taskName || '自由提问'),
+        '分类：' + String(task.category || '未分类'),
+        '状态：' + (task.done ? '已完成' : '进行中/未完成'),
+        '截止日期：' + String(task.dueDate || '原任务未设置'),
+        '截止时间：' + String(task.dueTime || '未设置'),
+        '任务步骤：' + (taskSteps.length ? taskSteps.join('；') : '未提供'),
+        '任务备注：' + String(task.noteFramework || task.noteRemark || '').slice(0, 2500),
+        '关联资料链接：' + (taskUrls.length ? taskUrls.join('\n') : '没有可直接读取的公开链接'),
+        '要求：用通俗易懂的中文解释，先说清问题原因，再给一条现在能做的操作、交付物和验收方法；不要修改原任务。'
+      ].join('\n');
       if (field('use-notes').checked) {
-        if(window.SYKnowledge&&!SYKnowledge.getStatus().count&&window.SYConnectLocalVault)await SYConnectLocalVault();
+        if (window.SYKnowledge && !SYKnowledge.getStatus().count && window.SYConnectLocalVault) await SYConnectLocalVault();
         if (!window.SYKnowledge || !SYKnowledge.getStatus().count) throw new Error('先连接 Obsidian 或导入文档，再勾选参考笔记。');
         notes = await SYKnowledge.search(entry.question);
-        context = notes.map(function (note, i) { return '[笔记' + (i + 1) + '] ' + note.title + '\n' + note.text; }).join('\n\n');
+        context += '\n\n' + notes.map(function (note, i) { return '[笔记' + (i + 1) + '] ' + note.title + '\n' + note.text; }).join('\n\n');
       }
+      for (var i = 0; i < taskUrls.length; i++) {
+        try {
+          var doc = await request('/api/extract', { url: taskUrls[i] }, job.signal);
+          var body = String(doc.text || '').trim();
+          var read = !!body && (doc.readStatus === 'fulltext' || doc.readStatus === 'snapshot' || doc.readStatus === 'visible-copy' || doc.status === 'read');
+          taskSources.push({ title: String(doc.title || taskUrls[i]), url: taskUrls[i], snippet: body.slice(0, 1800) || String(doc.note || '未返回正文'), readStatus: read ? 'fulltext' : 'snippet' });
+          if (read) context += '\n\n[任务关联资料：' + String(doc.title || taskUrls[i]) + ']\n' + body.slice(0, 5000);
+        } catch (sourceError) {
+          taskSources.push({ title: taskUrls[i], url: taskUrls[i], snippet: '本次未读取到正文：' + String(sourceError.message || sourceError).slice(0, 180), readStatus: 'failed' });
+        }
+      }
+      var previous = entry.history.slice(-6).map(function (x) { return x.role + ': ' + x.content; }).join('\n\n');
       var result = await request('/api/ask-ai', { mode: 'stuck', search: true, question: entry.question, task: entry.taskName, previous: previous, context: context }, job.signal);
       if (dialog !== d || job.signal.aborted) return;
       if (!result.reply || !Array.isArray(result.sources) || !result.searched) throw new Error('服务没有返回完整的联网回答，请检查 AI 连接。');
+      result.sources = taskSources.concat(result.sources || []);
       result.localSources = notes.map(function (n) { return { title: n.title, path: n.path, url: n.url }; });
       entry.result = result; entry.answeredQuestion = entry.question; entry.savedReply = null;
-      say('已找到 ' + result.sources.length + ' 个网页来源，其中 ' + (result.readCount || 0) + ' 个读取到正文。先试下面这一步，再告诉我是否解决。');
+      say('已找到 ' + result.sources.length + ' 条来源，其中 ' + result.sources.filter(function (s) { return s.readStatus === 'fulltext'; }).length + ' 条读取到正文。先试下面这一步，再告诉我是否解决。');
       resultView(); field('answer').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
     } catch (err) {
       if (dialog !== d) return;
@@ -286,7 +333,7 @@
     var task = options.task || {}, account = window.SY ? String(SY.currentAccountKey) : 'guest';
     var id = account + ':' + (task.id || task.name || 'free');
     if (!drafts.has(id)) drafts.set(id, { question: options.question || '', result: null });
-    current = drafts.get(id); current.taskId = task.id; current.taskName = task.name || options.taskName || ''; current.account = account;
+    current = drafts.get(id); current.taskId = task.id; current.taskName = task.name || options.taskName || ''; current.task = task; current.account = account;
     onResume = options.onResume || null;
     var d = document.createElement('dialog'); d.className = 'sy-support-dialog sy-rescue-dialog'; d.setAttribute('aria-labelledby', 'rescueTitle');
     d.innerHTML = DOMPurify.sanitize('<header><div><span class="sy-eyebrow">上岸鸭 · 卡点救援站</span><h2 id="rescueTitle">卡住了，我们查清楚再出发</h2></div><button data-rescue-close aria-label="关闭">×</button></header><div class="sy-dialog-body">' +
@@ -295,7 +342,7 @@
       '<div class="sy-rescue-toolbar"><label class="sy-check"><input type="checkbox" data-rescue-use-notes' + (options.useNotes ? ' checked' : '') + '>同时参考已连接的笔记（仅发送匹配片段给 AI）</label><button data-rescue-knowledge>连接 Obsidian / 导入文档</button></div>' +
       '<div class="sy-rescue-toolbar"><button data-rescue-voice>🎙 说出我的问题</button><button class="sy-primary" data-rescue-ask>帮我查资料，给出下一步</button><button data-rescue-cancel hidden>停止等待</button></div>' +
       '<p class="sy-rescue-footnote">语音由浏览器识别，可能需要联网。问题、当前任务名和检索到的资料会交给你配置的 AI 分析。</p>' +
-      '<p class="sy-rescue-status" role="status" aria-live="polite" data-rescue-status></p><div class="sy-rescue-answer" data-rescue-answer></div>' +
+      '<p class="sy-rescue-status" role="status" aria-live="polite" data-rescue-status></p><div class="sy-rescue-answer" data-rescue-answer></div><div class="sy-rescue-video-actions" data-rescue-video-actions hidden></div>' +
       '<h3 data-rescue-source-title hidden>本次参考来源</h3><div class="sy-rescue-sources" data-rescue-sources></div><div class="sy-rescue-sources" data-rescue-local-sources></div>' +
       '<div data-rescue-result-actions hidden><div class="sy-rescue-actions"><button data-rescue-save>保存答案与来源</button><button data-rescue-to-vault>存入 Obsidian</button><button class="sy-primary" data-rescue-resolved>这一步解决了 · 继续任务</button><button data-rescue-retry>还没解决 · 补充情况</button></div></div>' +
       '<details class="sy-rescue-config" data-rescue-config><summary>AI 连接 · <span data-rescue-connection>检查连接中…</span></summary>' +
