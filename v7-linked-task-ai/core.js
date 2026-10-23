@@ -4902,7 +4902,7 @@
     var h = '<div class="skill-card">' +
       '<p class="skill-eyebrow">🎯 我想学一个技能</p>';
     if(!sampleOn() && !backendOn('ai')){
-      h += '<p class="skill-src-note">公开网页搜索和正文读取已可用；要把资料自动整理成分阶段学习路线，请先在「我的」里连接 AI。</p>';
+      h += '<p class="skill-src-note">公开网页搜索和正文读取已可用；需要 AI 自动整理学习路线时，请在 <a href="./ai-p2.html?openConfig=1">关联任务 AI · 模型与联网搜索设置</a> 中完成配置。</p>';
     }
 
     if(!hasPlan){

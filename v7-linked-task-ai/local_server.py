@@ -19,7 +19,7 @@ import source_workflow as sourceflow
 from public_link_reader import research as source_research
 from local_integrations import initialize, ccswitch_catalog, connect_ccswitch, connect_local_gateway
 from local_tools import vault_info, vault_list, vault_search, vault_read, vault_save, screen_ocr
-from rescue_service import RescueError, ask_ai, extract, extract_uploaded, extract_video, preview_url, read_feishu, search_web, public_config, set_config, test_connection, observe_frame, list_models, provider_catalog, team_public_config, set_team_config
+from rescue_service import RescueError, ask_ai, extract, extract_uploaded, extract_video, preview_url, read_feishu, search_web, search_config_snapshot, set_search_config, public_config, set_config, test_connection, observe_frame, list_models, provider_catalog, team_public_config, set_team_config
 from desktop_feishu_reader import read_feishu_via_browser
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -89,6 +89,7 @@ class Handler(SimpleHTTPRequestHandler):
             vault = vault_info()
             return self.send_json({'ok':True,'version':'rescue-3','build':'v7.2','capabilities':{'search':True,'searchFallback':False,'extract':True,'urlPreview':True,'video':video,'feishu':feishu,'ai':cfg['configured'],'aiVerified':cfg['verified'],'imageImport':True,'outline':True,'vault':vault['connected'],'screenOcr':True},'ai':cfg,'vault':vault,'warn':'' if cfg['configured'] else 'AI 尚未连接；资料读取与按材料排路线仍可使用。','feishuNote':None if feishu else '飞书读取未启用；请配置 FEISHU_APP_ID 和 FEISHU_APP_SECRET 后重新启动服务。'})
         if path == '/api/ai-config': return self.send_json(public_config())
+        if path == '/api/search-config': return self.send_json(search_config_snapshot())
         if path == '/api/ai-team-config': return self.send_json(team_public_config())
         if path == '/api/public-feishu-status': return self.send_json({'ok':True,'configured':bool(os.getenv('FEISHU_APP_ID','').strip() and os.getenv('FEISHU_APP_SECRET','').strip())})
         if path == '/api/vault': return self.send_json(vault_info())
@@ -191,10 +192,11 @@ class Handler(SimpleHTTPRequestHandler):
             if self.path=='/api/sources/read':
                 return self.send_json(extract(str(data.get('url','')).strip()))
             if self.path=='/api/pm/test': return self.send_json(test_connection())
+            if self.path=='/api/search-config': return self.send_json(set_search_config(data))
             if self.path=='/api/search':
                 q=str(data.get('q','')).strip(); n=max(1,min(12,int(data.get('n',8))))
                 if not q: return self.send_json({'error':'缺少搜索词'},400)
-                return self.send_json(search_web(q,n))
+                return self.send_json(search_web(q,n,data.get('provider')))
             if self.path=='/api/extract':
                 return self.send_json(extract(str(data.get('url','')).strip()))
             if self.path=='/api/url-preview':

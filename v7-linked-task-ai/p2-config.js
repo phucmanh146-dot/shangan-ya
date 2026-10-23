@@ -2,6 +2,7 @@
 'use strict';
 const $=s=>document.querySelector(s);
 let providers=[];
+let searchSettings={provider:'auto',defaultEnabled:true};
 function message(text,bad=false){const node=$('#p2-config-status');if(node){node.textContent=text;node.classList.toggle('error',!!bad);}}
 function modelMessage(text,bad=false){const node=$('#p2-model-list-status');if(node){node.textContent=text;node.classList.toggle('error',!!bad);}}
 function applyProvider(){
@@ -34,9 +35,51 @@ async function open(){
   $('#p2-key').value='';
   await loadTeamConfig();
   await loadFeishuConfig();
+  await loadSearchSettings();
   message(config.verified?'已验证模型真实响应：'+config.model:(config.configured?'已保存配置，但尚未验证模型真实响应。':'尚未连接模型。填写自己的 API Key 后读取模型并进行真实测试。'));
  }catch(e){message('读取模型配置失败：'+e.message,true);}
 }
+
+async function loadSearchSettings(){
+ const status=$('#p2-search-config-status');
+ try{
+  const cfg=await P2App.api('/api/search-config',undefined,12000);
+  searchSettings={provider:cfg.provider||'auto',defaultEnabled:cfg.defaultEnabled!==false};
+  $('#p2-search-provider').value=searchSettings.provider;
+  $('#p2-search-default').checked=searchSettings.defaultEnabled;
+  if(status)status.textContent='当前优先引擎：'+({auto:'自动切换（DuckDuckGo → Bing）',duckduckgo:'DuckDuckGo',bing:'Bing'}[searchSettings.provider]||searchSettings.provider)+'。'+(searchSettings.defaultEnabled?'新问题默认勾选联网搜索。':'新问题默认不勾选联网搜索。');
+ }catch(e){if(status){status.textContent='读取搜索配置失败：'+e.message;status.classList.add('error');}}
+}
+async function saveSearchSettings(){
+ const button=$('#p2-search-save'),status=$('#p2-search-config-status');
+ button.disabled=true;if(status){status.classList.remove('error');status.textContent='正在保存联网搜索设置…';}
+ try{
+  const cfg=await P2App.api('/api/search-config',{provider:$('#p2-search-provider').value,defaultEnabled:$('#p2-search-default').checked},15000);
+  searchSettings={provider:cfg.provider||'auto',defaultEnabled:cfg.defaultEnabled!==false};
+  const toggle=$('#p2-search');
+  if(toggle&&toggle.dataset.userTouched!=='1')toggle.checked=searchSettings.defaultEnabled;
+  if(status)status.textContent='已保存。搜索引擎：'+({auto:'自动切换',duckduckgo:'DuckDuckGo',bing:'Bing'}[searchSettings.provider]||searchSettings.provider)+'；'+(searchSettings.defaultEnabled?'新问题默认开启联网搜索。':'新问题默认关闭联网搜索。');
+ }catch(e){if(status){status.textContent='保存失败：'+e.message;status.classList.add('error');}}
+ finally{button.disabled=false;}
+}
+async function testSearchSettings(){
+ const button=$('#p2-search-test'),status=$('#p2-search-config-status');
+ button.disabled=true;if(status){status.classList.remove('error');status.textContent='正在通过所选引擎实际搜索公开网页…';}
+ try{
+  const result=await P2App.api('/api/search',{q:'OpenAI API 官方文档',n:3,provider:$('#p2-search-provider').value},40000);
+  if(!Array.isArray(result.results)||!result.results.length)throw Error('搜索接口未返回可用来源。');
+  if(status)status.textContent='测试成功：'+result.provider+' 返回 '+result.results.length+' 条来源。搜索摘要不等于已读取全文，请核对原文。';
+ }catch(e){if(status){status.textContent='测试失败：'+e.message+'。可以切换到“自动切换”再测一次。';status.classList.add('error');}}
+ finally{button.disabled=false;}
+}
+function initSearchDefault(){
+ const toggle=$('#p2-search');if(!toggle)return;
+ P2App.api('/api/search-config',undefined,12000).then(cfg=>{
+  searchSettings={provider:cfg.provider||'auto',defaultEnabled:cfg.defaultEnabled!==false};
+  if(toggle.dataset.userTouched!=='1')toggle.checked=searchSettings.defaultEnabled;
+ }).catch(()=>{});
+}
+
 async function loadModels(){
  const btn=$('#p2-load-models'),base=$('#p2-base').value.trim(),key=$('#p2-key').value.trim(),protocol=$('#p2-protocol').value;
  if(!base){modelMessage('请先选择服务商或填写 API 地址。',true);return;}
@@ -222,6 +265,10 @@ async function clearTeam(){
 }
 
 $('#p2-open-config').addEventListener('click',open);
+$('#p2-search-save').addEventListener('click',saveSearchSettings);
+$('#p2-search-test').addEventListener('click',testSearchSettings);
+initSearchDefault();
+if(new URLSearchParams(location.search).get('openConfig')==='1')open();
 $('#p2-provider').addEventListener('change',applyProvider);
 $('#p2-load-models').addEventListener('click',loadModels);
 $('#p2-model-list').addEventListener('change',e=>{if(e.target.value)$('#p2-model').value=e.target.value;});

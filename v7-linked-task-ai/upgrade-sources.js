@@ -25,7 +25,7 @@
       '<label>课程 / 行动大纲（保留原来的层级和顺序）<textarea data-route-field="sourceText" rows="7" maxlength="80000" placeholder="第一节课：安装工具&#10;  1. 下载编辑器&#10;  2. 配置模型&#10;第二节课：创建项目">'+e(draft.sourceText)+'</textarea></label>'+
       
       '<p class="sy-route-footnote">一节课是一关，课内目录继续拆成小关。需要登录的飞书资料，可导出文档或把目录粘贴到这里。</p>'+
-      '<div class="sy-route-buttons"><button class="btn btn-primary" type="submit"'+(busy?' disabled':'')+'>'+(busy?'正在读取目录…':'按目录建立分层路线')+'</button><button class="btn btn-ghost" id="syReadSources" type="button"'+(busy?' disabled':'')+'>读取并核对原文</button><button class="btn btn-ghost" id="syRouteSettings" type="button">连接 AI</button><button class="btn btn-ghost" id="syRouteImport" type="button">导入课程文档</button></div></form>'+
+      '<div class="sy-route-buttons"><button class="btn btn-primary" type="submit"'+(busy?' disabled':'')+'>'+(busy?'正在读取目录…':'按目录建立分层路线')+'</button><button class="btn btn-ghost" id="syReadSources" type="button"'+(busy?' disabled':'')+'>读取并核对原文</button><button class="btn btn-ghost" id="syRouteImport" type="button">导入课程文档</button></div></form>'+
       '<div id="syRouteStatus" role="status" aria-live="polite">'+e(message).replace(/\n/g,'<br>')+'</div>'+
       (materials.length?'<details class="sy-route-materials"><summary>已读到 '+materials.length+' 份资料 · 查看正文</summary>'+materials.map(s=>'<article><strong>'+e(s.id)+' · '+e(s.title)+'</strong><p>'+e(s.scope)+(s.truncated?' · 资料过长，已明确截取前段':'')+'</p><pre>'+e(s.text.slice(0,2500))+'</pre></article>').join('')+'</details>':'')+
       renderResult(a)+'</section>';
@@ -75,7 +75,6 @@
     form.addEventListener('submit',ev=>{ev.preventDefault();run(false);});
     form.addEventListener('input',()=>{readForm(root);});
     root.querySelector('#syReadSources').onclick=()=>run(true);
-    root.querySelector('#syRouteSettings').onclick=()=>{if(window.SYRescue)SYRescue.configure();};
     root.querySelector('#syRouteImport').onclick=()=>{if(window.FocusQuest)FocusQuest.openForTask({name:draft.name||'按课程目录学习'});};
     root.querySelectorAll('[data-route-stage]').forEach(b=>b.onclick=()=>{const task=createStage(Number(b.dataset.routeStage));if(task)S.openQuest(task.id);});
     const all=root.querySelector('#syRouteCreateAll');if(all)all.onclick=()=>{result.stages.forEach((_,i)=>createStage(i));message='全部关卡已加入清单；重复点击不会重复创建。';redraw();};

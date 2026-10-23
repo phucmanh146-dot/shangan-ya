@@ -634,33 +634,66 @@ class SearchParser(HTMLParser):
             self.row[self.capture] += data
 
 
-def search_web(query, n=5):
+SEARCH_CONFIG_LOCK = threading.Lock()
+SEARCH_CONFIG = {"provider": "auto", "defaultEnabled": True}
+
+
+def search_config_snapshot():
+    with SEARCH_CONFIG_LOCK:
+        return dict(SEARCH_CONFIG)
+
+
+def set_search_config(data):
+    provider = str(data.get("provider") or "auto").strip().lower()
+    if provider not in ("auto", "duckduckgo", "bing"):
+        raise RescueError("请选择自动切换、DuckDuckGo 或 Bing。", "INVALID_SEARCH_PROVIDER", 400)
+    default_enabled = data.get("defaultEnabled", True)
+    if not isinstance(default_enabled, bool):
+        raise RescueError("默认联网搜索必须是开关值。", "INVALID_SEARCH_CONFIG", 400)
+    with SEARCH_CONFIG_LOCK:
+        SEARCH_CONFIG["provider"] = provider
+        SEARCH_CONFIG["defaultEnabled"] = default_enabled
+        return {"ok": True, **SEARCH_CONFIG}
+
+
+def search_web(query, n=5, provider=None):
     query = str(query).strip()[:350]
-    rows, provider = [], ""
-    try:
-        parser = SearchParser()
-        parser.feed(fetch_page("https://html.duckduckgo.com/html/?q=" + quote_plus(query)))
-        rows, provider = parser.results, "DuckDuckGo"
-    except (RescueError, OSError, ValueError):
-        pass
-    if not rows:
+    if not query:
+        raise RescueError("缺少搜索词。", "EMPTY_SEARCH", 400)
+    preferred = str(provider or search_config_snapshot()["provider"]).strip().lower()
+    if preferred not in ("auto", "duckduckgo", "bing"):
+        raise RescueError("未知搜索引擎。", "INVALID_SEARCH_PROVIDER", 400)
+    engines = ("duckduckgo", "bing") if preferred == "auto" else (preferred,)
+    rows, provider_name = [], ""
+    for engine in engines:
         try:
-            root = ET.fromstring(fetch_page("https://www.bing.com/search?format=rss&q=" + quote_plus(query)))
-            rows = [{"title": x.findtext("title", ""), "url": x.findtext("link", ""),
-                     "snippet": plain(x.findtext("description", "")),
-                     "source": urlparse(x.findtext("link", "")).netloc} for x in root.findall("./channel/item")]
-            provider = "Bing"
+            if engine == "duckduckgo":
+                parser = SearchParser()
+                parser.feed(fetch_page("https://html.duckduckgo.com/html/?q=" + quote_plus(query)))
+                rows = parser.results
+                provider_name = "DuckDuckGo"
+            else:
+                root = ET.fromstring(fetch_page("https://www.bing.com/search?format=rss&q=" + quote_plus(query)))
+                rows = [{"title": x.findtext("title", ""), "url": x.findtext("link", ""),
+                         "snippet": plain(x.findtext("description", "")),
+                         "source": urlparse(x.findtext("link", "")).netloc} for x in root.findall("./channel/item")]
+                provider_name = "Bing"
         except (RescueError, OSError, ValueError, ET.ParseError):
-            pass
+            rows = []
+        if rows:
+            break
     unique, seen = [], set()
     for row in rows:
-        if row["url"] not in seen and row["url"].startswith(("https://", "http://")) and row["title"].strip():
-            seen.add(row["url"])
-            row["title"], row["snippet"] = row["title"].strip(), row["snippet"].strip()
-            unique.append(row)
+        url = str(row.get("url") or "")
+        title = str(row.get("title") or "").strip()
+        if url not in seen and url.startswith(("https://", "http://")) and title:
+            seen.add(url)
+            unique.append({"title": title, "url": url, "snippet": str(row.get("snippet") or "").strip(),
+                           "source": str(row.get("source") or urlparse(url).netloc)})
     if not unique:
-        raise RescueError("搜索服务暂时没有返回可用网页，请稍后重试或把相关资料贴进问题。", "SEARCH_UNAVAILABLE", 503)
-    return {"query": query, "results": unique[:n], "provider": provider}
+        label = "DuckDuckGo" if preferred == "duckduckgo" else "Bing" if preferred == "bing" else "公开搜索引擎"
+        raise RescueError(label + " 暂时没有返回可用网页。切换搜索引擎或选择自动切换后重试。", "SEARCH_UNAVAILABLE", 503)
+    return {"query": query, "results": unique[:max(1, min(12, int(n)))], "provider": provider_name}
 
 
 CONFIG_LOCK = threading.Lock()

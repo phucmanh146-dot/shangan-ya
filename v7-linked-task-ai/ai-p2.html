@@ -85,6 +85,14 @@
   <div class="p2-dialog-actions"><button id="p2-test-model" type="button">实际测试并连接</button><a id="p2-api-docs" rel="noopener noreferrer" target="_blank" href="https://platform.openai.com/docs">打开服务商 API 文档 ↗</a></div>
   <p class="p2-small">密钥不会回显或写入聊天记录；请只在可信设备配置自己的 API Key。连接是否可用以真实测试结果为准，服务重启后可能需要重新配置。</p>
   <p id="p2-config-status" class="p2-status"></p>
+  <details id="p2-search-settings" class="p2-team-settings">
+    <summary>联网搜索设置（公开网页）</summary>
+    <p>在这里统一设置 AI 是否默认联网搜索、优先使用哪个公开搜索引擎，并实际测试搜索是否可用。无需另找“连接 AI”按钮；搜索引擎不需要额外 API Key，是否能访问取决于当前部署的网络环境。</p>
+    <label class="p2-search-default"><input type="checkbox" id="p2-search-default" checked> 新问题默认开启联网搜索</label>
+    <label>搜索引擎<select id="p2-search-provider"><option value="auto">自动切换（DuckDuckGo → Bing）</option><option value="duckduckgo">DuckDuckGo</option><option value="bing">Bing</option></select></label>
+    <div class="p2-dialog-actions"><button type="button" id="p2-search-save">保存搜索设置</button><button type="button" id="p2-search-test">实际测试搜索</button></div>
+    <p id="p2-search-config-status" class="p2-small" role="status">正在读取联网搜索配置…</p>
+  </details>
 <details id="p2-team-settings" class="p2-team-settings">
     <summary>配置多模型分工（可选）</summary>
     <p>主模型负责普通对话；为下面的角色配置独立 API 地址和模型 ID。未配置或未验证的角色自动回退到主模型。每个角色保存时都会真实调用一次 API，服务商可能计费。</p>
