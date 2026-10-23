@@ -346,7 +346,7 @@
       '<p class="sy-rescue-status" role="status" aria-live="polite" data-rescue-status></p><div class="sy-rescue-answer" data-rescue-answer></div><div class="sy-rescue-video-actions" data-rescue-video-actions hidden></div>' +
       '<h3 data-rescue-source-title hidden>本次参考来源</h3><div class="sy-rescue-sources" data-rescue-sources></div><div class="sy-rescue-sources" data-rescue-local-sources></div>' +
       '<div data-rescue-result-actions hidden><div class="sy-rescue-actions"><button data-rescue-save>保存答案与来源</button><button data-rescue-to-vault>存入 Obsidian</button><button class="sy-primary" data-rescue-resolved>这一步解决了 · 继续任务</button><button data-rescue-retry>还没解决 · 补充情况</button></div></div>' +
-      '<p class="sy-rescue-config-shortcut">模型配置、API 测试和联网搜索统一在 AI 配置中管理，避免重复入口。<a href="./ai-p2.html?openConfig=1" target="_blank" rel="noopener noreferrer">打开 AI 配置与搜索 ↗</a></p>' +
+      '<div class="sy-rescue-config-shortcut"><p>统一从完整 AI 工作区配置模型/API；也可直接进入多模态对话，上传图片、文档、网页链接或视频。视频解析、思维导图和讲解视频都在同一工作区使用。</p><div class="sy-rescue-ai-entry-actions"><button type="button" data-rescue-open-ai>进入完整 AI 工作区 ↗</button><button type="button" data-rescue-open-ai-config>配置模型 / API ↗</button></div></div>' +
       '<details class="sy-rescue-config" data-rescue-config><summary>AI 连接 · <span data-rescue-connection>检查连接中…</span></summary>' +
       '<div class="sy-ai-heading"><div><span class="sy-ai-kicker">CONNECTION STUDIO</span><h3>给陪跑员，接上一个大脑。</h3><p>选服务商 → 获取真实模型 → 测试连接</p></div><span class="sy-ai-orbit" aria-hidden="true">✳</span></div>' +
       '<section class="sy-cc-connect"><label>使用电脑中已有的 CC Switch 配置<select data-rescue-cc-provider><option value="">正在检查…</option></select></label><button type="button" data-rescue-cc-connect>读取配置并测试</button><button type="button" data-rescue-network-test>测试联网检索</button><p data-rescue-network-status role="status"></p></section>' +
@@ -382,6 +382,15 @@
     d.addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b || b.disabled) return;
       if (b.hasAttribute('data-rescue-close')) close();
+      else if (b.hasAttribute('data-rescue-open-ai') || b.hasAttribute('data-rescue-open-ai-config')) {
+        var openConfig = b.hasAttribute('data-rescue-open-ai-config');
+        var frame = document.getElementById('embeddedP2Frame');
+        var nav = document.getElementById('aiP2Nav');
+        if (!frame || !nav) { say('没有找到工作台内置 AI 区域，请刷新工作台后重试。', true); return; }
+        close();
+        frame.src = './ai-p2.html?embedded=1&linkedTaskAi=20261023v8' + (openConfig ? '&openConfig=1' : '');
+        nav.click();
+      }
       else if (b.hasAttribute('data-rescue-ask')) ask();
       else if (b.hasAttribute('data-rescue-voice')) voice();
       else if (b.hasAttribute('data-rescue-cancel')) cancelRequest();
