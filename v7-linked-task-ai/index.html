@@ -313,7 +313,7 @@
         <span>上岸鸭</span>
       </a>
 
-      <button class="app-sidebar-quickcapture" id="quickCaptureBtn" type="button">
+      <button class="app-sidebar-quickcapture" id="quickCaptureBtn" type="button" hidden aria-hidden="true" tabindex="-1" style="display:none!important">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         <span>快速收集</span>
       </button>
@@ -350,9 +350,7 @@
           <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10"/><path d="M12 20V4"/><path d="M20 20v-7"/><path d="M2 20h20"/></svg></span>
           <span>数据档案</span>
         </button>
-        <button class="app-nav-item" data-view="ai-p2" type="button" id="aiP2Nav">
-          <span class="app-nav-icon" aria-hidden="true">✦</span><span>连接 AI</span>
-        </button>
+
                 <button class="app-nav-item" data-view="knowledge" type="button">
           <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5v-17Z"/><path d="M4 19a2.5 2.5 0 0 1 2.5-2.5H20"/></svg></span>
           <span>知识库</span>
@@ -538,10 +536,7 @@
       <section class="app-view" data-view="quadrant" id="view-quadrant" hidden>
         <div id="quadrantBody"></div>
       </section>
-      <section class="app-view app-ai-chat-view" data-view="ai-p2" id="view-ai-p2" hidden>
-        <div class="embedded-p2-head"><div><strong>连接 AI</strong><span>自由提问 · 资料按需加入 · 联网检索 · 导图与复盘视频</span></div><span class="embedded-p2-ready" id="embeddedP2Status">真实模型与资料读取状态</span></div>
-        <iframe id="embeddedP2Frame" title="上岸鸭原工作台连接 AI 中心" src="./ai-p2.html?embedded=1&linkedTaskAi=20261024-center-v3" allow="clipboard-write; microphone" loading="lazy"></iframe>
-      </section>
+
       <section class="app-view" data-view="knowledge" id="view-knowledge" hidden>
         <div id="knowledgeBody"></div>
       </section>
@@ -610,6 +605,11 @@
         </div>
         <p class="code-hint" id="taskMaterialHint">粘贴公开网页、课程或平台分享链接；解析后整张资料卡都可以打开原文。</p>
         <div class="task-material-list" id="taskMaterialList" hidden></div>
+        <div class="sy-task-ai-inline" id="syTaskAiInline">
+          <p><strong>这项任务卡住了？</strong> AI 将围绕当前任务和你已读取的资料给出下一步。</p>
+          <button class="code-btn" id="syTaskAiAsk" type="button">✦ 带着这项任务问 AI</button>
+          <p class="code-hint" id="syTaskAiHint" role="status">关联的是当前任务，不会修改截止日期或完成状态。</p>
+        </div>
       </div>
       <p class="code-hint hint-warn" id="taskFormHint"></p>
       <button class="btn btn-primary submit-btn" id="taskFormNext" type="button">下一步 →</button>
@@ -1071,6 +1071,45 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
-</body>
+<script id="sy-task-ai-context-v1">
+(function(){
+'use strict';
+function currentTask(){
+  if(!window.SY||typeof SY.getAcctData!=='function')return null;
+  var data=SY.getAcctData(),tasks=Array.isArray(data.tasks)?data.tasks:[];
+  var modal=document.getElementById('taskModalOverlay');
+  var editId=modal&&modal.dataset&&(modal.dataset.taskId||modal.dataset.editId);
+  var idCandidates=[editId,window.SY.editingTaskId,window.SY.currentEditingTaskId].filter(Boolean);
+  var task=idCandidates.map(function(id){return tasks.find(function(t){return String(t.id)===String(id);});}).find(Boolean);
+  if(task)return task;
+  var input=document.getElementById('taskNameInput');
+  var label=input&&input.value.trim();
+  return label?tasks.find(function(t){return t.name===label;}):null;
+}
+function update(){
+ var btn=document.getElementById('syTaskAiAsk'),hint=document.getElementById('syTaskAiHint');
+ if(!btn||!hint)return;
+ var t=currentTask();
+ btn.textContent=t?'✦ 为「'+String(t.name||'当前任务').slice(0,26)+'」解卡':'✦ 保存任务后再关联 AI';
+ hint.textContent=t?'AI 只参考这项任务及实际读取的资料；新行动需要你确认后加入。':'请先保存任务，AI 才能绑定真实的任务 ID，避免错关联。';
+ btn.disabled=!t;
+}
+document.addEventListener('click',function(e){
+ if(e.target&&e.target.closest('#syTaskAiAsk')){
+  var t=currentTask();
+  if(!t){update();return;}
+  if(window.SYRescue&&typeof SYRescue.open==='function'){
+   SYRescue.open({task:t,useNotes:false});
+  }else{
+   var hint=document.getElementById('syTaskAiHint');
+   if(hint)hint.textContent='AI 救援组件尚未加载，请检查页面资源。';
+  }
+ }
+ if(e.target&&e.target.closest('#taskFormNext,#quickCaptureSubmit,#taskModalOverlay,#taskMaterialsField'))setTimeout(update,50);
+});
+document.addEventListener('input',function(e){if(e.target&&e.target.id==='taskNameInput')update();});
+document.addEventListener('DOMContentLoaded',update);
+})();
+</script></body>
 </html>
 
