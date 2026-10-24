@@ -250,6 +250,39 @@ async function clearTeam(){
  finally{button.disabled=false;}
 }
 
+async function reconnectAI(){
+ const button=$('#p2-reconnect-ai');
+ if(!button)return;
+ button.disabled=true;
+ const original=button.textContent;
+ button.textContent='正在重新连接…';
+ try{
+  const config=await P2App.api('/api/ai-config',undefined,15000);
+  if(!config.configured||!config.base||!config.model||!config.hasKey){
+   await open();
+   message('尚未检测到完整且可用的公网 AI 配置。请填写服务商 API 地址、模型 ID 和 API Key，再点击“实际测试并连接”；配置通过后可再次点击“重新连接 AI”。',true);
+   $('#p2-base')?.focus();
+   return;
+  }
+  message('正在重新验证已配置的模型 API；不会显示或覆盖已保存的密钥…');
+  const result=await P2App.api('/api/pm/config',{base:config.base,model:config.model,protocol:config.protocol||'chat',key:'',keepKey:true},105000);
+  await P2App.checkStatus();
+  if(result.verified){
+   message('重新连接成功：模型 '+(result.model||config.model)+' 已通过真实 API 测试。');
+   const status=$('#p2-status');
+   if(status){status.textContent='AI 已重新连接并通过真实 API 验证，可以继续提问。';status.classList.remove('error');}
+  }else{
+   message('重新连接未通过验证。请检查 API Key 权限、模型 ID 和服务商额度。',true);
+  }
+ }catch(e){
+  message('重新连接失败：'+e.message+'。请打开配置 / 测试 API 检查连接信息。',true);
+  await P2App.checkStatus();
+ }finally{
+  button.disabled=false;
+  button.textContent=original;
+ }
+}
+$('#p2-reconnect-ai')?.addEventListener('click',reconnectAI);
 $('#p2-open-config').addEventListener('click',()=>open($('#p2-top-provider')?.value||undefined));
 $('#p2-top-provider').addEventListener('change',e=>{
  const id=e.target.value;updateTopDocs(id);
