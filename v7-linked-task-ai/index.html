@@ -9,7 +9,13 @@
 <link rel="stylesheet" href="./core.css">
 <link rel="stylesheet" href="./cover-module-layout.css?v=20261016-six-cover">
 <link rel="stylesheet" href="./inline-task-rest.css?v=20261024-1">
-</head>
+<style id="sy-task-ai-context-style">
+.sy-task-ai-inline{margin-top:12px;padding:14px 16px;border:1px solid #cbdcc4;background:#f2f8ed;border-radius:14px}
+.sy-task-ai-inline p{margin:0 0 10px;line-height:1.65;color:#244a38}
+.sy-task-ai-inline .code-btn{background:#245440;color:#fff;border-radius:10px;padding:10px 14px;font-weight:700}
+.sy-task-ai-inline .code-btn:disabled{opacity:.58;cursor:not-allowed}
+.sy-task-ai-inline .code-hint{margin:10px 0 0;font-size:12px;color:#64756b}
+</style></head>
 <body>
 
 
@@ -1084,7 +1090,7 @@ function currentTask(){
   if(task)return task;
   var input=document.getElementById('taskNameInput');
   var label=input&&input.value.trim();
-  return label?tasks.find(function(t){return t.name===label;}):null;
+  if(!label)return null;var matches=tasks.filter(function(t){return t.name===label;});return matches.length===1?matches[0]:null;
 }
 function update(){
  var btn=document.getElementById('syTaskAiAsk'),hint=document.getElementById('syTaskAiHint');
