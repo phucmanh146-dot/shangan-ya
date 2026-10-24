@@ -60,7 +60,8 @@ $('#take').addEventListener('click',()=>{if(taken){toast('这张号牌已经取�
 $('#protect').addEventListener('click',()=>{protectedOn=!protectedOn;$('#protect').innerHTML=(protectedOn?'已开启过号保护':'开启过号保护')+' <span>'+(protectedOn?'演示提醒已打开':'提醒别错过')+'</span>';$('#status').textContent=protectedOn?'过号保护已开启演示提醒；真实保号需店家系统支持。':'过号保护已关闭。';toast(protectedOn?'过号提醒已开启。':'过号提醒已关闭。')});
 $('#remind').addEventListener('click',()=>{reminded=!reminded;$('#remind').innerHTML=(reminded?'已开启到站前 5 桌提醒':'开启到站前 5 桌提醒')+' <span>'+(reminded?'本页演示状态':'提前准备')+'</span>';$('#status').textContent=reminded?'到站前 5 桌提醒已开启演示状态；正式通知需接入排队数据。':'到站提醒已关闭。';toast(reminded?'到站前 5 桌提醒已记下。':'到站提醒已关闭。')});
 $('#order').addEventListener('click',()=>{let p=places[chosen];$('#status').textContent='点菜清单：'+p.dish+'。人均约 ¥'+p.price+'，到店后请按实际菜单确认。';toast('奶奶把招牌菜记到清单上了。')});
-$('#restart').addEventListener('click',()=>{clearInterval(timer);clearInterval(closeTimer);votes={};voted={};finished=false;closing=false;go(1);toast('好，再选一顿，别饿着。')});$('[data-appgo]').forEach(b=>b.addEventListener('click',()=>{let n=+b.dataset.appgo;if(n===1){go(1)}else if(n===2){if(!places.length){setup();render()}go(2)}else if(n===3){if(!finished){if(!places.length){setup();render()}finish(true)}else go(3)}}));$('[data-appgo]').forEach(b=>b.addEventListener('click',()=>{let n=+b.dataset.appgo;if(n===1){go(1)}else if(n===2){if(!places.length){toast('先说说预算、辣度和到站时间。');return}go(2)}else if(n===3){if(!finished){toast('先完成投票，奶奶才能安排结果。');return}go(3)}}));
+$('#restart').addEventListener('click',()=>{clearInterval(timer);clearInterval(closeTimer);votes={};voted={};finished=false;closing=false;places=[];go(1);toast('好，再选一顿，别饿着。')});
+$$('[data-appgo]').forEach(b=>b.addEventListener('click',()=>{const n=+b.dataset.appgo;if(n===1){go(1)}else if(n===2){if(!places.length){setup();render()}go(2)}else{if(!places.length){setup();render()}if(!finished)finish(true);else go(3)}}));
 tick();setInterval(tick,1000);
 })();
 </script></body></html>
