@@ -217,6 +217,18 @@
         notes = await SYKnowledge.search(entry.question);
         context = notes.map(function (note, i) { return '[笔记' + (i + 1) + '] ' + note.title + '\n' + note.text; }).join('\n\n');
       }
+      // Use only the exact selected task's existing saved note. A URL is not treated as fetched content.
+      if(entry.taskId&&window.SY&&typeof SY.getAcctData==='function'){
+        var accountData=SY.getAcctData();
+        var actualTask=(accountData.tasks||[]).find(function(t){return String(t.id)===String(entry.taskId);});
+        if(actualTask){
+          var taskLines=['[当前关联任务]', '任务ID：'+String(actualTask.id), '任务名称：'+String(actualTask.name||'')];
+          if(actualTask.dueDate)taskLines.push('截止日期：'+String(actualTask.dueDate));
+          var savedNotes=String(actualTask.noteRemark||'').trim();
+          if(savedNotes)taskLines.push('任务中已保存的笔记（用户原文，未经外部网页验证）：\n'+savedNotes.slice(0,6000));
+          context=taskLines.join('\n')+(context?'\n\n[已实际检索到的笔记片段]\n'+context:'');
+        }
+      }
       var result = await request('/api/ask-ai', { mode: 'stuck', search: true, question: entry.question, task: entry.taskName, previous: previous, context: context }, job.signal);
       if (dialog !== d || job.signal.aborted) return;
       if (!result.reply || !Array.isArray(result.sources) || !result.searched) throw new Error('服务没有返回完整的联网回答，请检查 AI 连接。');
@@ -279,13 +291,13 @@
     d.innerHTML = DOMPurify.sanitize('<header><div><span class="sy-eyebrow">上岸鸭 · 卡点救援站</span><h2 id="rescueTitle">卡住了，我们查清楚再出发</h2></div><button data-rescue-close aria-label="关闭">×</button></header><div class="sy-dialog-body">' +
       '<p class="sy-rescue-intro">写明目标、目前进度和卡点；AI 会结合你选择的资料给出下一步、交付物和验收方法。</p><p>当前模型：<strong data-rescue-current-model>正在核对真实配置…</strong></p><p class="sy-rescue-task">当前任务：' + esc(current.taskName || '自由提问') + '</p>' +
       '<label class="sy-field">具体卡在哪里？<textarea data-rescue-question rows="4" maxlength="3000" placeholder="例如：我要写一篇图文攻略，资料已导入，但不知道怎样安排结构。请先给我第一步、交付物和验收方法。">' + esc(current.question) + '</textarea></label>' +
-      '<div class="sy-rescue-toolbar"><label class="sy-check"><input type="checkbox" data-rescue-use-notes' + (options.useNotes ? ' checked' : '') + '>同时参考已连接的笔记（仅发送匹配片段给 AI）</label><button data-rescue-knowledge>连接 Obsidian / 导入文档</button></div>' +
+      '<div class="sy-rescue-toolbar"><label class="sy-check"><input type="checkbox" data-rescue-use-notes' + (options.useNotes ? ' checked' : '') + '>按需检索本机笔记（可选）</label></div>' +
       '<div class="sy-rescue-toolbar"><button data-rescue-voice>🎙 说出我的问题</button><button class="sy-primary" data-rescue-ask>帮我查资料，给出下一步</button><button data-rescue-cancel hidden>停止等待</button></div>' +
       '<p class="sy-rescue-footnote">语音由浏览器识别，可能需要联网。问题、当前任务名和检索到的资料会交给你配置的 AI 分析。</p>' +
       '<p class="sy-rescue-status" role="status" aria-live="polite" data-rescue-status></p><div class="sy-rescue-answer" data-rescue-answer></div>' +
       '<h3 data-rescue-source-title hidden>本次参考来源</h3><div class="sy-rescue-sources" data-rescue-sources></div><div class="sy-rescue-sources" data-rescue-local-sources></div>' +
       '<div data-rescue-result-actions hidden><div class="sy-rescue-actions"><button data-rescue-save>保存答案与来源</button><button data-rescue-to-vault>存入 Obsidian</button><button class="sy-primary" data-rescue-resolved>这一步解决了 · 继续任务</button><button data-rescue-retry>还没解决 · 补充情况</button></div></div>' +
-      '<details class="sy-rescue-config" data-rescue-config><summary>AI 连接 · <span data-rescue-connection>检查连接中…</span></summary>' +
+      '<details class="sy-rescue-config" data-rescue-config><summary>模型设置（仅首次连接） · <span data-rescue-connection>检查连接中…</span></summary>' +
       '<div class="sy-ai-heading"><div><span class="sy-ai-kicker">CONNECTION STUDIO</span><h3>给陪跑员，接上一个大脑。</h3><p>选服务商 → 获取真实模型 → 测试连接</p></div><span class="sy-ai-orbit" aria-hidden="true">✳</span></div>' +
       '<section class="sy-cc-connect"><button type="button" data-rescue-network-test>测试联网检索</button><p data-rescue-network-status role="status"></p></section>' +
       '<ol class="sy-ai-steps"><li data-rescue-step-provider><span>01</span>选择服务商</li><li data-rescue-step-model><span>02</span>选择模型</li><li data-rescue-step-test><span>03</span>连接成功</li></ol>' +
