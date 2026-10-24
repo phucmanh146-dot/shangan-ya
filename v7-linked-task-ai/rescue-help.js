@@ -161,19 +161,6 @@
       }
     }
   }
-  async function loadCCSwitch(){
-    var d=dialog;try{var r=await request('/api/cc-switch',null,null,6000);if(dialog!==d)return;var select=field('cc-provider');select.replaceChildren();
-      (r.providers||[]).forEach(function(p){var o=document.createElement('option');o.value=p.id;o.textContent=p.name+' · '+(p.model||'未设置模型')+(p.current?' · 当前使用':'')+(!p.available?' · 缺少 API 配置':'');o.disabled=!p.available;select.append(o);});
-      var first=(r.providers||[]).find(function(p){return p.current&&p.available;})||(r.providers||[]).find(function(p){return p.available;});if(first)select.value=first.id;else{var o=document.createElement('option');o.textContent='没有可用的 CC Switch API 配置';o.value='';select.append(o);select.value='';}
-    }catch(err){if(dialog===d)field('network-status').textContent=err.message;}
-  }
-  async function connectCCSwitch(){
-    if(configBusy)return;var d=dialog,id=field('cc-provider').value;if(!id){configMessage('请先在 CC Switch 中配置服务地址、API Key 和模型。',true);return;}
-    configBusy=true;field('cc-connect').disabled=true;configMessage('正在读取已有配置并实际发送一次测试请求…');
-    try{var r=await request('/api/cc-switch/connect',{id:id},null,80000);if(dialog!==d)return;config=r;field('base').value=r.base;field('model').value=r.model;field('protocol').value=r.protocol;field('key').value='';await loadConfig();configMessage('已连接 '+r.provider+' · '+r.model+'，对话测试通过。');}
-    catch(err){if(dialog===d){if(err.data&&err.data.config){config=err.data.config;field('base').value=config.base;field('model').value=config.model;field('protocol').value=config.protocol;field('key').value='';field('connection').textContent=err.data.unchanged?'候选连接未通过 · 已保留原配置':'配置已读取 · 对话测试未通过';}configMessage(err.message+(err.data&&err.data.unchanged?' 原有连接未被替换。':''),true);}}
-    finally{configBusy=false;if(dialog===d)field('cc-connect').disabled=false;}
-  }
   async function testNetwork(){
     var d=dialog;field('network-test').disabled=true;field('network-status').textContent='正在实际检索公开网页…';
     try{var r=await request('/api/search',{q:'飞书 开放平台 文档 API',n:3},null,35000);if(dialog!==d)return;field('network-status').textContent='联网检索已返回 '+r.results.length+' 条来源（'+r.provider+'）。这项测试与模型对话额度无关。';renderSources(r.results);}
@@ -300,7 +287,7 @@
       '<div data-rescue-result-actions hidden><div class="sy-rescue-actions"><button data-rescue-save>保存答案与来源</button><button data-rescue-to-vault>存入 Obsidian</button><button class="sy-primary" data-rescue-resolved>这一步解决了 · 继续任务</button><button data-rescue-retry>还没解决 · 补充情况</button></div></div>' +
       '<details class="sy-rescue-config" data-rescue-config><summary>AI 连接 · <span data-rescue-connection>检查连接中…</span></summary>' +
       '<div class="sy-ai-heading"><div><span class="sy-ai-kicker">CONNECTION STUDIO</span><h3>给陪跑员，接上一个大脑。</h3><p>选服务商 → 获取真实模型 → 测试连接</p></div><span class="sy-ai-orbit" aria-hidden="true">✳</span></div>' +
-      '<section class="sy-cc-connect"><label>使用电脑中已有的 CC Switch 配置<select data-rescue-cc-provider><option value="">正在检查…</option></select></label><button type="button" data-rescue-cc-connect>读取配置并测试</button><button type="button" data-rescue-network-test>测试联网检索</button><p data-rescue-network-status role="status"></p></section>' +
+      '<section class="sy-cc-connect"><button type="button" data-rescue-network-test>测试联网检索</button><p data-rescue-network-status role="status"></p></section>' +
       '<ol class="sy-ai-steps"><li data-rescue-step-provider><span>01</span>选择服务商</li><li data-rescue-step-model><span>02</span>选择模型</li><li data-rescue-step-test><span>03</span>连接成功</li></ol>' +
       '<div class="sy-ai-columns"><section class="sy-ai-card"><h4><span>01</span>从哪里接入</h4>' +
       '<label class="sy-field">服务商<select data-rescue-provider aria-label="选择 AI 服务商"><option value="">正在加载服务商…</option></select></label>' +
@@ -315,7 +302,7 @@
       '<div class="sy-ai-launch"><p role="status" aria-live="polite" data-rescue-config-status>正在检查本机服务…</p><button class="sy-primary" data-rescue-connect>测试连接并启用 →</button></div>' +
       '<p class="sy-rescue-footnote">模型列表来自你选择的服务商；不同账号可用范围不同。密钥只保留在本次本机服务内存中，关闭服务后需重新填写。</p></details></div>');
     d.dataset.setup = options.setup ? 'true' : 'false'; liveModels = []; modelBase = '';
-    document.body.appendChild(d); dialog = d; d.showModal(); resultView(); loadConfig(); loadCCSwitch(); field('question').focus();
+    document.body.appendChild(d); dialog = d; d.showModal(); resultView(); loadConfig(); field('question').focus();
     d.addEventListener('cancel', function (e) { e.preventDefault(); close(); });
     d.addEventListener('input', function (e) {
       remember();
@@ -337,7 +324,6 @@
       else if (b.hasAttribute('data-rescue-voice')) voice();
       else if (b.hasAttribute('data-rescue-cancel')) cancelRequest();
       else if (b.hasAttribute('data-rescue-connect')) saveConfig();
-      else if (b.hasAttribute('data-rescue-cc-connect')) connectCCSwitch();
       else if (b.hasAttribute('data-rescue-network-test')) testNetwork();
       else if (b.hasAttribute('data-rescue-models')) fetchModels();
       else if (b.hasAttribute('data-rescue-save')) saveAnswer(false);
