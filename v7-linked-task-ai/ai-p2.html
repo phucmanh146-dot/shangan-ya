@@ -15,6 +15,15 @@
 <link rel="stylesheet" href="./p2-answer-mindmap.css?v=20261023-v8">
 <link rel="stylesheet" href="./p2-heygen-video.css?v=20261023-v8">
 <link rel="stylesheet" href="./workbench-readable-ui.css?v=20261015-2248">
+<style id="p2-unified-center-layout">
+.p2-attach-lead{font-size:12px;color:#64756b;white-space:nowrap;align-self:center}
+#p2-obsidian-open{white-space:nowrap}
+.p2-task-context-box{margin-bottom:8px}
+.p2-controls-left{flex-wrap:wrap;gap:7px}
+.p2-welcome{max-width:860px;margin-inline:auto}
+.p2-prompts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media(max-width:740px){.p2-prompts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
 </head>
 <body>
 <div class="p2-shell" id="p2-app">
@@ -25,20 +34,20 @@
     <div class="p2-history" id="p2-history" aria-label="历史对话"></div>
     <div class="p2-side-bottom">
        <a href="./index.html" class="p2-back">← 返回上岸鸭工作台</a>
-       <p>独立 AI 工作区。对话记录保存在本机浏览器；可从原工作台选择现有任务，自动带入任务背景与资料链接；原任务不会自动被覆盖。</p>
+       <p>原工作台内置 AI：会话保存在当前浏览器，任务和资料仅在主动选择时关联，不自动修改原任务。</p>
     </div>
   </aside>
   <div class="p2-main">
     <header class="p2-topbar">
       <div class="p2-top-left"><button class="p2-menu" id="p2-open-side" aria-label="打开对话列表">☰</button>
-      <div><div class="p2-top-title">AI 工作区 <span>通用 AI 对话 · 图片/文档/链接 · 联网研究 · 视频解析</span></div><div class="p2-model-status" id="p2-model-status">正在检查真实模型连接…</div></div></div>
+      <div><div class="p2-top-title">连接 AI <span>直接提问 · 按需加入资料 · 通俗讲解与复盘</span></div><div class="p2-model-status" id="p2-model-status">正在检查真实模型连接…</div></div></div>
       <div class="p2-actions p2-model-quick"><label class="p2-top-provider-label" for="p2-top-provider">AI 模型</label><select id="p2-top-provider" aria-label="选择 AI 模型供应商"><option value="">正在读取模型列表…</option></select><a id="p2-top-docs" class="p2-api-doc-link" href="https://platform.openai.com/docs" target="_blank" rel="noopener noreferrer">官方 API 文档 ↗</a><button id="p2-reconnect-ai" class="p2-config" type="button" title="重新检查已配置的 AI API 并恢复连接">↻ 重新连接 AI</button><button id="p2-open-config" class="p2-config">配置 / 测试 API</button><a class="p2-workbench" href="./index.html">工作台 ↗</a></div>
     </header>
     <section id="p2-timeline" class="p2-timeline" aria-live="polite">
       <div id="p2-welcome" class="p2-welcome">
         <div class="p2-orb">✦</div>
         <h1>有什么可以帮你？</h1>
-        <p>像通用 AI 助手一样直接提问、连续追问和分析资料。支持图片理解、文档阅读、网页链接、联网研究与代码排查；额外提供视频逐段解析、可选语音转写，以及回答转思维导图 / 讲解视频。关联任务完全可选。</p>
+        <p>直接提问即可，不必先配置知识库。需要时再加入飞书、Obsidian、网页、图片、文档或视频；AI 根据真实读取的内容回答，结果可生成导图和复盘视频。关联任务可选。</p>
         <div class="p2-prompts">
           <button data-q="请先直接回答我的问题，再用通俗语言解释原因、步骤和注意事项；不确定的地方明确说明。" class="p2-prompt-primary">✦ 直接问 AI</button>
           <button data-q="帮我深入研究这个问题，交叉核对可靠来源，给出结论、证据、不同观点和可执行步骤。" data-web="1">🔎 联网研究</button>
@@ -58,10 +67,10 @@
         <details class="p2-task-context-box"><summary>关联现有任务 / 目标（可选）</summary><label for="p2-task-context">任务名称、要求、截止日期或验收标准</label><textarea id="p2-task-context" rows="2" placeholder="例如：上岸鸭多模态 AI 接入；目标是图片/文档/链接能解决任务并生成讲解视频"></textarea><small>只将你在此填写的任务背景发送给 AI；不会自动改动原任务或截止日期。</small></details>
         <textarea id="p2-text" placeholder="向 AI 提问，或粘贴链接 / 拖入图片、文档、视频；可连续追问…" rows="3" spellcheck="true"></textarea>
         <div class="p2-controls">
-          <div class="p2-controls-left">
+          <div class="p2-controls-left"><span class="p2-attach-lead">按需添加：</span>
             <label class="p2-upload" title="上传资料">＋<input id="p2-files" type="file" multiple accept=".pdf,.doc,.docx,.pptx,.pptm,.xlsx,.xlsm,.txt,.md,.csv,.json,.html,.png,.jpg,.jpeg,.webp,.gif,.bmp,.mp4,.mov,.webm,.mkv,.mp3,.wav,.m4a,.aac,.ogg,.flac,.opus,.aiff,.srt,.vtt" aria-label="上传文件"></label>
             <button type="button" id="p2-video-analyze" class="p2-link p2-video-analyze" title="选择视频并进行画面解析">▶ <span>视频解析</span></button><input id="p2-video-files" type="file" multiple accept=".mp4,.mov,.webm,.mkv,.avi,.m4v" hidden aria-label="选择待解析视频"><button type="button" id="p2-add-url" class="p2-link" title="读取网页地址">🔗 <span>网页链接</span></button><button type="button" id="p2-feishu-quick-read" class="p2-link" title="把指定飞书文档读取到当前 AI 对话">📄 <span>飞书文档</span></button>
-            <button type="button" id="p2-wechat-open" class="p2-link" title="读取真实授权微信原文并交给当前 AI">💬 <span>微信原始数据 AI</span></button>
+            <button type="button" id="p2-obsidian-open" class="p2-link" title="按需选择 Obsidian 笔记，未连接时不会声称读取成功">🗒 <span>Obsidian</span></button> <button type="button" id="p2-wechat-open" class="p2-link" title="读取真实授权微信原文并交给当前 AI">💬 <span>微信原始数据 AI</span></button>
             <label class="p2-switch" title="更有层次、引用更多来源"><input type="checkbox" id="p2-deep" checked><span>✦ 深入分析</span></label>
             <label class="p2-switch" title="调用真实搜索引擎并引用来源"><input type="checkbox" id="p2-search" checked><span>⌕ 联网搜索</span></label>
             <label class="p2-switch" title="画面解析会抽取视频帧交给视觉模型；勾选此项才额外尝试语音转写，可能产生费用"><input type="checkbox" id="p2-transcribe"><span>同时转写语音</span></label>
@@ -75,7 +84,7 @@
 </div>
 <dialog id="p2-config-dialog" class="p2-dialog">
   <form method="dialog"><button class="p2-dialog-x" aria-label="关闭">×</button></form>
-  <h2>接入真实 AI 模型</h2>
+  <h2>选择与验证 AI 模型</h2>
   <p>本机已连接的模型可直接使用。更换服务商需要你自己的 API Key，点击测试后才能启用。</p>
   <label>服务商<select id="p2-provider"></select></label>
   <label>模型 ID<input id="p2-model" placeholder="先读取可用模型，或手动填写准确的模型 ID"></label>
@@ -129,7 +138,7 @@
     <p class="p2-small">密钥只在当前服务进程内存中保存，不回显、不写入聊天记录；服务重启后需要重新配置。公网多用户部署前应先完成账号隔离，不能共用访客 API Key。</p>
   </details>
   <details id="p2-feishu-settings" class="p2-team-settings">
-    <summary>连接飞书知识库（读取正文与目录）</summary>
+    <summary>飞书文档读取方式（只在需要时设置）</summary>
     <p>填写飞书开放平台自建应用凭证。系统会通过官方 API 读取你有权访问的 Wiki 文档；知识库目录会递归读取子页面，单次最多 30 篇。不会读取你私人微信聊天。</p>
     <label>飞书应用 ID<input id="p2-feishu-app-id" spellcheck="false" autocomplete="off" placeholder="cli_…"></label>
     <label>飞书应用密钥<input id="p2-feishu-app-secret" type="password" autocomplete="new-password" placeholder="填写应用 App Secret，不是飞书登录密码"></label>
@@ -210,5 +219,19 @@
 <script src="./p2-config.js?v=20261023-ai-workspace-v2" defer></script>
 <script src="./p2-voice-sop.js" defer></script>
 <link rel="stylesheet" href="./p2-voice-sop.css">
+<script id="p2-obsidian-entry-v1">
+document.addEventListener('DOMContentLoaded',function(){
+ var btn=document.getElementById('p2-obsidian-open');
+ if(!btn)return;
+ btn.addEventListener('click',function(){
+   var parent=window.parent;
+   try{
+     if(parent&&parent!==window&&parent.SYKnowledge&&typeof parent.SYKnowledge.open==='function'){parent.SYKnowledge.open();return;}
+   }catch(e){}
+   var status=document.getElementById('p2-status');
+   if(status)status.textContent='Obsidian 尚未验证读取：请从原工作台选择知识库或用左侧＋上传 Markdown 文件。本次不会伪装为已连接。';
+ });
+});
+</script>
 </body>
 </html>
