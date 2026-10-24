@@ -51,3 +51,9 @@ body.p2-embedded .p2-status{font-size:12px}
  body.p2-embedded .p2-switch{font-size:10px;padding:6px 7px}
 }
 @media(prefers-reduced-motion:reduce){body.p2-embedded .p2-side{transition:none}}
+
+/* The source strip is the single source-entry row in embedded mode; avoid duplicate buttons. */
+body.p2-embedded #p2-add-url,
+body.p2-embedded #p2-feishu-quick-read,
+body.p2-embedded #p2-obsidian-open,
+body.p2-embedded #p2-wechat-open{display:none!important}
