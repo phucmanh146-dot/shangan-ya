@@ -538,7 +538,7 @@
       </section>
       <section class="app-view app-ai-chat-view" data-view="ai-p2" id="view-ai-p2" hidden>
         <div class="embedded-p2-head"><div><strong>连接 AI</strong><span>自由提问 · 资料按需加入 · 联网检索 · 导图与复盘视频</span></div><span class="embedded-p2-ready" id="embeddedP2Status">真实模型与资料读取状态</span></div>
-        <iframe id="embeddedP2Frame" title="上岸鸭原工作台连接 AI 中心" src="./ai-p2.html?embedded=1&linkedTaskAi=20261024-center-v2" allow="clipboard-write; microphone" loading="lazy"></iframe>
+        <iframe id="embeddedP2Frame" title="上岸鸭原工作台连接 AI 中心" src="./ai-p2.html?embedded=1&linkedTaskAi=20261024-center-v3" allow="clipboard-write; microphone" loading="lazy"></iframe>
       </section>
       <section class="app-view" data-view="knowledge" id="view-knowledge" hidden>
         <div id="knowledgeBody"></div>
@@ -1039,22 +1039,7 @@
 
 <!-- sy-agent-skills-entry-v1 -->
 <a href="/agent-skills.html" target="_self" aria-label="?? Agent ????" style="position:fixed;right:18px;bottom:18px;z-index:2100;padding:11px 17px;background:#255bb3;color:#fff;text-decoration:none;border-radius:24px;font:600 14px system-ui,sans-serif;box-shadow:0 6px 20px #21417a33">Agent ????</a>
-<script id="wechat-ai-nav-bridge">
-(function(){
-  function bind(){
-    var nav=document.getElementById('wechatAiNav');
-    if(!nav||nav.dataset.wechatAiBound)return;
-    nav.dataset.wechatAiBound='1';
-    nav.addEventListener('click',function(){
-      window.setTimeout(function(){
-        var frame=document.getElementById('embeddedP2Frame');
-        if(frame)frame.src='./ai-p2.html?embedded=1&linkedTaskAi=20261024-center-v2#wechat-ai';
-      },120);
-    });
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
-})();
-</script>
+
 <script src="./start-use-hotfix.js?v=20261023v8"></script>
 <script id="sy-hide-old-schedule-nav-v1">
 (function(){
