@@ -1,4 +1,4 @@
-/* Show P2 within original Shanganya main navigation; preserve its existing login, tasks and notes. */
+/* Open advanced AI tools only from the selected task; keep the primary navigation clean. */
 (function(){
  'use strict';
  const nav=document.getElementById('aiP2Nav');
@@ -14,17 +14,13 @@
        const back=inner.querySelector('.p2-back');
        if(back)back.hidden=true;
        const tag=inner.querySelector('.p2-top-title span');
-       if(tag)tag.textContent='同一工作台 · 自由提问 · 资料按需加入 · 复盘视频';
+       if(tag)tag.textContent='进阶工具 · 视频解析 · 思维导图 · 通俗讲解';
        const status=document.getElementById('embeddedP2Status');
-       if(status)status.textContent='已进入原工作台 AI 中心 · 资料需实际读取后才加入对话';
+       if(status)status.textContent='已打开进阶工具 · 资料需实际读取后才加入对话';
      }
    }catch(_){ }
  }
  frame.addEventListener('load',adapt);
  nav.addEventListener('click',()=>requestAnimationFrame(adapt));
- // Allow bookmarked original-page links, without leaving the original workbench.
- if(location.hash==='#ai-p2'){
-   const run=()=>{const btn=document.getElementById('aiP2Nav');if(btn)btn.click()};
-   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else setTimeout(run,300);
- }
+
 })();
