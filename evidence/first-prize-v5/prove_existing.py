@@ -23,6 +23,9 @@ ROOT = HERE.parents[1]
 
 
 def blob_sha(data):
+    # Match Git's canonical text blob on Windows with core.autocrlf=true.
+    # The working tree may contain CRLF while the committed blob contains LF.
+    data = data.replace(b'\r\n', b'\n')
     return hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
 
 
