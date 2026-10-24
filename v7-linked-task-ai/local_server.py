@@ -17,7 +17,7 @@ import agent_runtime as agent
 import knowledge_agent_skills as kskills
 import source_workflow as sourceflow
 from public_link_reader import research as source_research
-from local_integrations import initialize, ccswitch_catalog, connect_ccswitch, connect_local_gateway
+from local_integrations import initialize, connect_local_gateway
 from local_tools import vault_info, vault_list, vault_search, vault_read, vault_save, screen_ocr
 from rescue_service import RescueError, ask_ai, extract, extract_uploaded, extract_video, preview_url, read_feishu, search_web, public_config, set_config, test_connection, observe_frame, list_models, provider_catalog, team_public_config, set_team_config
 from desktop_feishu_reader import read_feishu_via_browser
@@ -108,7 +108,6 @@ class Handler(SimpleHTTPRequestHandler):
         if path == '/api/pm/wx/status': return self.send_json(wxdesk.status())
         if path == '/api/pm/events': return self.send_json(pm.obsidian_bridge_events(__import__('urllib.parse',fromlist=['parse_qs']).parse_qs(urlparse(self.path).query).get('after',['0'])[0]))
         if path == '/api/ai-providers': return self.send_json(provider_catalog())
-        if path == '/api/cc-switch': return self.send_json(ccswitch_catalog())
         if path.startswith('/api/'): return self.send_json({'error':'接口不存在'},404)
         if path.endswith(('.py','.pyc','.cmd','.ps1','.env','.log','.zip','.json','.sqlite','.sqlite3','.db','.sqlite3-wal','.sqlite3-shm')) or any(p.startswith('.') for p in path.split('/') if p):
             return self.send_json({'error':'文件不可通过浏览器读取'},403)
@@ -220,7 +219,6 @@ class Handler(SimpleHTTPRequestHandler):
             if self.path=='/api/ai-config': return self.send_json(set_config(data))
             if self.path=='/api/ai-models': return self.send_json(list_models(data))
             if self.path=='/api/ai-test': return self.send_json(test_connection())
-            if self.path=='/api/cc-switch/connect': return self.send_json(connect_ccswitch(data.get('id')))
             return self.send_json({'error':'接口不存在'},404)
         except RescueError as ex: return self.send_json({'error':str(ex),'code':ex.code,**ex.extra},ex.status)
         except Exception: return self.send_json({'error':'服务暂时未完成请求，请检查输入后重试。','code':'SERVER_ERROR'},502)
