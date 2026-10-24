@@ -2,7 +2,7 @@
 "use strict";
 function ready(){
  const btn=document.getElementById('aiP2Nav');
- if(btn){btn.title="原工作台内的 P2 深度 AI 问答；不进入 Obsidian";btn.setAttribute('aria-label','AI 深度问答 P2');}
+ if(btn){btn.title="按当前任务打开的进阶 AI 工具；资料读取状态需核验";btn.setAttribute('aria-label','上岸鸭进阶 AI 工具');}
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ready);else ready();
 })();
