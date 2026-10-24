@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="./inline-task-rest.css?v=20261024-1">
 <style id="sy-task-centered-simplify-v1">
 /* Remove duplicate global entry points; keep their legacy data handlers intact. */
-#quickCaptureBtn{display:none!important;visibility:hidden!important;pointer-events:none!important}
+#quickCaptureBtn{display:none!important;visibility:hidden!important;pointer-events:none!important}#aiP2Nav{display:none!important;visibility:hidden!important;pointer-events:none!important}
 .inline-life-panel .itw-actions{display:flex;flex-wrap:wrap;gap:8px}
 .inline-life-panel .itw-actions button{flex:0 1 auto}
 .inline-life-panel .itw-actions #itw-open-ai{background:#285c48;color:#fff}
@@ -360,7 +360,10 @@
           <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10"/><path d="M12 20V4"/><path d="M20 20v-7"/><path d="M2 20h20"/></svg></span>
           <span>数据档案</span>
         </button>
-                <button class="app-nav-item" data-view="knowledge" type="button">
+                <button class="app-nav-item" data-view="ai-p2" type="button" id="aiP2Nav" aria-hidden="true" tabindex="-1" style="display:none!important">
+          <span class="app-nav-icon" aria-hidden="true">✦</span><span>进阶 AI 工具</span>
+        </button>
+        <button class="app-nav-item" data-view="knowledge" type="button">
           <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5v-17Z"/><path d="M4 19a2.5 2.5 0 0 1 2.5-2.5H20"/></svg></span>
           <span>知识库</span>
         </button>
@@ -544,6 +547,10 @@
       </section>
       <section class="app-view" data-view="quadrant" id="view-quadrant" hidden>
         <div id="quadrantBody"></div>
+      </section>
+      <section class="app-view app-ai-chat-view" data-view="ai-p2" id="view-ai-p2" hidden>
+        <div class="embedded-p2-head"><div><strong>进阶 AI 工具</strong><span>按需使用 · 视频解析 · 思维导图 · 通俗讲解 · 多模型设置</span></div><span class="embedded-p2-ready" id="embeddedP2Status">请按页面提示核验真实连接状态</span></div>
+        <iframe id="embeddedP2Frame" title="上岸鸭原工作台进阶 AI 工具" src="./ai-p2.html?embedded=1&linkedTaskAi=20261025-task-centered-v1" allow="clipboard-write; microphone" loading="lazy"></iframe>
       </section>
       <section class="app-view" data-view="knowledge" id="view-knowledge" hidden>
         <div id="knowledgeBody"></div>
@@ -1045,6 +1052,8 @@
 <!-- sy-agent-skills-entry-v1 -->
 <a href="/agent-skills.html" target="_self" aria-label="?? Agent ????" style="position:fixed;right:18px;bottom:18px;z-index:2100;padding:11px 17px;background:#255bb3;color:#fff;text-decoration:none;border-radius:24px;font:600 14px system-ui,sans-serif;box-shadow:0 6px 20px #21417a33">Agent ????</a>
 
+<script src="./p2-entry.js"></script>
+<script src="./p2-workbench-navigation.js"></script>
 <script src="./start-use-hotfix.js?v=20261023v8"></script>
 <script src="./inline-task-rest.js?v=20261025-task-centered-v1"></script>
 <script id="sy-hide-old-schedule-nav-v1">
