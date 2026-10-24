@@ -57,3 +57,31 @@ body.p2-embedded #p2-add-url,
 body.p2-embedded #p2-feishu-quick-read,
 body.p2-embedded #p2-obsidian-open,
 body.p2-embedded #p2-wechat-open{display:none!important}
+
+
+/* 2026-10-24 clean premium pass: prioritize conversation over controls.
+   Keep all integrations wired; reduce only their default visual prominence. */
+body.p2-embedded .p2-model-quick{gap:8px;flex-wrap:nowrap}
+body.p2-embedded .p2-top-provider-label,
+body.p2-embedded #p2-top-provider,
+body.p2-embedded .p2-api-doc-link,
+body.p2-embedded #p2-reconnect-ai,
+body.p2-embedded .p2-workbench{display:none!important}
+body.p2-embedded #p2-open-config{font-size:12px;font-weight:700;padding:9px 13px;border-radius:11px}
+body.p2-embedded .p2-model-status{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:#edf4e8;color:#55745a}
+body.p2-embedded .p2-prompts button:nth-child(n+4){display:none!important}
+body.p2-embedded .p2-prompts{grid-template-columns:repeat(3,minmax(0,1fr));max-width:700px;margin:18px auto}
+body.p2-embedded .p2-source-shortcut:nth-of-type(n+4){display:none!important}
+body.p2-embedded .p2-source-strip{justify-content:center;gap:8px}
+body.p2-embedded .p2-source-shortcut{font-size:12px;padding:8px 12px}
+body.p2-embedded .p2-composer textarea{min-height:74px;font-size:15px}
+body.p2-embedded .p2-controls-left{align-items:center;gap:6px}
+body.p2-embedded .p2-link,
+body.p2-embedded .p2-upload,
+body.p2-embedded .p2-switch{border-radius:10px}
+@media(max-width:760px){
+ body.p2-embedded .p2-model-quick{max-width:none}
+ body.p2-embedded #p2-open-config{font-size:11px;padding:8px}
+ body.p2-embedded .p2-prompts{grid-template-columns:1fr;max-width:440px}
+ body.p2-embedded .p2-source-strip{justify-content:flex-start}
+}
