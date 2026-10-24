@@ -41,7 +41,7 @@
     <header class="p2-topbar">
       <div class="p2-top-left"><button class="p2-menu" id="p2-open-side" aria-label="打开对话列表">☰</button>
       <div><div class="p2-top-title">连接 AI <span>直接提问 · 按需加入资料 · 通俗讲解与复盘</span></div><div class="p2-model-status" id="p2-model-status">正在检查真实模型连接…</div></div></div>
-      <div class="p2-actions p2-model-quick"><label class="p2-top-provider-label" for="p2-top-provider">AI 模型</label><select id="p2-top-provider" aria-label="选择 AI 模型供应商"><option value="">正在读取模型列表…</option></select><a id="p2-top-docs" class="p2-api-doc-link" href="https://platform.openai.com/docs" target="_blank" rel="noopener noreferrer">官方 API 文档 ↗</a><button id="p2-reconnect-ai" class="p2-config" type="button" title="重新检查已配置的 AI API 并恢复连接">↻ 重新连接 AI</button><button id="p2-open-config" class="p2-config">配置 / 测试 API</button><a class="p2-workbench" href="./index.html">工作台 ↗</a></div>
+      <div class="p2-actions p2-model-quick"><label class="p2-top-provider-label" for="p2-top-provider">AI 模型</label><select id="p2-top-provider" aria-label="选择 AI 模型供应商"><option value="">正在读取模型列表…</option></select><a id="p2-top-docs" class="p2-api-doc-link" href="https://platform.openai.com/docs" target="_blank" rel="noopener noreferrer">官方 API 文档 ↗</a><button id="p2-reconnect-ai" class="p2-config" type="button" title="重新检查已配置的 AI API 并恢复连接">↻ 重新连接 AI</button><button id="p2-open-config" class="p2-config">模型设置</button><a class="p2-workbench" href="./index.html">工作台 ↗</a></div>
     </header>
     <section id="p2-timeline" class="p2-timeline" aria-live="polite">
       <div id="p2-welcome" class="p2-welcome">
@@ -59,6 +59,19 @@
       </div>
       <div id="p2-messages" class="p2-messages"></div>
     </section>
+    <div class="p2-source-strip" aria-label="按需添加资料来源">
+      <span class="p2-source-strip-label">资料入口</span>
+      <button type="button" class="p2-source-shortcut" data-source-target="feishu">飞书文档</button>
+      <button type="button" class="p2-source-shortcut" data-source-target="obsidian">Obsidian</button>
+      <button type="button" class="p2-source-shortcut" data-source-target="wechat">微信资料</button>
+      <button type="button" class="p2-source-shortcut" data-source-target="公众号">公众号</button>
+      <button type="button" class="p2-source-shortcut" data-source-target="视频号">视频号</button>
+      <button type="button" class="p2-source-shortcut" data-source-target="小红书">小红书</button>
+      <button type="button" class="p2-source-shortcut" data-source-target="抖音">抖音</button>
+      <button type="button" class="p2-source-shortcut" data-source-target="B站">B站</button>
+      <button type="button" class="p2-source-shortcut" data-source-target="YouTube">YouTube</button>
+      <button type="button" class="p2-source-shortcut" data-source-target="网页">网页链接</button>
+    </div>
     <div class="p2-composer-wrap">
       <div id="p2-status" class="p2-status" role="status"></div>
       <div id="p2-attachments" class="p2-attachments"></div>
@@ -150,9 +163,9 @@
 </dialog>
 <dialog id="p2-link-dialog" class="p2-dialog">
   <form method="dialog"><button class="p2-dialog-x" aria-label="关闭">×</button></form>
-  <h2>添加网页资料</h2>
-  <p>只读取你主动提交的网址。对需要登录的飞书或付费内容，无法读取就会如实说明。</p>
-  <label>网址<input id="p2-link-input" placeholder="https://…" inputmode="url"></label>
+  <h2>添加资料链接</h2>
+  <p id="p2-link-hint">粘贴你有权访问的文章或视频链接。系统会尝试读取公开正文；需要登录、受限或未取得正文时会明确提示，不会假装读取成功。</p>
+  <label>资料网址<input id="p2-link-input" placeholder="https://…" inputmode="url"></label>
   <div class="p2-dialog-actions"><button type="button" id="p2-confirm-link">加入本次问题</button></div>
   <p id="p2-link-status" class="p2-status"></p>
 </dialog>
