@@ -5,12 +5,26 @@ function el(tag,cls,txt){var n=document.createElement(tag);if(cls)n.className=cl
 function button(t,fn){var b=el('button','sywp-btn',t);b.type='button';b.onclick=fn;return b;}
 function msg(t){t=String(t||'').replace(/此功能需要连接访客自己的本机客户端。请在本机打开上岸鸭后使用。/g,'当前账号尚未完成微信授权，未读取任何聊天内容。').replace(/请[^。；\n]*(?:客户端|打开微信|微信主窗口|微信前台)[^。；\n]*[。]?/g,'微信会话当前不可读取，本次未取得消息。');var n=dialog&&dialog.querySelector('[data-wp-status]');if(n)n.textContent=t;}
 async function api(url,data){
-var native=(location.hostname==='127.0.0.1'||location.hostname==='localhost')&&location.port==='8892';
 var live=['/status','/wechat/search','/wechat/open','/wechat/preview','/wechat/history-status','/wechat/history-groups','/wechat/history'].includes(url);
-var path=native&&live?'http://127.0.0.1:8901/api/sources/wechat':base+url;
-var payload=native&&live?{path:url,method:data===undefined?'GET':'POST',data:data||{}}:data;
-var r=await fetch(path,{method:payload===undefined?'GET':'POST',headers:{'Content-Type':'application/json'},body:payload===undefined?undefined:JSON.stringify(payload)});
-var d=await r.json();if(r.status===401&&window.SYCloudAuth)SYCloudAuth.open().catch(()=>{});if(!r.ok||d.error)throw Error(d.error||('服务错误 '+r.status));return d;}
+if(live){
+  /* These endpoints must run on the user's own PC. A hosted server cannot see a local WeChat window. */
+  var path='http://127.0.0.1:8901/api/sources/wechat';
+  var payload={path:url,method:data===undefined?'GET':'POST',data:data||{}};
+  var r;
+  try{
+    r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),cache:'no-store'});
+  }catch(e){
+    throw Error('无法连接本机微信桥接服务（127.0.0.1:8901）。本次没有读取群聊或消息，也不会用云端登录窗口冒充连接。请确认本机微信桥接服务正在运行，再点击“检测本机微信连接”。浏览器提示：'+(e&&e.message||'连接失败'));
+  }
+  var d;
+  try{d=await r.json()}catch(e){throw Error('本机微信桥接服务返回的不是有效 JSON；未读取到聊天内容。')}
+  if(!r.ok||d.error)throw Error(d.error||('本机微信服务错误 '+r.status));
+  return d;
+}
+var r=await fetch(base+url,{method:data===undefined?'GET':'POST',headers:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data),cache:'no-store'});
+var d=await r.json();
+if(!r.ok||d.error)throw Error(d.error||('资料服务错误 '+r.status));
+return d;}
 async function groups(){var r=await api('/groups'),s=dialog.querySelector('[data-wp-groups]'),old=s.value;s.replaceChildren(new Option('全部关注群',''));r.groups.forEach(function(g){s.append(new Option(g,g));});if(r.groups.includes(old))s.value=old;await search();}
 async function search(){
 var q=dialog.querySelector('[data-wp-query]')?.value.trim()||'',g=dialog.querySelector('[data-wp-groups]')?.value||'',groupQuery=dialog.querySelector('[data-wp-group-query]')?.value.trim()||'';
@@ -50,9 +64,9 @@ if(d.groups?.length===1)await readHistory(d.groups[0]);
 else msg(d.groups?.length?'已取得真实群目录，请选择目标群读取历史正文。':'没有匹配群名，本次没有取得历史正文。');
 }catch(e){msg('历史群目录读取失败：'+e.message);}}
 function open(){if(dialog){dialog.showModal();return;}dialog=el('dialog','sywp-dialog');
-var header=el('div','sywp-head');header.append(el('div','','💬 上岸鸭 · 微信历史与知识库'),button('关闭',function(){dialog.close();}));dialog.append(header,el('p','sywp-caption','检索已授权的群聊与历史消息，按原文和时间显示结果。'));
+var header=el('div','sywp-head');header.append(el('div','','💬 本机微信连接 · 群聊与历史消息'),button('关闭',function(){dialog.close();}));dialog.append(header,el('p','sywp-caption','直接连接当前电脑的微信桥接服务，按群名和消息关键词检索；若本机服务不可用会明确报错，不会假装连接成功。'));
 var pick=el('div','sywp-row'),name=el('input');name.dataset.wpGroupQuery='';name.placeholder='输入微信群关键词，搜索后核对准确群名';pick.append(name,button('关注此群',async function(){try{if(!name.value.trim())return msg('先填写准确群名');await api('/groups',{name:name.value.trim()});name.value='';await groups();}catch(e){msg(e.message);}}),button('从微信当前会话选择',async function(){try{var r=await api('/wechat/preview',{});showPreview(r);msg('已读取真实微信画面。请根据截图填写准确群名，再关注此群。');}catch(e){msg(e.message);}}));pick.append(button('搜索微信历史与 Obsidian',search));dialog.append(pick);
-var historyPanel=el('div','sywp-row'),historyStatus=el('p','','正在验证微信历史读取权限…');historyStatus.dataset.wpHistoryStatus='';historyPanel.append(historyStatus,button('验证历史访问权限',()=>historyState(true)));dialog.append(historyPanel);var next=el('div','sywp-row');next.dataset.wpHistoryNext='';dialog.append(next);
+var historyPanel=el('div','sywp-row'),historyStatus=el('p','','正在验证微信历史读取权限…');historyStatus.dataset.wpHistoryStatus='';historyPanel.append(historyStatus,button('检测本机微信连接',()=>historyState(true)));dialog.append(historyPanel);var next=el('div','sywp-row');next.dataset.wpHistoryNext='';dialog.append(next);
 var sessions=el('div','sywp-sessions');sessions.dataset.wpSessions='';dialog.append(sessions);
 var bar=el('div','sywp-row'),sel=el('select');sel.dataset.wpGroups='';sel.append(new Option('全部关注群',''));var q=el('input');q.dataset.wpQuery='';q.placeholder='搜索关键词：资料、副业、文案、视频、链接、DDL';bar.append(sel,q,button('搜索微信历史与 Obsidian',search),button('读取选中群当前画面',async function(){if(!sel.value)return msg('请选中一个已授权群');try{msg('正在读取微信当前画面，请稍候…');var r=await api('/wechat/preview',{});showPreview(r);msg('已读取真实微信画面；请核对目标群名、截图和识别文字，确认后归档。');}catch(e){msg('真实微信读取失败：'+e.message);}}));bar.append(button('用原微信窗口搜索 / 截图框选',function(){dialog.close();if(window.SY&&SY.switchAppView)SY.switchAppView('knowledge');setTimeout(function(){var target=document.getElementById('pmaw-mini');if(target)target.scrollIntoView({behavior:'smooth',block:'start'});else if(window.SYPMWeChatV4&&SYPMWeChatV4.focus)SYPMWeChatV4.focus();},700);}));dialog.append(bar);
 var details=el('details','sywp-detail'),sum=el('summary','','也可以粘贴从微信复制的消息（无需额外安装）'),area=el('textarea');area.placeholder='每行一条消息。选择群后导入，原文保存在当前授权资料空间。';details.append(sum,area,button('导入文本',async function(){if(!sel.value)return msg('先选择一个群');var lines=area.value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);if(!lines.length)return;try{var r=await api('/import',{group:sel.value,messages:lines.map(text=>({text:text}))});area.value='';await search();msg('已将 '+r.added+' 条新消息保存到当前授权资料空间。');}catch(e){msg(e.message);}}));dialog.append(details);
@@ -69,7 +83,7 @@ items.forEach(function(m){var c=el('article','sywp-item'),top=el('div','sywp-met
 actions.append(button('加入今日任务',function(){if(!window.SY||!SY.getAcctData||!SY.saveAcctData)return msg('原任务系统尚未登录。');var title=prompt('确认这是你的任务，并修改标题：',m.text.slice(0,85));if(!title||!title.trim())return;var date=new Date(),day=date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');var a=SY.getAcctData();a.tasks=a.tasks||[];var id='sy-wx-'+m.id;if(a.tasks.some(x=>x.id===id))return msg('这条消息已加过任务，不重复创建。');if(!confirm('添加任务「'+title+'」到今天的原任务清单？'))return;a.tasks.push({id:id,name:title.trim(),date:day,category:'其他',done:false,completedAt:null,estMinutes:30,plannedMinutes:30,startMinutes:null,firstTime:false,multiplier:1,weight:'light',createdAt:Date.now(),order:a.tasks.reduce((v,t)=>Math.max(v,Number(t.order||0)),0)+1,noteFramework:'来自微信 '+m.group+'；原消息：'+m.text.slice(0,1400)});SY.saveAcctData(a);msg('已保存到原任务清单。默认估时30分钟，需要按你的历史耗时校正。');}));
 actions.append(button('AI总结 / 识别任务',function(){if(window.SYRescue&&SYRescue.open){dialog.close();SYRescue.open({question:'请从下面微信消息中识别任务、资料或副业机会；只提取原文明确的信息，标记不确定的时间，给我一个下一步：\n'+m.text,useNotes:true});}else msg('原 AI 救援尚未加载，请确认模型连接。');}));
 var links=m.text.match(/https?:\/\/[^\s<>"'，。）》]+/g)||[];if(links.length)actions.append(button('读取原链接',function(){if(window.SYHub){dialog.close();SYHub.open(links.join('\n'),'sources');}else msg('原资料读取入口还未加载。');}));c.append(actions);dest.append(c);});}
-function mount(){var host=document.querySelector('.app-topbar-right');if(host&&!host.querySelector('[data-sywp-launch]')){var b=button('💬 微信重要群与副业资料',open);b.classList.add('sywp-launch');b.dataset.sywpLaunch='';host.prepend(b);}}
+function mount(){var host=document.querySelector('.app-topbar-right');if(host&&!host.querySelector('[data-sywp-launch]')){var b=button('💬 本机微信连接 · 群聊/消息搜索',open);b.classList.add('sywp-launch');b.dataset.sywpLaunch='';host.prepend(b);}}
 document.addEventListener('sywx:crop-ready',async function(ev){if(!token||!dialog)return;var d=ev.detail||{},txt=String(d.content||'').trim(),sel=dialog.querySelector('[data-wp-groups]');if(!txt||!sel||!sel.value)return;if(!confirm('将刚才主动框选并识别的文字归档到关注群「'+sel.value+'」吗？请确认群名及内容无误。'))return;try{var r=await api('/import',{group:sel.value,messages:[{text:txt}]});if(!dialog.open)dialog.showModal();await search();msg('已保存这次框选的 '+r.added+' 条新资料。');}catch(e){msg('框选内容归档失败：'+e.message);}});
 document.addEventListener('cloud:account-changed',()=>{if(dialog?.open){items=[];render();historyState();}});
 window.SYWechatPrivate={open:open};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();document.addEventListener('sy:ready',mount);
