@@ -1,16 +1,37 @@
 (function(){
 'use strict';if(window.SYWechatPrivate)return;
-var base='/api/wechat-private',token='',dialog=null,items=[];
+var base='/api/wechat-private',token='',bridgeToken='',dialog=null,items=[];
 function el(tag,cls,txt){var n=document.createElement(tag);if(cls)n.className=cls;if(txt!==undefined)n.textContent=txt;return n;}
 function button(t,fn){var b=el('button','sywp-btn',t);b.type='button';b.onclick=fn;return b;}
 function msg(t){t=String(t||'').replace(/此功能需要连接访客自己的本机客户端。请在本机打开上岸鸭后使用。/g,'当前账号尚未完成微信授权，未读取任何聊天内容。').replace(/请[^。；\n]*(?:客户端|打开微信|微信主窗口|微信前台)[^。；\n]*[。]?/g,'微信会话当前不可读取，本次未取得消息。');var n=dialog&&dialog.querySelector('[data-wp-status]');if(n)n.textContent=t;}
 async function api(url,data){
 var native=(location.hostname==='127.0.0.1'||location.hostname==='localhost')&&['8877','8892'].includes(location.port);
 var localOnly=url==='/groups'||url==='/import'||url.indexOf('/messages')===0||url.indexOf('/wechat/')===0;
-if(localOnly&&!native)throw Error('公网工作台不能直接读取这台电脑的微信历史。请在本机打开 http://127.0.0.1:8877/index.html 使用本机桥接；本次未读取聊天内容。');
 var path=base+url,options={method:data===undefined?'GET':'POST',cache:'no-store'};
 if(data!==undefined){options.headers={'Content-Type':'application/json'};options.body=JSON.stringify(data);}
-var r=await fetch(path,options);var d=await r.json();if(r.status===401&&window.SYCloudAuth)SYCloudAuth.open().catch(()=>{});if(!r.ok||d.error)throw Error(d.error||('服务错误 '+r.status));return d;}
+if(localOnly&&!native){
+  // A public webpage cannot read a visitor's desktop by itself. Pair with the loopback bridge
+  // only when the user clicks a WeChat action and the local bridge explicitly allows this origin.
+  var origin=location.origin;
+  if(!['https://shanganya-v8-workbench-production.up.railway.app','https://shanganya-full-public-20261017-production.up.railway.app'].includes(origin)){
+    throw Error('本机微信连接仅允许从上岸鸭官方工作台发起；当前页面来源不在白名单内。');
+  }
+  var localBase='http://127.0.0.1:8877/api/wechat-private';
+  if(!bridgeToken){
+    var pair=await fetch(localBase+'/pairing',{method:'GET',cache:'no-store',mode:'cors',credentials:'omit'});
+    var pairData=await pair.json().catch(function(){return {};});
+    if(!pair.ok||!pairData.token)throw Error('没有检测到本机微信桥接。请先在这台电脑启动上岸鸭本机服务（127.0.0.1:8877），并允许浏览器访问本机网络。');
+    bridgeToken=pairData.token;
+  }
+  path=localBase+url;
+  options.mode='cors';options.credentials='omit';options.headers=Object.assign({},options.headers||{},{'X-Focus-Client':bridgeToken});
+}
+var r;
+try{r=await fetch(path,options);}catch(e){if(localOnly&&!native)throw Error('本机微信桥接连接失败：请确认本机服务正在运行，并允许浏览器访问本机网络。');throw e;}
+var d=await r.json().catch(function(){return {};});
+if(r.status===401&&window.SYCloudAuth)SYCloudAuth.open().catch(()=>{});
+if(r.status===403&&localOnly&&!native){bridgeToken='';throw Error(d.error||'本机微信桥接未授权，请重新点击连接。');}
+if(!r.ok||d.error)throw Error(d.error||('服务错误 '+r.status));return d;}
 async function groups(){var r=await api('/groups'),s=dialog.querySelector('[data-wp-groups]'),old=s.value;s.replaceChildren(new Option('全部关注群',''));r.groups.forEach(function(g){s.append(new Option(g,g));});if(r.groups.includes(old))s.value=old;await search();}
 async function search(){
 var q=dialog.querySelector('[data-wp-query]')?.value.trim()||'',g=dialog.querySelector('[data-wp-groups]')?.value||'',groupQuery=dialog.querySelector('[data-wp-group-query]')?.value.trim()||'';
