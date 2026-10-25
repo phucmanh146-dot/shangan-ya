@@ -59,7 +59,7 @@ function selectedItems(){var ids=Array.from(document.querySelectorAll('[data-sc-
 function upsert(item){var key=item.url||item.sourceRef||item.id,idx=items.findIndex(function(x){return (x.url||x.sourceRef||x.id)===key});if(idx>=0)items[idx]=item;else items.push(item)}
 async function refreshHealth(){
  var n=$('#scApiState');if(!n)return;n.textContent='正在检测本机后端 API…';n.dataset.ok='false';
- try{var r=await window.SY.backendCall('/api/health',null,8000);if(!r||!r.ok)throw Error(r&&r.error||'后端未返回成功状态');var h=r.data||{},caps=h.capabilities||{};n.textContent='后端已连接 · '+(caps.extract?'文件解析可用':'文件解析待核验')+' · '+(caps.feishu?'飞书应用已配置':'飞书权限待核验');n.dataset.ok='true'}
+ try{var r=await window.SY.backendCall('/api/health',null,8000);if(!r||!r.ok)throw Error(r&&r.error||'后端未返回成功状态');var h=r.data||{},caps=h.capabilities||{};n.textContent='后端已连接 · '+(caps.extract?'文件解析可用':'文件解析待核验')+' · '+(caps.feishu?'飞书应用已配置':'飞书权限待核验')+' · AI '+(caps.aiVerified?'已验证':'待验证');n.dataset.ok='true'}
  catch(e){n.textContent='后端未连接：'+e.message+'。读取失败会明确显示，不会伪装成功。';n.dataset.ok='false'}
 }
 async function refreshVaultState(){
