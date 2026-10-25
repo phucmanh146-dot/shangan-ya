@@ -32,3 +32,12 @@
 #pma-root .pmaw-status{font-size:11px;color:#35694b;line-height:1.7;margin:9px 0 0}
 #pma-root .pmaw-status[data-error=true]{color:#a53636}
 @media(max-width:830px){#pma-root .pmaw-filters{grid-template-columns:1fr 1fr}#pma-root .pmaw-form{grid-template-columns:1fr}#pma-root .pmaw-head>button{width:100%}}
+
+/* 2026-10-25: always-visible group/message search; warm pink workspace styling */
+.pmaw-search-heading{display:flex;gap:8px;align-items:baseline;justify-content:space-between;flex-wrap:wrap;margin:8px 0 12px;color:var(--text,#38584f)}
+.pmaw-search-heading span{font-size:.82rem;color:var(--text-soft,#71877f)}
+.pmaw-optional-search{display:block;margin:12px 0;padding:14px;border:1px solid #dcebe5;border-radius:16px;background:rgba(255,255,255,.72)}
+.pmaw-filters{display:grid;grid-template-columns:minmax(180px,1fr) auto;gap:10px;align-items:end}
+.pmaw-filters label{display:grid;gap:6px;color:var(--text,#38584f);font-size:.9rem;font-weight:650}
+.pmaw-filters input{min-height:42px;padding:9px 12px;border:1px solid #dce9e3;border-radius:10px;background:#fff;font:inherit;color:inherit}
+@media(max-width:680px){.pmaw-filters{grid-template-columns:1fr}.pmaw-filters button{width:100%}}
