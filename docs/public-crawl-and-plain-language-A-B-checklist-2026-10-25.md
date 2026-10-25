@@ -131,3 +131,23 @@ B 负责把 A 已经证明的问题变成“照着就能做”的小步骤，而
 - 赛道三官方细则：<https://finance.dzwww.com/zt/2026ai/sdsz/202609/t20260928_18161132.htm>
 - 青岛科技大学赛事通知（交叉核验）：<https://student.qust.edu.cn/info/1304/13508.htm>
 - 山东省医学类高校赛事通知（交叉核验）：<https://jwch.sdsmu.edu.cn/2026/1008/c2593a180734/page.htm>
+
+
+## 8. 补充：当前 GitHub 分支可核验的版本证据（2026-10-25）
+
+检查分支 `captain/real-artifact-gap-review-20261024` 时：
+- `learning-agent/learning_agent.py` 当前 Git blob SHA：`00acf4f55f21bd1e4e543412d31c589f4921119e`。
+- 在同一分支读取 `learning-agent/provenance.json` 返回 404，说明该路径在当前分支无法读取到文件（可能未提交、路径不同或分支内容不同，原因尚未确定）。
+- GitHub 文件搜索也未返回 `provenance.json` 的命中结果。
+- 这只能证明“当前分支下该路径不可读取”，不能单独证明用户本机的文件内容，也不能代替本地测试。需要远程设备恢复可用后，读取本机当前分支、工作区和文件哈希，比较本地与远端版本，再决定如何重建 provenance。
+- 本轮远程命令调用超时，未取得本机 `git status`、当前 commit、测试命令输出或模型调用结果。因此本轮没有宣称已重新跑完测试、修复 SHA 或完成真实模型验证。
+
+建议下一次远程执行时先只读采集：
+```powershell
+git status --short --branch
+git rev-parse HEAD
+git rev-parse HEAD:learning-agent/learning_agent.py
+Get-FileHash learning-agent/learning_agent.py -Algorithm SHA256
+Test-Path learning-agent/provenance.json
+```
+若本机不是仓库根目录，先定位实际仓库路径再运行；不要直接覆盖文件、删掉哈希校验或提交 API Key。
