@@ -86,8 +86,10 @@ function enhanceKnowledgeSearch(){
    action.disabled=true;action.textContent='正在读取真实来源…';
    try{
     const data=await post('/api/pm/note',{path:String(path?.textContent||'').trim()});
-    window.SYPMUpgrade?.addExternalMaterial?.({id:'obsidian:'+data.path,title:data.title,source:'obsidian',sourceRef:data.path,content:data.content,selected:true,importedAt:new Date().toISOString()});
-    wrapper.append(E('p','pmas-note','已把 '+data.chars+' 字真实 Markdown 原文放入下方引用资料池。'));
+    const material={id:'obsidian:'+data.path,title:data.title,source:'obsidian',sourceRef:data.path,url:data.url||'',content:data.content,selected:true,importedAt:new Date().toISOString()};
+    window.SYPMUpgrade?.addExternalMaterial?.(material);
+    window.SYSourceCenter?.importMaterial?.(material);
+    wrapper.append(E('p','pmas-note','已把 '+data.chars+' 字真实 Markdown 原文放入 AI 资料池和独立资料中心，可继续关联任务或带入航线工坊。'));
     action.textContent='已导入笔记全文 ✓';
    }catch(err){wrapper.append(E('p','pmas-note','当前结果可能是浏览器手动导入的资料：'+err.message+'。目前只能引用已显示的片段。'));action.textContent='无法定位仓库原文';}
   };

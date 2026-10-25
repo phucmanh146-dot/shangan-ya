@@ -4393,14 +4393,11 @@
       '</div>' +
       '<p class="skill-source-note">全网搜索只返回公开网页。选中结果后点「读进学习资料」，正文会进入路线资料框；原始链接会随后续阶段任务保存。</p>';
     h += '<div class="skill-local-source">' +
-      '<div class="skill-local-source-copy"><b>本机微信资料</b><span>连接你电脑上的微信读取器；需要先在读取器里登录电脑版微信并完成初始化。</span></div>' +
+      '<div class="skill-local-source-copy"><b>微信任务单独收集</b><span>微信消息不再混入学习资料解析。请到「收集任务」搜索群聊、核对真实消息，再关联已有任务。</span></div>' +
       '<div class="skill-local-source-actions">' +
-        '<button class="btn btn-ghost btn-sm" type="button" id="skillWechatOpenBtn">打开微信客户端</button>' +
-        '<button class="btn btn-ghost btn-sm" type="button" id="skillWechatReaderBtn">打开微信读取器</button>' +
-        '<button class="btn btn-ghost btn-sm" type="button" id="skillWechatCheckBtn"' + (wechatReaderBusy ? ' disabled' : '') + '>' + (wechatReaderBusy ? '检查中…' : '检查读取器') + '</button>' +
+        '<button class="btn btn-ghost btn-sm" type="button" id="skillGoWechatTaskBtn">前往收集任务并关联微信 →</button>' +
       '</div>' +
-      (wechatReaderMsg ? '<p class="skill-local-source-msg">' + wechatReaderMsg + '</p>' : '') +
-      '<p class="skill-source-note">网页不会绕过微信权限直接读取私聊或群聊；读取器响应后，请在它的会话界面选择群聊并生成资料包，再把导出的 Markdown/TXT 拖入本机资料舱。</p>' +
+      '<p class="skill-source-note">此处继续负责网页、飞书和视频链接的正文读取；微信读取状态以收集任务页连接本机 API 的实际结果为准。</p>' +
     '</div>';
     if(!canSearch) h += '<p class="skill-source-note skill-source-warn">本机服务未连接，先启动「启动闯关陪跑.cmd」才能把搜索结果读回网页；下面的站点按钮仍可真实打开。</p>';
     if(skillSearchMsg) h += '<p class="skill-link-msg">' + skillSearchMsg + '</p>';
@@ -5312,12 +5309,11 @@
     root.querySelectorAll('[data-skill-read-result]').forEach(function(btn){
       btn.addEventListener('click', function(){ readSkillSearchResult(Number(btn.getAttribute('data-skill-read-result'))); });
     });
-    var wechatOpen = root.querySelector('#skillWechatOpenBtn');
-    if(wechatOpen) wechatOpen.addEventListener('click', openWechatClientFromSkill);
-    var wechatReader = root.querySelector('#skillWechatReaderBtn');
-    if(wechatReader) wechatReader.addEventListener('click', openWechatReaderFromSkill);
-    var wechatCheck = root.querySelector('#skillWechatCheckBtn');
-    if(wechatCheck) wechatCheck.addEventListener('click', checkWechatReaderFromSkill);
+    var wechatTaskLink = root.querySelector('#skillGoWechatTaskBtn');
+    if(wechatTaskLink) wechatTaskLink.addEventListener('click', function(){
+      if(window.SY && SY.switchAppView) SY.switchAppView('task-intake');
+      else { var nav=document.querySelector('[data-view="task-intake"]'); if(nav) nav.click(); }
+    });
     var shotIn = root.querySelector('#skillShotInput');
     if(shotIn) shotIn.addEventListener('change', function(){
       var max = skillShotMax();

@@ -7,7 +7,12 @@ const el=(tag,text)=>{const n=document.createElement(tag);if(text!==undefined)n.
 let results=[],page=0,lastQuery='',requestId=0;
 function status(text,error=false){const n=$('#syd-status');if(n){n.textContent=text;n.dataset.error=String(error)}}
 async function api(path,data){
- const r=await fetch(path,{method:data===undefined?'GET':'POST',headers:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data),cache:'no-store'});
+ if(window.SY&&typeof SY.backendCall==='function'){
+  const result=await SY.backendCall(path,data,60000);
+  if(!result||!result.ok)throw Error(result&&result.error||'本机 Obsidian API 未成功');
+  return result.data||{};
+ }
+ const r=await fetch(path,{method:data==null?'GET':'POST',headers:{'Content-Type':'application/json'},body:data==null?undefined:JSON.stringify(data),cache:'no-store'});
  const obj=await r.json();if(!r.ok||obj.error)throw Error(obj.error||'HTTP '+r.status);return obj;
 }
 function link(label,url){
@@ -38,8 +43,10 @@ async function read(path,importNow=false){
   if(importNow){
    const owner=window.SY?.currentAccountKey;
    if(!owner||!window.SYPMUpgrade?.addExternalMaterial)throw Error('请先登录工作台，再加入资料池。');
-   window.SYPMUpgrade.addExternalMaterial({id:'obsidian:'+note.path,source:'obsidian',title:note.title,content:note.content,sourceRef:note.path,url:note.url,links:note.links,selected:true,importedAt:new Date().toISOString()});
-   status('已加入蓝色资料池：'+note.title+'（'+note.chars+' 字）');return note;
+   const material={id:'obsidian:'+note.path,source:'obsidian',title:note.title,content:note.content,sourceRef:note.path,url:note.url,links:note.links,selected:true,importedAt:new Date().toISOString()};
+   window.SYPMUpgrade.addExternalMaterial(material);
+   window.SYSourceCenter?.importMaterial?.(material);
+   status('已加入 AI 资料池和资料中心：'+note.title+'（'+note.chars+' 字）');return note;
   }
   if(!window.SYPMUpgrade?.showMaterial)throw Error('全文阅读组件尚未就绪，请稍后重试。');
   window.SYPMUpgrade.showMaterial(note);

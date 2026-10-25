@@ -1,0 +1,40 @@
+#sourceCenterRoot{color:var(--text,#344a43)}
+.sc-page{display:grid;gap:18px;padding:2px 0 28px}
+.sc-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.sc-eyebrow{margin:0 0 6px;font-size:11px;letter-spacing:.12em;font-weight:850;color:#a45d79}
+.sc-head h1{margin:0;font-size:clamp(24px,3vw,34px);color:var(--text-strong,#213d34)}
+.sc-subtitle{margin:8px 0 0;max-width:760px;color:var(--text-soft,#71847c);font-size:13px;line-height:1.7}
+.sc-api-state{padding:9px 12px;border:1px solid #ead3dc;border-radius:12px;background:#fff8fa;color:#8b5368;font-size:12px;max-width:280px}
+.sc-api-state[data-ok=true]{background:#f1f8f4;border-color:#d2e7d9;color:#356b50}
+.sc-flow{list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:0;margin:0}
+.sc-flow li{display:flex;align-items:center;gap:8px;padding:11px;border:1px solid #f0dfe5;border-radius:12px;background:#fffafb;font-size:12px;color:#725363}
+.sc-flow b{display:grid;place-items:center;width:24px;height:24px;flex:none;border-radius:50%;background:#f4dce5;color:#994f6c}
+.sc-loop-back{display:flex;align-items:center;justify-content:center;gap:9px;flex-wrap:wrap;padding:10px 14px;border:1px dashed #e5c4d0;border-radius:999px;background:#fff8fa;color:#87536a;font-size:12px;line-height:1.6}
+.sc-loop-back b{font-size:18px;color:#b45d7d}
+.sc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.sc-card,.sc-results,.sc-associate{min-width:0;border:1px solid #e5e9e5;border-radius:18px;background:var(--surface,#fff);padding:17px;box-shadow:0 5px 20px #233d3210}
+.sc-card h2,.sc-results h2,.sc-associate h2{margin:0 0 6px;font-size:16px;color:var(--text-strong,#213d34)}
+.sc-card p{font-size:12px;line-height:1.65;color:var(--text-soft,#71847c);margin:7px 0 12px}
+.sc-card label{display:grid;gap:7px;font-size:12px;font-weight:700;color:#5e6f68}
+.sc-card textarea,.sc-card input[type=text],.sc-associate select{width:100%;box-sizing:border-box;border:1px solid #dce5e0;border-radius:11px;padding:11px 12px;background:#fff;color:#344a43;font:inherit;min-width:0}
+.sc-card textarea{min-height:100px;resize:vertical;line-height:1.6}
+.sc-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:11px}
+.sc-btn{border:1px solid #e6cbd5;background:#fff7fa;color:#8b4d67;border-radius:10px;padding:9px 12px;font-size:12px;font-weight:750;cursor:pointer}
+.sc-btn.primary{border-color:#b45d7d;background:#b45d7d;color:#fff}
+.sc-btn.secondary{border-color:#d9e6df;background:#f6faf7;color:#38684f}
+.sc-btn:disabled{opacity:.45;cursor:not-allowed}
+.sc-mini-status{font-size:11px;line-height:1.6;color:#8a6272;margin-top:9px}
+.sc-results-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.sc-results-list{display:grid;gap:10px}
+.sc-result{border:1px solid #e6e9e5;border-radius:13px;padding:12px;background:#fff}
+.sc-result-head{display:flex;align-items:flex-start;gap:9px}
+.sc-result-head input{margin-top:4px;flex:none}
+.sc-result-title{font-size:13px;font-weight:800;color:#30483f;overflow-wrap:anywhere}
+.sc-result-meta{font-size:10px;color:#8b7b83;margin-top:4px}
+.sc-result-status{display:inline-block;margin-top:6px;border-radius:7px;padding:3px 7px;background:#f8eaf0;color:#8b4d67;font-size:10px}
+.sc-result-status[data-ok=true]{background:#edf7f0;color:#39714f}
+.sc-result-excerpt{margin:9px 0 0;max-height:180px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:11px;line-height:1.65;color:#53655d;background:#f8faf8;border-radius:9px;padding:10px}
+.sc-associate-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}
+.sc-associate-row label{display:grid;gap:7px;font-size:12px;color:#5e6f68;font-weight:700}
+.sc-empty{padding:20px 10px;text-align:center;color:#87958e;font-size:12px;border:1px dashed #dce4df;border-radius:12px}
+@media(max-width:760px){.sc-grid{grid-template-columns:1fr}.sc-flow{grid-template-columns:repeat(2,minmax(0,1fr))}.sc-associate-row{grid-template-columns:1fr}.sc-api-state{max-width:none;width:100%;box-sizing:border-box}}

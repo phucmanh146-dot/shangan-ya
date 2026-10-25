@@ -5,10 +5,15 @@ const $=(q,root=document)=>root.querySelector(q);
 const tag=(el,cls,text)=>{const e=document.createElement(el);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e};
 const status=(message,bad=false)=>{const e=$('#pmah-status');if(e){e.textContent=message;e.dataset.error=String(bad)}};
 let apiState={},mountAccount='';
-async function rpc(route,data){
- const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),65000);
+async function rpc(route,data,timeout){
+ if(window.SY&&typeof SY.backendCall==='function'){
+  const result=await SY.backendCall(route,data,timeout||65000);
+  if(!result||!result.ok)throw Error(result&&result.error||'本机后端请求未成功');
+  return result.data||{};
+ }
+ const abort=new AbortController(),timer=setTimeout(()=>abort.abort(),timeout||65000);
  try{
-  const response=await fetch(route,{method:data===undefined?'GET':'POST',headers:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data),signal:abort.signal,cache:'no-store'});
+  const response=await fetch(route,{method:data==null?'GET':'POST',headers:{'Content-Type':'application/json'},body:data==null?undefined:JSON.stringify(data),signal:abort.signal,cache:'no-store'});
   const value=await response.json().catch(()=>({error:'服务未返回有效数据'}));
   if(!response.ok||value.error)throw Error(value.error||'请求失败');
   return value;
@@ -21,40 +26,20 @@ function make(){
  <div class="pmah-question-slot"></div><label class="pmah-help"><input type="checkbox" id="pmah-include-tasks" checked> 结合我已有任务和进度回答（可关闭）</label>
  <div class="pmah-actions">
   <label class="pmah-upload" for="pmah-files">📎 上传图片 / PDF / Word / PPT / Excel / 视频<input id="pmah-files" type="file" multiple accept=".png,.jpg,.jpeg,.webp,.gif,.bmp,.pdf,.doc,.docx,.pptx,.xlsx,.xlsm,.md,.txt,.csv,.json,.mp4,.mov,.mkv,.webm,.srt,.vtt"></label>
-  <button id="pmah-use-link" type="button">🔗 提供链接</button><button id="pmah-use-obsidian" type="button">📂 我的 Obsidian</button><button id="pmah-use-wechat" type="button">💬 微信框选</button>
+  <button id="pmah-open-sources" type="button">📚 资料中心（飞书 / Obsidian / 链接）</button><button id="pmah-open-wechat" type="button">💬 收集任务 · 微信</button>
  </div>
  <div class="pmah-files-status" id="pmah-files-status" aria-live="polite">拖拽文件到此处也可以上传。选择后会调用真实文件解析接口。</div>
  <div class="pmah-actions pmah-main-ask"><div class="pmah-send-slot"></div><span class="pmah-help">先上传附件，再提问；勾选资料池中的内容会一起参与回答。</span></div>
  <div class="pmah-answer-slot"></div>
- <div class="pmah-vault-mini"><div><strong>📚 本机 Obsidian 仓库</strong><p id="pmah-vault-path">正在读取真实仓库目录…</p></div><button id="pmah-open-vault">打开 Obsidian ↗</button><button id="pmah-explore-vault">打开仓库文件夹</button><button id="pmah-change-vault">选择其他仓库</button></div>
- <details class="pmah-vault-manual"><summary>找不到仓库？手动指定仓库目录</summary><div class="pmah-vault-pick"><input id="pmah-vault-entry" placeholder="D:\\obsidian\\我的知识库（包含 .obsidian）"><button id="pmah-save-vault">绑定此位置</button></div></details>
+ <p class="pmah-desc">资料来源统一在「资料中心」读取和核对；微信消息只在「收集任务」中识别并关联。此处专注解决问题、分析已提供的附件并给出下一步。</p>
  <details class="pmah-transcribe"><summary>🎤 读取视频里的说话内容（按需开启）</summary><p>勾选后，没有启用转写 API 时使用本机语音模型；配置并启用 OpenAI 转写 API 后，音频会发送给服务商并可能计费。当前能否使用本机识别，以下方真实状态为准。</p><label><input id="pma-v3-transcribe" type="checkbox"> 对本次上传或链接视频进行语音识别</label><div class="pmah-transcriber-config"><input id="pmah-transcribe-key" type="password" autocomplete="new-password" placeholder="OpenAI 音频转写 API Key（仅在电脑本地填写）"><select id="pmah-transcribe-model"><option value="gpt-4o-mini-transcribe">gpt-4o-mini-transcribe</option><option value="gpt-4o-transcribe">gpt-4o-transcribe</option><option value="whisper-1">whisper-1</option></select><button id="pmah-enable-transcribe">启用音频转写配置</button></div><p id="pmah-transcribe-status">音频转写默认关闭。</p></details>
  <p id="pmah-status" role="status" class="pmah-foot-status">只根据你授权提供的资料回答；读不到的来源会明确说明。</p>`;
  hub.querySelectorAll('[data-theme]').forEach(btn=>btn.onclick=()=>{hub.querySelectorAll('[data-theme]').forEach(x=>x.classList.remove('active'));btn.classList.add('active');const q=$('#pma-question');if(q){q.dataset.theme=btn.dataset.theme;q.placeholder='【'+btn.dataset.theme+'】我现在做到哪一步，目标是什么，卡住在哪里？可以上传截图、官方通知、课件或者视频。';q.focus()}});
  hub.addEventListener('dragover',event=>{if([...event.dataTransfer?.types||[]].includes('Files'))event.preventDefault()});
  hub.addEventListener('drop',event=>{if(!event.dataTransfer?.files?.length)return;event.preventDefault();attachFiles(event.dataTransfer.files)});
  $('#pmah-files',hub).onchange=e=>{attachFiles(e.target.files);e.target.value=''};
- $('#pmah-use-link',hub).onclick=()=>jump('#pma-url');
- $('#pmah-use-obsidian',hub).onclick=()=>jump('#pma-notes');
- $('#pmah-use-wechat',hub).onclick=()=>jump('#pma-wx-frame');
- $('#pmah-open-vault',hub).onclick=async()=>{
-  try{const r=await rpc('/api/pm/vault-open',{});status('已请求打开电脑上的 Obsidian：'+r.name)}
-  catch(e){status('无法打开 Obsidian：'+e.message,true)}
- };
- $('#pmah-explore-vault',hub).onclick=async()=>{
-  try{const r=await rpc('/api/pm/vault-explorer',{});status('已请求在资源管理器打开：'+r.path)}
-  catch(e){status('打开仓库文件夹失败：'+e.message,true)}
- };
- $('#pmah-change-vault',hub).onclick=async()=>{
-  status('正在弹出 Windows 文件夹选择窗口…');
-  try{const r=await rpc('/api/pm/vault-select',{interactive:true});if(r.cancelled)return status('已取消，没有更改仓库');status('已绑定本机仓库：'+r.path);await checkStatus();window.SYPMUpgrade?.refresh?.()}
-  catch(e){status('文件夹选择器未打开：'+e.message+'。可以在下方输入真实仓库路径。',true)}
- };
- $('#pmah-save-vault',hub).onclick=async()=>{
-  let path=$('#pmah-vault-entry').value.trim();if(!path)return status('请先输入 Obsidian 仓库路径',true);
-  try{const r=await rpc('/api/pm/vault-select',{path});status('仓库已绑定：'+r.path);await checkStatus();window.SYPMUpgrade?.refresh?.()}
-  catch(e){status('仓库绑定失败：'+e.message,true)}
- };
+ $('#pmah-open-sources',hub).onclick=()=>{if(window.SY&&SY.switchAppView){SY.switchAppView('sources');window.SYSourceCenter&&SYSourceCenter.refresh&&SYSourceCenter.refresh()}else status('资料中心尚未加载，请刷新工作台。',true)};
+ $('#pmah-open-wechat',hub).onclick=()=>{if(window.SY&&SY.switchAppView)SY.switchAppView('task-intake');else status('收集任务页面尚未加载，请刷新工作台。',true)};
  $('#pmah-enable-transcribe',hub).onclick=async()=>{
   const key=$('#pmah-transcribe-key').value.trim();
   if(!key)return status('要启用付费音频转写，请先填写你自己的 OpenAI API Key。',true);

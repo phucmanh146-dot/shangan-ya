@@ -131,7 +131,7 @@ function confirmTask(){
 }
 function make(){
  const root=El('section','pmaw-mini');root.id='pmaw-mini';
- root.innerHTML=`<header class="pmaw-head"><div><strong>💬 微信任务收集</strong><p>只处理微信消息；识别后关联原任务。知识库和链接解析在独立页面。</p></div><button type="button" id="pmaw-focus" class="pmaw-light">打开微信并框选 ↗</button></header><ol class="pmaw-flow" aria-label="微信任务处理流程"><li><b>1</b><span>找群</span></li><li><b>2</b><span>找消息</span></li><li><b>3</b><span>识别任务</span></li><li><b>4</b><span>关联确认</span></li></ol>
+ root.innerHTML=`<header class="pmaw-head"><div><strong>💬 微信任务收集</strong><p>只处理微信消息；识别后关联原任务。Obsidian、飞书和链接解析请前往独立的「资料中心」。</p></div><button type="button" id="pmaw-focus" class="pmaw-light">打开微信并框选 ↗</button></header><ol class="pmaw-flow" aria-label="微信任务处理流程"><li><b>1</b><span>找群</span></li><li><b>2</b><span>找消息</span></li><li><b>3</b><span>识别任务</span></li><li><b>4</b><span>关联确认</span></li></ol>
  <section class="pmaw-optional-search"><div class="pmaw-search-heading"><strong>搜索群名及群聊消息</strong><span>先查本机历史群目录；若不可用，再查当前微信窗口。置顶标记需按真实界面核对</span></div><div class="pmaw-filters"><label>群聊关键词<input id="pmaw-group-query" placeholder="例如：挑战杯、项目组"></label><button id="pmaw-search-groups">① 搜索群聊</button><label>群聊消息关键词<input id="pmaw-message-query" placeholder="先选群，再搜：DDL、PPT、老师反馈"></label><button id="pmaw-search-messages">② 搜索当前窗口消息</button></div>
  <div id="pmaw-results" class="pmaw-results"></div>
  <details id="pmaw-window-preview" class="pmaw-preview"><summary>查看微信窗口搜索画面（仅本机显示）</summary><img id="pmaw-search-image" alt="已登录微信窗口截图" hidden></details></section>

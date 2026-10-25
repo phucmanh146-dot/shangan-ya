@@ -404,7 +404,11 @@
         </button>
         <button class="app-nav-item" data-view="knowledge" type="button">
           <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5v-17Z"/><path d="M4 19a2.5 2.5 0 0 1 2.5-2.5H20"/></svg></span>
-          <span>资料解析</span>
+          <span>知识库</span>
+        </button>
+        <button class="app-nav-item" data-view="sources" type="button">
+          <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a1.5 1.5 0 0 1 1.5-1.5H10l2 2h7.5A1.5 1.5 0 0 1 21 9v8.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5Z"/><path d="M3 9.5h18"/></svg></span>
+          <span>资料中心</span>
         </button>
         <p class="app-nav-group-label">账号</p>
         <button class="app-nav-item" data-view="profile" type="button">
@@ -572,7 +576,7 @@
         <div id="inboxBody"></div>
       </section>
 
-      <section class="app-view" data-view="task-intake" id="view-task-intake" hidden><div class="app-main-topbar" style="margin-bottom:18px;"><div><p class="app-greeting-eyebrow">COLLECT → VERIFY → LINK</p><h1 style="font-size:1.45rem;">收集任务</h1><p style="color:var(--text-soft);font-size:.92rem;">微信只负责消息采集与任务关联；Obsidian、飞书、网页和视频解析请进入独立的「知识库」页。</p></div></div><div id="wechatTaskMount"></div></section>
+      <section class="app-view" data-view="task-intake" id="view-task-intake" hidden><div class="app-main-topbar" style="margin-bottom:18px;"><div><p class="app-greeting-eyebrow">COLLECT → VERIFY → LINK</p><h1 style="font-size:1.45rem;">收集任务</h1><p style="color:var(--text-soft);font-size:.92rem;">微信只负责消息采集与任务关联；Obsidian、飞书、网页和视频链接请进入独立的「资料中心」页。</p></div></div><div id="wechatTaskMount"></div></section>
       <section class="app-view" data-view="pomodoro" id="view-pomodoro" hidden>
         <div id="pomodoroBody"></div>
       </section>
@@ -594,6 +598,9 @@
       </section>
       <section class="app-view" data-view="knowledge" id="view-knowledge" hidden>
         <div id="knowledgeBody"></div>
+      </section>
+      <section class="app-view" data-view="sources" id="view-sources" hidden>
+        <div id="sourceCenterRoot"></div>
       </section>
       <section class="app-view" data-view="deadlines" id="view-deadlines" hidden>
         <div id="deadlinesBody"></div>
@@ -1066,6 +1073,8 @@
 <script src="./pm-wechat-mini-v4.js?v=20261025-history-api-flow-v5"></script>
 <script src="./pm-materials-v4.js"></script>
 <link rel="stylesheet" href="./pm-materials-v4.css">
+<link rel="stylesheet" href="./source-center.css?v=20261025-source-center-v1">
+<script src="./source-center.js?v=20261025-source-center-v1"></script>
 <link rel="stylesheet" href="./p2-entry.css">
 
 <link rel="stylesheet" href="./p2-embedded-in-workbench.css">
