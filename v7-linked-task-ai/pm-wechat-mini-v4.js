@@ -124,7 +124,7 @@ function make(){
  root.innerHTML=`<header class="pmaw-head"><div><strong>💬 微信资料助手</strong><p>进入微信 → 右上角框选内容 → 确认识别 → 核对并关联任务</p></div><button type="button" id="pmaw-focus" class="pmaw-light">进入微信 · 右上角框选 ↗</button></header>
  <section class="pmaw-optional-search"><div class="pmaw-search-heading"><strong>按关键词搜索群聊 / 消息</strong><span>只展示本机微信窗口搜索到的候选，不冒充完整历史数据库</span></div><div class="pmaw-filters"><label>群聊关键词<input id="pmaw-group-query" placeholder="例如：挑战杯、项目组"></label><button id="pmaw-search-groups">① 搜索群聊</button><label>消息关键词<input id="pmaw-message-query" placeholder="例如：DDL、PPT、老师反馈"></label><button id="pmaw-search-messages">② 搜索当前窗口消息</button></div>
  <div id="pmaw-results" class="pmaw-results"></div>
- <details id="pmaw-window-preview" class="pmaw-preview"><summary>查看微信窗口搜索画面（仅本机显示）</summary><img id="pmaw-search-image" alt="已登录微信窗口截图" hidden></details></details>
+ <details id="pmaw-window-preview" class="pmaw-preview"><summary>查看微信窗口搜索画面（仅本机显示）</summary><img id="pmaw-search-image" alt="已登录微信窗口截图" hidden></details></section>
  <div class="pmaw-row"><button id="pmaw-crop" type="button" class="pmaw-main">开始框选微信内容 →</button><span>切换群聊或打开微信文章时，浮窗跟随当前微信窗口；点确认后才识别。</span></div>
  <div id="pmaw-crop-slot"></div>
  <section id="pmaw-recognition" class="pmaw-recognition" hidden><h4>④ 核对框选原文 → 绑定任务</h4><pre id="pmaw-ocr"></pre>
