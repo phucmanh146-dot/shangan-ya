@@ -7087,11 +7087,16 @@
   // 把"哪个钟点是高/中/低精力"单独抽出来——精力时段卡片要用，自动排程也要用，
   // 两边必须是同一套判断，不能一个地方一个算法。纯只读，不写任何数据。
   function computeEnergyTiers(acct){
+    var ps = acct.plannerSettings || {};
+    var currentScore = Number(ps.currentEnergyScore);
+    var currentAt = Number(ps.energyLevelUpdatedAt || 0);
+    var currentFresh = currentScore >= 1 && currentScore <= 5 && currentAt > 0 && Date.now() - currentAt < 3 * 60 * 60 * 1000;
+    var currentHint = { currentEnergyScore: currentFresh ? currentScore : null, currentEnergyAt: currentFresh ? currentAt : 0, currentHour: new Date().getHours() };
     var sessions = (Array.isArray(acct.focusSessions) ? acct.focusSessions : [])
       .filter(function(s){ return typeof focusRateOf(s) === 'number'; });
     var logs = (acct.durationLog || []).filter(function(r){ return onTimeScoreOf(r) !== null && startHourOf(r) !== null; });
     if(!sessions.length && !logs.length){
-      return { hasData: false, hours: [], ranked: [], thin: [], high: [], mid: [], low: [], dayCount: 0 };
+      return { hasData: false, hours: [], ranked: [], thin: [], high: [], mid: [], low: [], dayCount: 0, currentEnergyScore: currentHint.currentEnergyScore, currentEnergyAt: currentHint.currentEnergyAt, currentHour: currentHint.currentHour };
     }
     // 按钟点汇总两个维度。专注度来自摄像头盯梢，按时率来自用时记录，两边都按"开始的钟点"归档。
     var byHour = {};
@@ -7131,12 +7136,17 @@
     var low = rest.filter(function(r){ return r.score < TIER_MID_MIN; });
     return {
       hasData: true, hours: hours, ranked: ranked, thin: thin,
-      high: high, mid: mid, low: low, dayCount: Object.keys(days).length
+      high: high, mid: mid, low: low, dayCount: Object.keys(days).length,
+      currentEnergyScore: currentHint.currentEnergyScore, currentEnergyAt: currentHint.currentEnergyAt, currentHour: currentHint.currentHour
     };
   }
   // 某个钟点属于哪一档。没参与排名/没数据的钟点一律 'unknown'——不瞎猜。
   function energyTierOfHour(tiers, h){
-    if(!tiers || !tiers.hasData) return 'unknown';
+    if(!tiers) return 'unknown';
+    if(tiers.currentEnergyScore !== null && tiers.currentEnergyScore !== undefined && h === tiers.currentHour && Date.now() - Number(tiers.currentEnergyAt || 0) < 3 * 60 * 60 * 1000){
+      return Number(tiers.currentEnergyScore) >= 4 ? 'high' : Number(tiers.currentEnergyScore) <= 2 ? 'low' : 'mid';
+    }
+    if(!tiers.hasData) return 'unknown';
     function has(list){ for(var i = 0; i < list.length; i++){ if(list[i].hour === h) return true; } return false; }
     if(has(tiers.high)) return 'high';
     if(has(tiers.mid)) return 'mid';
@@ -8929,6 +8939,7 @@
   Object.defineProperty(window.SY, 'activeDailyTab', { get: function(){ return activeDailyTab; }, set: function(v){ activeDailyTab = v; } });
   Object.defineProperty(window.SY, 'dayViewDate', { get: function(){ return dayViewDate; }, set: function(v){ dayViewDate = v; } });
   Object.defineProperty(window.SY, 'computeDayTimeline', { get: function(){ return computeDayTimeline; }, set: function(v){ computeDayTimeline = v; } });
+  Object.defineProperty(window.SY, 'planDay', { get: function(){ return planDay; }, set: function(v){ planDay = v; } });
   Object.defineProperty(window.SY, 'openCategoryReceipt', { get: function(){ return openCategoryReceipt; }, set: function(v){ openCategoryReceipt = v; } });
   Object.defineProperty(window.SY, 'bindTaskListInteractions', { get: function(){ return bindTaskListInteractions; }, set: function(v){ bindTaskListInteractions = v; } });
   Object.defineProperty(window.SY, 'taskCardHtml', { get: function(){ return taskCardHtml; }, set: function(v){ taskCardHtml = v; } });
