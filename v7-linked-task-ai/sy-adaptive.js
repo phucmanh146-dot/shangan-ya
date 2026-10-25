@@ -105,10 +105,10 @@ x.querySelector('[data-ksearch]').onclick=async function(){var q=x.querySelector
 function mount(){if(!window.SY||!document.querySelector('.app-main-topbar'))return;document.querySelectorAll('.sy-adaptive-launch,#sy-adaptive-summary').forEach(function(n){n.remove();});
  var legacy=document.querySelector('[data-comfort-entry]');if(legacy)legacy.remove();
  var daily=document.getElementById('view-daily');if(!daily)return;
- var container=daily.querySelector('.app-main-topbar')||daily.querySelector('.lc-hero')||daily;
+ var container=daily;
  if(!daily.querySelector('[data-comfort-entry]')){
   var entry=el('button','sy-comfort-daily-button','☕ 舒适排期 · 给休息留时间');entry.setAttribute('data-comfort-entry','');entry.type='button';entry.setAttribute('aria-label','打开今日舒适排期');entry.onclick=function(){open('plan')};
-  if(container===daily)daily.prepend(entry);else container.append(entry);
+  daily.insertBefore(entry,daily.firstChild);
  }
 
 }
