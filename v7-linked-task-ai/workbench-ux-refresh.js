@@ -124,3 +124,50 @@ function bindSearchLogging(){
 window.SYWorkbenchUX={showHistoryPage:showHistoryPage,refreshHistory:renderHistoryPage,recordSearch:recordSearch,version:'2026-10-25-ux-v1'};
 bindSearchLogging();
 })();
+
+/* AI-first interaction fix: move the energy planner into its own page and show source options progressively. */
+(function(){
+ 'use strict';
+ function $(s,r){return (r||document).querySelector(s)}
+ function movePlanner(){
+   var target=$('#planningMount'),planner=$('#energy-left-planner');
+   if(target&&planner&&!target.contains(planner)){
+     target.appendChild(planner);
+     planner.setAttribute('data-planner-location','planning-page');
+   }
+ }
+ function setupSourceTabs(){
+   var root=$('#sourceCenterRoot'),grid=root&&$('.sc-grid',root);
+   if(!grid)return;
+   var cards=Array.prototype.slice.call(grid.querySelectorAll(':scope > .sc-card'));
+   if(cards.length<2)return;
+   var tabs=root.querySelector('.sc-source-tabs');
+   function selectTab(index){
+     var btns=Array.prototype.slice.call(tabs.querySelectorAll('[data-source-tab]'));
+     cards.forEach(function(card,i){card.hidden=i!==index;card.setAttribute('aria-hidden',String(i!==index));});
+     btns.forEach(function(btn,i){btn.setAttribute('aria-selected',String(i===index));btn.tabIndex=i===index?0:-1;});
+   }
+   if(!tabs){
+     tabs=document.createElement('div');tabs.className='sc-source-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','选择资料来源');
+     var labels=['本机知识库','网页 / 视频链接','本地文件','任务关联'];
+     cards.forEach(function(card,i){
+       var title=card.querySelector('h2'),label=labels[i]||((title&&title.textContent)||('来源 '+(i+1)));
+       var b=document.createElement('button');b.type='button';b.setAttribute('role','tab');b.setAttribute('aria-selected',String(i===0));b.dataset.sourceTab=String(i);
+       var step=document.createElement('span');step.className='sc-tab-step';step.textContent=String(i+1);
+       var text=document.createElement('span');text.textContent=label;b.append(step,text);
+       b.addEventListener('click',function(){selectTab(i)});
+       tabs.appendChild(b);
+       card.setAttribute('role','tabpanel');card.setAttribute('aria-label',label);card.id=card.id||('sc-source-panel-'+i);
+       b.setAttribute('aria-controls',card.id);
+     });
+     grid.parentNode.insertBefore(tabs,grid);
+   }
+   var selected=tabs.querySelector('[aria-selected=true]'),idx=selected?Number(selected.dataset.sourceTab):0;
+   selectTab(Number.isFinite(idx)&&idx>=0&&idx<cards.length?idx:0);
+ }
+ function boot(){movePlanner();setupSourceTabs();}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+ var obs=new MutationObserver(function(){movePlanner();setupSourceTabs();});
+ obs.observe(document.documentElement,{childList:true,subtree:true});
+ window.addEventListener('pageshow',boot);
+})();
