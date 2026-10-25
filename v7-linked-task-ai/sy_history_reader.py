@@ -2,6 +2,9 @@
 from pathlib import Path
 import os,sys,types,threading,time,datetime,re,contextlib,logging,hashlib
 ROOT=Path(__file__).resolve().parent
+LIBS=Path(os.environ.get('SHANGANYA_WECHAT_HISTORY_LIBS',str(ROOT/'.wechat-history-libs')))
+if not (LIBS/'wechatauto').exists() and Path(r'D:\shanganya-ai-workbench-v3\.wechat-history-libs\wechatauto').exists():
+ LIBS=Path(r'D:\shanganya-ai-workbench-v3\.wechat-history-libs')
 PRIVATE=Path(os.environ.get('SHANGANYA_WECHAT_HISTORY_DIR',r'D:\shanganya-private\wechat-history'))
 _LOCK=threading.RLock()
 _STATE={'phase':'not_started','historyVerified':False,'checkedAt':None,'groupCount':0,'error':''}
