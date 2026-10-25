@@ -3,11 +3,43 @@
 const native=location.hostname==='127.0.0.1'||location.hostname==='localhost';
 const publicWorkbench=location.origin==='https://shanganya-v8-workbench-production.up.railway.app';const base=((native&&location.port==='8892')||publicWorkbench)?'http://127.0.0.1:8901':'';
 const el=(tag,parent,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(parent)parent.append(e);return e};
-let modal=null,watchBusy=false,lastSources=[];
+let modal=null,watchBusy=false,lastSources=[],bridgeToken='';
 function storageKey(){return 'sy-multi-sources-v1:'+(window.SY?.currentAccountKey||'guest')}
 function state(){try{return JSON.parse(localStorage.getItem(storageKey())||'null')||{enabled:false,watches:[]}}catch{return {enabled:false,watches:[]}}}
 function save(s){localStorage.setItem(storageKey(),JSON.stringify(s))}
-async function api(path,data){const r=await fetch(base+path,{method:data?'POST':'GET',headers:data?{'Content-Type':'application/json'}:undefined,body:data?JSON.stringify(data):undefined});const d=await r.json();if(!r.ok||d.error)throw Error(d.error||'来源接口未成功');return d}
+async function api(path,data){
+ if(path==='/api/sources/wechat'){
+   const remoteOrigin='https://shanganya-v8-workbench-production.up.railway.app';
+   const publicOrigin='https://shanganya-full-public-20261017-production.up.railway.app';
+   const localNative=(location.hostname==='127.0.0.1'||location.hostname==='localhost')&&location.port==='8892';
+   const route=String(data?.path||'');
+   if(!route.startsWith('/'))throw Error('微信桥接路径无效。');
+   let target='http://127.0.0.1:8892/api/wechat-private'+route;
+   const method=String(data?.method||'POST').toUpperCase();
+   const options={method,cache:'no-store'};
+   if(method!=='GET'){options.headers={'Content-Type':'application/json'};options.body=JSON.stringify(data?.data||{});}
+   if(!localNative){
+     if(![remoteOrigin,publicOrigin].includes(location.origin))throw Error('本机微信只允许从上岸鸭官方工作台连接。');
+     if(!bridgeToken){
+       const pair=await fetch('http://127.0.0.1:8892/api/wechat-private/pairing',{method:'GET',cache:'no-store',mode:'cors',credentials:'omit'});
+       const paired=await pair.json().catch(()=>({}));
+       if(!pair.ok||!paired.token)throw Error('未检测到本机微信桥接。请先启动本机上岸鸭（127.0.0.1:8892），并允许浏览器访问本机网络。');
+       bridgeToken=paired.token;
+     }
+     options.mode='cors';options.credentials='omit';options.headers=Object.assign({},options.headers||{},{'X-Focus-Client':bridgeToken});
+   }else{
+     target='/api/wechat-private'+route;
+   }
+   let response;
+   try{response=await fetch(target,options);}catch(e){if(!localNative)throw Error('本机微信连接失败：请确认本机上岸鸭运行在 8892 端口，并允许浏览器访问本机网络。');throw e;}
+   const result=await response.json().catch(()=>({}));
+   if(response.status===403&&!localNative)bridgeToken='';
+   if(!response.ok||result.error)throw Error(result.error||('微信接口错误 '+response.status));
+   return result;
+ }
+ const r=await fetch(base+path,{method:data?'POST':'GET',headers:data?{'Content-Type':'application/json'}:undefined,body:data?JSON.stringify(data):undefined});
+ const d=await r.json();if(!r.ok||d.error)throw Error(d.error||'来源接口未成功');return d
+}
 function link(parent,label,url){try{const u=new URL(url);if(!['http:','https:','obsidian:'].includes(u.protocol))return;const a=el('a',parent,label||url);a.href=u.href;a.target='_blank';a.rel='noopener noreferrer';return a}catch{}}
 function button(parent,title,fn){const b=el('button',parent,title);b.type='button';b.className='syref-btn muted';b.onclick=async()=>{b.disabled=true;try{await fn()}catch(e){const p=modal?.querySelector('[data-ms-status]');if(p)p.textContent='未完成：'+e.message;else alert(e.message)}finally{b.disabled=false}};return b}
 function field(parent,title,value='',type='text'){const label=el('label',parent,title);label.style.cssText='display:grid;gap:7px;margin:12px 0';const input=el(type==='textarea'?'textarea':'input',label);if(type!=='textarea')input.type=type;input.value=value;input.className='syref-input';input.style.cssText='width:100%;box-sizing:border-box;padding:12px;min-height:42px';return input}
