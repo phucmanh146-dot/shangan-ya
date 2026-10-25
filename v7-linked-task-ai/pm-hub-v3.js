@@ -16,7 +16,7 @@ async function rpc(route,data){
 }
 function make(){
  const hub=tag('section','pmah-hub');hub.id='pma-hub-v3';
- hub.innerHTML=`<div class="pmah-top"><div><p class="pmah-kicker">SHANGANYA · AI PROBLEM SOLVER</p><h2>遇到困难，直接丢给 AI</h2><p class="pmah-desc">发问题 + 上传截图/视频/资料，结合你的知识库和目标给出可以照做的下一步。</p></div><div class="pmah-status"><span id="pmah-model-state">检查真实 API 中…</span><span id="pmah-vault-state">检查 Obsidian 中…</span></div></div>
+ hub.innerHTML=`<div class="pmah-top"><div><p class="pmah-kicker">SHANGANYA · AI PROBLEM SOLVER</p><h2>遇到困难，直接丢给 AI</h2><p class="pmah-desc">发问题 + 上传截图/视频/资料，结合你的知识库和目标给出可以照做的下一步。</p></div><div class="pmah-status" aria-live="polite"><span id="pmah-model-state">模型状态待核验</span></div></div>
  <div class="pmah-themes" role="group" aria-label="当前问题分类"><button data-theme="比赛">🏆 比赛</button><button data-theme="运营">📣 运营</button><button data-theme="AI课程">🤖 AI 课程</button><button data-theme="考研">📚 考研</button><button data-theme="其他">🧩 其他</button></div>
  <div class="pmah-question-slot"></div><label class="pmah-help"><input type="checkbox" id="pmah-include-tasks" checked> 结合我已有任务和进度回答（可关闭）</label>
  <div class="pmah-actions">
