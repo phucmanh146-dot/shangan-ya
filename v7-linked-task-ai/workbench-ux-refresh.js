@@ -17,7 +17,7 @@ function recordSearch(action,query,status,title){
  var rows=searchRecords(),now=Date.now(),existing=rows.find(function(r){return r.action===action&&r.query===query&&now-Number(r.at||0)<2500;});
  if(existing){if(status)existing.status=status;if(title)existing.title=title;existing.at=now;}
  else rows.unshift({id:'srch-'+now.toString(36)+'-'+Math.random().toString(36).slice(2,6),at:now,action:action,query:query,status:status||'已发起',title:title||''});
- try{localStorage.setItem(recordsKey(),JSON.stringify(rows.slice(0,300));}catch(_){}
+ try{localStorage.setItem(recordsKey(),JSON.stringify(rows.slice(0,300)));}catch(_){}
  if($('#view-history')&&!$('#view-history').hidden&&activeTab==='search')renderHistoryBody();
 }
 function mergeUnique(a,b,key){var seen={};return (a||[]).concat(b||[]).filter(function(x){var k=String(x&&((x.id)||(x.at)||(x.generatedAt))||'')+'|'+String(x&&x[key]||'');if(seen[k])return false;seen[k]=1;return true;});}
