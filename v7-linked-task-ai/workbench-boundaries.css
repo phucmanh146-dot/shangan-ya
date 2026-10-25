@@ -1,0 +1,20 @@
+/* V8 strict feature boundaries: legacy components remain mounted for compatibility, but do not create a second, mixed source/WeChat dashboard in Knowledge. */
+#view-knowledge #sywx-root,
+#view-knowledge #pma-wechat-import,
+#view-knowledge .sykv-toolbar,
+#view-knowledge #pma-legacy-tools,
+#view-knowledge .pma-quick-nav,
+#view-knowledge #pma-root>.pma-section:has(#pma-notes),
+#view-knowledge #pma-root>.pma-section:has(#pma-url),
+#view-knowledge #pma-root>#pma-pool-zone { display:none!important; }
+#view-knowledge #pma-root {max-width:1050px;margin:20px auto;padding:clamp(14px,2.2vw,26px);background:#fff;border-radius:22px;border:1px solid #e6dce0;}
+#view-knowledge #pma-root .pma-head h2{font-size:clamp(20px,2.4vw,28px);color:#4b6354}
+#view-knowledge #pma-root .pma-head span{display:none}
+#view-knowledge .sy-separate-nav{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 24px}
+#view-knowledge .sy-separate-nav button{background:#fff8fb;color:#8d4c66;border:1px solid #e6c6d1;border-radius:12px;padding:11px 16px;font:inherit;font-weight:700;cursor:pointer}
+#view-knowledge .sy-separate-nav button:hover{background:#f9e7ef}
+#view-knowledge .sy-separate-nav p{width:100%;color:#8a7580;font-size:12px;margin:4px 0}
+#view-knowledge .skill-card{max-width:1050px;margin:24px auto}
+#view-task-intake #wechatTaskMount{max-width:1060px;margin:auto}
+#view-sources #sourceCenterRoot{max-width:1260px;margin:auto}
+@media(max-width:720px){#view-knowledge #pma-root{margin:12px 0}#view-knowledge .sy-separate-nav button{flex:1 1 42%}}
