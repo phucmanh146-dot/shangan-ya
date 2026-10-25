@@ -3,9 +3,12 @@
 'use strict';if(window.SYPMWeChatV4)return;
 const Q=(s,r=document)=>r.querySelector(s);
 const El=(t,c,v)=>{const n=document.createElement(t);if(c)n.className=c;if(v!==undefined)n.textContent=String(v);return n};
-let currentSearch=null,lastCandidate=null,lastCrop=null,busy=false,selectedScope='group',selectedGroup='';
+let currentSearch=null,lastCandidate=null,lastCrop=null,busy=false,selectedScope='group',selectedGroup='',selectedGroupId='',selectedHistoryMessage=null;
 function notice(t,bad=false){let x=Q('#pmaw-status');if(x){x.textContent=t;x.dataset.error=String(bad)}}
 function setFlowStep(step){Q('.pmaw-flow')?.querySelectorAll('li').forEach((n,i)=>{n.classList.toggle('is-active',i+1===step);n.classList.toggle('is-done',i+1<step)})}
+async function historyApi(path,data){if(!window.SYMultiSources?.api)throw Error('本机资料桥未加载；请确认本机读取服务正在运行。');return window.SYMultiSources.api('/api/sources/wechat',{path,method:'POST',data:data||{}})}
+function showGroupResults(result){const host=Q('#pmaw-results');host.replaceChildren();const groups=Array.isArray(result.groups)?result.groups:[];host.append(El('p','pmaw-note','本机历史群目录匹配 '+(result.total||groups.length)+' 个群。此目录不提供置顶标记；请核对群名后选择。'));groups.slice(0,200).forEach((g,i)=>{const name=String(g.name||'').trim();if(!name)return;const row=El('div','pmaw-hit'),num=El('span','pmaw-hit-number',String(i+1).padStart(2,'0')),info=El('span','pmaw-hit-name',name),btn=El('button','pmaw-light','选中此群');btn.type='button';btn.onclick=()=>{selectedGroup=name;selectedGroupId=String(g.id||'');selectedHistoryMessage=null;Q('#pmaw-message-query')?.focus();setFlowStep(2);notice('已选中群聊「'+name+'」。输入消息关键词后，搜索本机历史记录。');host.querySelectorAll('.pmaw-hit').forEach(x=>x.classList.remove('is-selected'));row.classList.add('is-selected');btn.textContent='已选中 ✓'};row.append(num,info,btn);host.append(row)});if(result.partial)host.append(El('p','pmaw-note','匹配结果超过本批显示上限；请缩小群名关键词。'))}
+function showHistoryMessages(result){const host=Q('#pmaw-results');host.replaceChildren();const items=Array.isArray(result.items)?result.items:[];host.append(El('p','pmaw-note','群聊「'+String(result.group||selectedGroup)+'」本机历史搜索结果：'+items.length+' 条。只显示匹配到的真实记录；图片/语音/视频等媒体消息可能需要另行识别。'));items.forEach((item,i)=>{const row=El('article','pmaw-history-hit'),meta=El('div','pmaw-history-meta',String(item.time||'')+' · '+String(item.sender||'未知发送者')),body=El('p','pmaw-history-text',String(item.text||'').slice(0,1200)),btn=El('button','pmaw-light','选择并识别任务');btn.type='button';btn.onclick=()=>{selectedHistoryMessage=item;lastCandidate={label:String(item.text||'').slice(0,180),scope:'history'};lastCrop=null;const box=Q('#pmaw-recognition');if(box)box.hidden=false;const ocr=Q('#pmaw-ocr');if(ocr)ocr.textContent=String(item.text||'');taskOptions();setFlowStep(3);notice('已选择一条本机历史消息。请点击“AI 识别任务/链接”，核对后再关联任务。');row.classList.add('is-selected')};row.append(meta,body,btn);host.append(row)});if(!items.length)host.append(El('p','pmaw-note','没有匹配消息。可换关键词，或切换到微信窗口搜索。'));if(result.hasMore)host.append(El('p','pmaw-note','本批消息还有更多记录；当前先展示前 '+items.length+' 条。'))}
 async function api(url,data){
  const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),50000);
  try{const r=await fetch(url,{method:data===undefined?'GET':'POST',headers:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data),signal:ctrl.signal,cache:'no-store'});const j=await r.json().catch(()=>({error:'没有收到有效数据'}));if(!r.ok||j.error)throw Error(j.error||('HTTP '+r.status));return j}
@@ -51,11 +54,20 @@ async function search(scope){
  if(!keyword)return notice('先填'+(scope==='group'?'群聊':'群聊消息')+'关键词',true);
  if(busy)return;busy=true;selectedScope=scope;setFlowStep(scope==='group'?1:2);
  try{
-  notice(scope==='group'?'正在通过本机微信搜索群聊关键词…':'正在通过本机微信搜索当前群聊消息…');
-  const r=await api('/api/pm/wx/search',{keyword,scope,groupName:selectedGroup,groupOnly:scope==='message',pinnedFirst:true});
+  if(scope==='group'){
+   notice('正在通过本机只读历史目录检索群名…');
+   try{const h=await historyApi('/wechat/history-groups',{query:keyword});if(Array.isArray(h.groups)&&h.groups.length){currentSearch={source:'wechat-history-directory',groups:h.groups,total:h.total};showGroupResults(h);notice('群名检索完成：找到 '+(h.total||h.groups.length)+' 个匹配群。选择群名后再搜索消息。');return}}
+   catch(historyError){/* If local history directory is not available, use the visible logged-in WeChat window. */}
+  }else if(selectedGroupId){
+   notice('正在读取群聊「'+selectedGroup+'」的本机历史消息…');
+   try{const h=await historyApi('/wechat/history',{groupId:selectedGroupId,keyword,offset:0,limit:50});showHistoryMessages(h);currentSearch={source:'wechat-history',groupId:selectedGroupId,items:h.items||[],hasMore:!!h.hasMore};notice('本机历史读取返回 '+((h.items||[]).length)+' 条匹配消息。请选中一条再识别和关联。');return}
+   catch(historyError){notice('本机历史消息接口不可用，改用当前微信窗口搜索：'+historyError.message)}
+  }
+  notice('正在通过已登录的微信窗口搜索“'+keyword.slice(0,50)+'”…');
+  const r=await api('/api/pm/wx/search',{keyword,scope,groupName:selectedGroup,groupOnly:scope==='message'});
   candidates(r);
-  notice((r.note||'微信窗口搜索已返回。')+(selectedGroup&&scope==='message'?' 当前选中群：'+selectedGroup+'。':'')+(r.candidates?.length?' 找到 '+r.candidates.length+' 条候选，请核对真实群名和消息。':'')+' 本接口结果不等于完整历史数据库。');
- }catch(e){notice('微信搜索未完成：'+e.message+'。请确认本机微信已登录且后端窗口控制服务可用。',true)}
+  notice((r.note||'微信窗口搜索已返回。')+(selectedGroup&&scope==='message'?' 当前选中群：'+selectedGroup+'。':'')+(r.candidates?.length?' 找到 '+r.candidates.length+' 条候选，请核对真实群名和消息。':'')+' 窗口搜索不等于完整历史数据库。');
+ }catch(e){notice('微信搜索未完成：'+e.message+'。请确认本机桥接服务和微信窗口可用。',true)}
  finally{busy=false}
 }
 async function focus(){
@@ -78,16 +90,16 @@ function catchCrop(detail){
  notice('框选图片已进入本地资料池。请核对识别文字、选择原任务或输入新任务名称，再按确认。')
 }
 function analyzeCrop(){
- if(!lastCrop?.file?.id)return notice('先框选微信窗口并点击“加入资料池”',true);
+ const raw=selectedHistoryMessage?String(selectedHistoryMessage.text||''):String(lastCrop?.content||'');if(!raw.trim())return notice('先选择一条历史消息，或框选微信窗口内容。',true);
  const q=Q('#pma-question'),button=Q('#pma-ask');if(!q||!button)return notice('AI 问答入口暂未加载',true);
  const group=selectedGroup||Q('#pmaw-group-query')?.value.trim()||'（未知群聊）';
  const message=Q('#pmaw-message-query')?.value.trim()||'（未设）';
- q.value='只根据这次授权的微信框选图片及已识别文字，识别对应任务、明确的DDL原话、责任人和下一步。群聊搜索词：'+group+'；消息搜索词：'+message+'。未知内容请标注“未确认”，不能编造截止日期。OCR文字：\n'+String(lastCrop.content||'').slice(0,3500);
+ q.value='只根据本次授权读取的微信消息或框选截图，识别对应任务、明确的DDL原话、责任人、消息中的链接和下一步。群聊：'+group+'；消息关键词：'+message+'。未知内容请标注“未确认”，不能编造截止日期。原文：\n'+raw.slice(0,5000);
  q.dispatchEvent(new Event('input',{bubbles:true}));
  button.click();notice('已向当前已连接的模型提交框选截图与任务识别请求，结果显示在上方的 Agent 回答区。')
 }
 function confirmTask(){
- const d=lastCrop,a=account();if(!d?.file?.id)return notice('先截取真实微信区域',true);
+ const d=lastCrop,a=account(),rawText=selectedHistoryMessage?String(selectedHistoryMessage.text||''):String(d?.content||'');if(!rawText.trim()||(!selectedHistoryMessage&&!d?.file?.id))return notice('先选择一条历史消息或框选真实微信内容',true);
  const sel=Q('#pmaw-existing-task')?.value||'new';
  let task=null;
  const create=sel==='new';
@@ -107,23 +119,23 @@ function confirmTask(){
    createdAt:Date.now(),materials:[],aiScheduled:false};
   tasks.push(task);a.tasks=tasks;
  }
- const rawText=String(d.content||'').slice(0,14000);
+ const rawTextForRecord=rawText.slice(0,14000);
  const extractedLinks=(rawText.match(/(?:https?:\/\/|obsidian:\/\/)[^\s\])）<>"'，。；;]+/gi)||[]).map(x=>x.replace(/[),.，。；;]+$/,'')).filter((x,i,a)=>a.indexOf(x)===i).slice(0,20);
  const record={id:'wx-proof-'+Date.now().toString(36),
   taskId:String(task.id),taskName:String(task.name),groupQuery:(Q('#pmaw-group-query')?.value||'').trim(),
   messageQuery:(Q('#pmaw-message-query')?.value||'').trim(),
   selectedResult:lastCandidate?.label||'',
-  text:rawText,links:extractedLinks,fileId:d.file.id,
-  capturedAt:new Date().toISOString(),source:'windows-wechat-selected-region',
+  text:rawTextForRecord,links:extractedLinks,fileId:d?.file?.id||null,proofId:selectedHistoryMessage?'history:'+String(selectedHistoryMessage.id):'crop:'+String(d.file.id),historyMessageId:selectedHistoryMessage?.id||null,
+  capturedAt:new Date().toISOString(),source:selectedHistoryMessage?'wechat-history':'windows-wechat-selected-region',
   ddlCandidate:(String(d.content||'').split(/\n/).find(x=>/DDL|截止|提交|deadline|明天|今晚/i.test(x))||'').slice(0,250),
   confirmedByUser:true};
  const prior=Array.isArray(a.wxTaskEvidence)?a.wxTaskEvidence:[];
- if(prior.some(x=>x.fileId===record.fileId&&x.taskId===record.taskId))return notice('这份截图已经归入该任务，无须重复保存。');
+ if(prior.some(x=>(x.proofId||('crop:'+String(x.fileId)))===record.proofId&&x.taskId===record.taskId))return notice('这条微信证据已经归入该任务，无须重复保存。');
  prior.unshift(record);a.wxTaskEvidence=prior.slice(0,180);
  if(extractedLinks.length){task.materials=Array.isArray(task.materials)?task.materials:[];extractedLinks.forEach(function(url){if(!task.materials.some(function(m){return (typeof m==='string'?m:m&&(m.url||m.href||m.link))===url}))task.materials.push({id:'wx-link-'+Date.now().toString(36)+'-'+task.materials.length,url:url,title:url,source:'wechat-message',readStatus:'pending',addedAt:Date.now()})});}
  save(a);taskOptions();
  Q('#pmaw-last-confirmed').textContent='已确认：'+task.name+' · 保存1条微信证据'+(extractedLinks.length?'，提取 '+extractedLinks.length+' 条链接并附加到任务资料':'')+'；DDL以实际截图和你手动填写为准。';
- notice('任务证据已关联到《'+task.name+'》。'+(create?'新任务已加入原有任务列表。':'没有更改该任务的原计划。'));
+ setFlowStep(4);selectedHistoryMessage=null;notice('任务证据已关联到《'+task.name+'》。'+(create?'新任务已加入原有任务列表。':'没有更改该任务的原计划。'));
 }
 function make(){
  const root=El('section','pmaw-mini');root.id='pmaw-mini';
