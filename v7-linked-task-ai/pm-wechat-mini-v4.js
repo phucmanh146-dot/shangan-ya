@@ -49,7 +49,7 @@ async function focus(){
 }
 async function crop(){return focus()}
 function catchCrop(detail){
- setFlowStep(4);lastCrop=detail;const box=Q('#pmaw-recognition');if(!box)return;
+ setFlowStep(3);lastCrop=detail;const box=Q('#pmaw-recognition');if(!box)return;
  box.hidden=false;
  const content=String(detail.content||'').trim(),msg=Q('#pmaw-ocr');
  msg.textContent=content||'本次 OCR 未读出可用的中文。原始截图仍关联在 AI 附件中，可点“AI根据截图识别”。';
@@ -114,12 +114,12 @@ function make(){
  <section class="pmaw-optional-search"><div class="pmaw-search-heading"><strong>搜索群名及群聊消息</strong><span>先查本机历史群目录；若不可用，再查当前微信窗口。置顶标记需按真实界面核对</span></div><div class="pmaw-filters"><label>群聊关键词<input id="pmaw-group-query" placeholder="例如：挑战杯、项目组"></label><button id="pmaw-search-groups">① 搜索群聊</button><label>群聊消息关键词<input id="pmaw-message-query" placeholder="先选群，再搜：DDL、PPT、老师反馈"></label><button id="pmaw-search-messages">② 搜索当前窗口消息</button></div>
  <div id="pmaw-results" class="pmaw-results"></div>
  <details id="pmaw-window-preview" class="pmaw-preview"><summary>查看微信窗口搜索画面（仅本机显示）</summary><img id="pmaw-search-image" alt="已登录微信窗口截图" hidden></details></section>
- <div class="pmaw-row"><button id="pmaw-crop" type="button" class="pmaw-main">开始框选微信内容 →</button><span>切换群聊或打开微信文章时，浮窗跟随当前微信窗口；点确认后才识别。</span></div>
+ <div class="pmaw-row"><button id="pmaw-crop" type="button" class="pmaw-main">手动框选微信内容（备用） →</button><span>切换群聊或打开微信文章时，浮窗跟随当前微信窗口；点确认后才识别。</span></div>
  <div id="pmaw-crop-slot"></div>
  <section id="pmaw-recognition" class="pmaw-recognition" hidden><h4>第 4 步 · 核对原文并关联任务</h4><pre id="pmaw-ocr"></pre>
  <div class="pmaw-form"><label>关联到哪个任务<select id="pmaw-existing-task"></select></label>
  <div id="pmaw-new-task-fields"><label>新任务名称（请核对）<input id="pmaw-taskname" placeholder="如：补比赛用户调研PPT"></label><label>所属类别<select id="pmaw-category"><option>比赛</option><option>运营</option><option>AI PM</option><option>考研</option><option>副业</option></select></label><label>预计分钟（请确认）<input type="number" id="pmaw-est-minutes" min="5" max="1200" value="30"></label><label>DDL（未确认就留空）<input type="date" id="pmaw-due-date"></label></div></div>
- <div class="pmaw-row"><button id="pmaw-analyze" type="button" class="pmaw-light">🤖 AI根据截图识别任务/DDL</button><button id="pmaw-confirm" type="button" class="pmaw-main">确认关联任务 ✓</button></div>
+ <div class="pmaw-row"><button id="pmaw-analyze" type="button" class="pmaw-light">🤖 AI识别任务 / DDL / 链接</button><button id="pmaw-confirm" type="button" class="pmaw-main">确认关联任务 ✓</button></div>
  <p id="pmaw-last-confirmed" class="pmaw-note"></p></section>
  <p class="pmaw-status" id="pmaw-status" role="status">不扫描私聊数据库、不假装读取完整历史。关键词搜索基于当前微信窗口可见内容；AI识别后选择原有任务，只有你确认后才保存关联证据。</p>`;
  Q('#pmaw-focus',root).onclick=focus;
