@@ -117,6 +117,15 @@ def open_hit(key):
  return {'ok':True,'label':hit['box']['text'],'note':'已点击所选微信候选。请核对目标会话，然后读取当前画面。'}
 def api(method,path,data=None):
  data=data or {};u=urlparse(path);q=parse_qs(u.query)
+ if u.path=='/wechat/history-status':
+  import sy_history_reader as history_reader
+  return history_reader.status(bool(data.get('retry')))
+ if u.path=='/wechat/history-groups':
+  import sy_history_reader as history_reader
+  return history_reader.groups(data.get('query',''))
+ if u.path=='/wechat/history':
+  import sy_history_reader as history_reader
+  return history_reader.history(data)
  if u.path=='/status':
   return {'ok':True,'available':bool(windows()),'wxauto4':False,'driver':'Windows 微信窗口 + OCR','mode':'same-origin-local'}
  if u.path=='/wechat/search':return search(data.get('query'))
