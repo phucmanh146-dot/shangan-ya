@@ -4,7 +4,7 @@
 #pma-root .pmah-kicker{font-size:10px;color:#3c8068;letter-spacing:2.1px;font-weight:820;margin:0}
 #pma-root .pmah-desc{font-size:13px;color:#477063;line-height:1.7;margin:0}
 #pma-root .pmah-status{display:flex;flex-direction:column;align-items:flex-end;gap:6px;margin-top:3px}
-#pma-root .pmah-status span{font-size:11px;color:#306450;background:#e5f3eb;border-radius:9px;padding:7px 11px}
+#pma-root .pmah-status span{font-size:11px;color:#69535e;background:#f7edf1;border:1px solid #ead9df;border-radius:9px;padding:7px 11px}
 #pma-root .pmah-themes{display:flex;gap:7px;flex-wrap:wrap;margin-top:19px}
 #pma-root .pmah-themes button{border:1px solid #bfdbd0;border-radius:100px;padding:9px 13px;font-size:12px;font-weight:720;background:#ffffff;color:#275846;cursor:pointer}
 #pma-root .pmah-themes button.active{background:#1d674a;color:white;border-color:#1d674a}
