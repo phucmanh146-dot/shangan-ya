@@ -103,7 +103,13 @@ x.querySelector('[data-krescue]').onclick=function(){var q=x.querySelector('[dat
 x.querySelector('[data-ksearch]').onclick=async function(){var q=x.querySelector('[data-knowledge-q]').value.trim();if(!q)return status('请先输入检索词。');if(!window.SYKnowledge){status('知识库模块未加载。');return;}var btn=x.querySelector('[data-ksearch]');btn.disabled=true;status('正在检索你授权的本机笔记…');try{var r=await SYKnowledge.search(q),host=x.querySelector('[data-results]');host.replaceChildren();if(!r||!r.length){status('未找到匹配的笔记，检查 Obsidian 是否已经连接。');return;}r.slice(0,15).forEach(function(n){var box=el('div','sy-source'),strong=el('strong','',n.title||n.path||'笔记'),para=el('p','sy-muted',String(n.text||'').slice(0,400));box.append(strong,para);if(n.url&&/^obsidian:\/\/open\?/.test(n.url)){var a=el('a','', '在 Obsidian 中打开 ↗');a.href=n.url;box.append(a);}host.append(box);});status('匹配 '+r.length+' 篇笔记，点击笔记可打开原文。');}catch(e){status('真实检索失败：'+(e.message||e));}finally{btn.disabled=false;}};
 }
 function mount(){if(!window.SY||!document.querySelector('.app-main-topbar'))return;document.querySelectorAll('.sy-adaptive-launch,#sy-adaptive-summary').forEach(function(n){n.remove();});
- var sidebar=document.querySelector('.app-sidebar, .sidebar, aside');if(sidebar&&!sidebar.querySelector('[data-comfort-entry]')){var entry=el('button','btn btn-sm sy-comfort-nav','☕ 舒适排期 · 精力与躺平');entry.setAttribute('data-comfort-entry','');entry.type='button';entry.style.cssText='display:block;width:calc(100% - 20px);margin:12px 10px;padding:12px 8px;border:1px solid #e6b9c9;background:#fff1f4;color:#793e58;border-radius:12px;font-weight:700;cursor:pointer;text-align:left';entry.onclick=function(){open('plan')};sidebar.append(entry);}
+ var legacy=document.querySelector('[data-comfort-entry]');if(legacy)legacy.remove();
+ var daily=document.getElementById('view-daily');if(!daily)return;
+ var container=daily.querySelector('.app-main-topbar')||daily.querySelector('.lc-hero')||daily;
+ if(!daily.querySelector('[data-comfort-entry]')){
+  var entry=el('button','sy-comfort-daily-button','☕ 舒适排期 · 给休息留时间');entry.setAttribute('data-comfort-entry','');entry.type='button';entry.setAttribute('aria-label','打开今日舒适排期');entry.onclick=function(){open('plan')};
+  if(container===daily)daily.prepend(entry);else container.append(entry);
+ }
 
 }
 window.SYAdaptive={open:open,replan:function(){draft=[];pending=[];open('plan');},version:'1.0'};
