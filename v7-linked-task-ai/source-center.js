@@ -116,20 +116,25 @@ async function readObsidianNote(path,button){
   noteStatus('已读取《'+String(note.title||path)+'》全文，共 '+(note.chars||content.length)+' 字；已加入 AI 资料池和本次结果。');
  }catch(e){if(button){button.disabled=false;button.textContent='重试读取全文'}noteStatus('读取 Obsidian 全文失败：'+e.message,true)}
 }
-async function readLinks(){
- if(busy)return;var urls=window.SYSourceIO?SYSourceIO.normalizeLinks($('#scLinks')&&$('#scLinks').value||[]):[];
+async function readLinks(kind){
+ kind=kind||'web';
+ var fieldId=kind==='feishu'?'scFeishuLinks':kind==='video'?'scVideoLinks':'scLinks';
+ var buttonId=kind==='feishu'?'scReadFeishu':kind==='video'?'scReadVideo':'scReadLinks';
+ var urls=window.SYSourceIO?SYSourceIO.normalizeLinks($('#'+fieldId)&&$('#'+fieldId).value||[]):[];
  if(!urls.length){noteStatus('请先粘贴至少一条完整链接。',true);return}
- busy=true;var button=$('#scReadLinks');if(button){button.disabled=true;button.textContent='逐条读取中…'}
+ busy=true;var button=$('#'+buttonId);if(button){button.disabled=true;button.textContent='逐条读取中…'}
  var ok=0,fail=0;
- try{  for(var i=0;i<urls.slice(0,12).length;i++){
+ try{for(var i=0;i<urls.slice(0,12).length;i++){
    var url=urls[i];noteStatus('正在读取第 '+(i+1)+' / '+Math.min(urls.length,12)+' 条：'+url);
-   var item={id:uid(),url:url,type:sourceType(url),sourceKey:sourceType(url)==='飞书'?'feishu':sourceType(url)==='视频链接'?'video':'web',title:url,sourceRef:url,content:'',readStatus:'failed',error:''};
+   var type=sourceType(url);
+   var item={id:uid(),url:url,type:type,sourceKey:type==='飞书'?'feishu':type==='视频链接'?'video':'web',title:url,sourceRef:url,content:'',readStatus:'failed',error:''};
    try{var doc=await SYSourceIO.readLink(url);item.title=titleFor(doc,url);item.content=contentFor(doc);item.sourceRef=doc.path||doc.sourceRef||url;item.readStatus=String(doc.readStatus||'fulltext');if(!item.content.trim())throw Error('接口返回成功但没有正文');item.readStatus='fulltext';ok++;addToPool(item)}
    catch(e){item.error=e.message||'读取失败';item.readStatus='failed';fail++}
    upsert(item);renderResults();
   }
+  activateSourceTab('results');
   noteStatus('本批完成：已读到正文 '+ok+' 条，失败 '+fail+' 条。每条状态已单独列出；失败项可打开原文或调整权限后重试。',fail>0)
- }finally{busy=false;if(button){button.disabled=false;button.textContent='逐条读取正文'}}
+ }finally{busy=false;if(button){button.disabled=false;button.textContent=kind==='feishu'?'读取飞书正文':kind==='video'?'读取视频资料':'读取网页正文'}}
 }
 async function readFiles(files){
  files=Array.from(files||[]);if(!files.length)return;busy=true;var button=$('#scChooseFiles');if(button){button.disabled=true;button.textContent='解析中…'}
@@ -183,14 +188,26 @@ function importMaterial(data){
  var item={id:String(data.id||uid()),title:titleFor(data,data.url,data.sourceRef),type:data.source==='obsidian'?'Obsidian 笔记':'导入资料',sourceKey:data.source||'web',sourceRef:data.sourceRef||data.path||data.url||'',url:data.url||'',content:content,readStatus:'fulltext',selected:true,error:''};
  upsert(item);addToPool(item);renderResults();noteStatus('已导入《'+item.title+'》全文到资料中心，可关联任务或带入航线工坊。');
 }
+function activateSourceTab(key){
+ var root=$('#sourceCenterRoot');if(!root)return;
+ root.querySelectorAll('[data-sc-tab]').forEach(function(btn){var active=btn.getAttribute('data-sc-tab')===key;btn.classList.toggle('is-active',active);btn.setAttribute('aria-current',active?'page':'false')});
+ root.querySelectorAll('[data-sc-panel]').forEach(function(panel){var active=panel.getAttribute('data-sc-panel')===key;panel.hidden=!active;panel.classList.toggle('is-active',active)});
+}
 function bind(){
+ var root=$('#sourceCenterRoot');
+ if(root)root.querySelectorAll('[data-sc-tab]').forEach(function(btn){btn.onclick=function(){activateSourceTab(btn.getAttribute('data-sc-tab'))}});
  $('#scSearchObsidian').onclick=searchObsidian;
  $('#scObsidianQuery').onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();searchObsidian()}};
  $('#scConnectVault').onclick=function(){if(window.SYKnowledge)SYKnowledge.open();else noteStatus('Obsidian 读取组件尚未加载。',true);setTimeout(refreshVaultState,500)};
  $('#scOpenVault').onclick=async function(){try{var r=await SY.backendCall('/api/pm/vault-open',{},10000);if(!r||!r.ok)throw Error(r&&r.error||'本机服务没有打开 Obsidian');noteStatus('已请求打开本机 Obsidian。')}catch(e){noteStatus('打开失败：'+e.message,true)}};
- $('#scReadLinks').onclick=readLinks;
+ $('#scReadLinks').onclick=function(){readLinks('web')};
+ $('#scReadFeishu').onclick=function(){readLinks('feishu')};
+ $('#scReadVideo').onclick=function(){readLinks('video')};
+ $('#scOpenAdvancedFeishu').onclick=function(){if(window.SYHub)SYHub.open(null,'connect');else noteStatus('连接检测面板尚未加载。',true)};
+ $('#scGoAI').onclick=function(){if(window.SY&&SY.switchAppView)SY.switchAppView('knowledge');else noteStatus('AI 工作助手入口尚未加载。',true)};
  $('#scFiles').onchange=function(){var files=Array.from(this.files||[]);this.value='';readFiles(files)};
  $('#scChooseFiles').onclick=function(){$('#scFiles').click()};
+ var drop=$('#scFileDrop');if(drop){['dragenter','dragover'].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.add('is-dragging')})});['dragleave','dragend'].forEach(function(ev){drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.remove('is-dragging')})});drop.addEventListener('drop',function(e){e.preventDefault();drop.classList.remove('is-dragging');readFiles(e.dataTransfer&&e.dataTransfer.files)})}
  $('#scClear').onclick=function(){items=[];renderResults();noteStatus('已清空本次读取结果；已关联到任务的资料不会被删除。')};
  $('#scAssociate').onclick=associate;
  $('#scAnalyze').onclick=analyze;
@@ -202,5 +219,5 @@ function refresh(){renderTasks();refreshHealth();refreshVaultState()}
 function mount(){if(!$('#sourceCenterRoot'))return;if(owner!==account()){owner=account();items=[]}renderShell()}document.addEventListener('click',function(e){if(e.target.closest&&e.target.closest('[data-view="sources"]'))refresh()});
 document.addEventListener('sy:ready',mount);
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
-window.SYSourceCenter={refresh:refresh,readLinks:readLinks,renderResults:renderResults,importMaterial:importMaterial};
+window.SYSourceCenter={refresh:refresh,readLinks:readLinks,renderResults:renderResults,importMaterial:importMaterial,activateSourceTab:activateSourceTab};
 })();
