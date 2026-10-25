@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="light">
 <meta name="referrer" content="no-referrer">
 <title>上岸鸭 · 连接 AI</title>
-<link rel="stylesheet" href="./p2-chat.css?v=20261023-gpt-workspace-v3">
+<link rel="stylesheet" href="./p2-chat.css?v=20261025-natural-workspace-v4">
 <link rel="stylesheet" href="./p2-wechat-ai.css?v=20261023-wechat-ai">
 <link rel="stylesheet" href="./p2-video-presenter.css?v=20261023-multimodal-video">
 <link rel="stylesheet" href="./p2-embedded-child.css?v=20261024-clean-v4">
@@ -60,19 +60,17 @@
       </div>
       <div id="p2-messages" class="p2-messages"></div>
     </section>
-    <div class="p2-source-strip" aria-label="按需添加资料来源">
-      <span class="p2-source-strip-label">资料入口</span>
-      <button type="button" class="p2-source-shortcut" data-source-target="feishu">飞书文档</button>
-      <button type="button" class="p2-source-shortcut" data-source-target="obsidian">Obsidian</button>
-      <button type="button" class="p2-source-shortcut" data-source-target="wechat">微信资料</button>
-      <button type="button" class="p2-source-shortcut" data-source-target="公众号">公众号</button>
-      <button type="button" class="p2-source-shortcut" data-source-target="视频号">视频号</button>
-      <button type="button" class="p2-source-shortcut" data-source-target="小红书">小红书</button>
-      <button type="button" class="p2-source-shortcut" data-source-target="抖音">抖音</button>
-      <button type="button" class="p2-source-shortcut" data-source-target="B站">B站</button>
-      <button type="button" class="p2-source-shortcut" data-source-target="YouTube">YouTube</button>
-      <button type="button" class="p2-source-shortcut" data-source-target="网页">网页链接</button>
-    </div>
+    <details class="p2-source-menu">
+      <summary>＋ 更多平台链接 <span>公众号 · 视频号 · 小红书 · 抖音 · B站 · YouTube</span></summary>
+      <div class="p2-source-strip" aria-label="更多平台资料来源">
+        <button type="button" class="p2-source-shortcut" data-source-target="公众号">微信公众号文章</button>
+        <button type="button" class="p2-source-shortcut" data-source-target="视频号">微信视频号</button>
+        <button type="button" class="p2-source-shortcut" data-source-target="小红书">小红书</button>
+        <button type="button" class="p2-source-shortcut" data-source-target="抖音">抖音</button>
+        <button type="button" class="p2-source-shortcut" data-source-target="B站">B站</button>
+        <button type="button" class="p2-source-shortcut" data-source-target="YouTube">YouTube</button>
+      </div>
+    </details>
     <div class="p2-composer-wrap">
       <div id="p2-status" class="p2-status" role="status"></div>
       <div id="p2-attachments" class="p2-attachments"></div>
