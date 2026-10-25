@@ -146,3 +146,44 @@
 .p2-team-grid{gap:16px}
 .p2-role-card{padding:18px;border-radius:16px}
 @media(max-width:760px){.p2-shell{min-height:100dvh}.p2-side{width:min(84vw,320px);flex-basis:min(84vw,320px)}.p2-top-title{font-size:17px}.p2-welcome{margin:28px auto 18px;padding:0 18px}.p2-welcome h1{font-size:31px}.p2-prompts{grid-template-columns:1fr 1fr;gap:10px;margin:22px auto}.p2-prompts button{min-height:68px;padding:13px;font-size:14px}.p2-messages{padding:14px 16px 28px;gap:22px}.p2-bubble{font-size:14px}.p2-source-strip{width:calc(100% - 20px);padding:9px}.p2-composer-wrap{width:calc(100% - 20px)}.p2-composer{padding:11px}.p2-controls-left{gap:6px}.p2-attach-lead{display:none}.p2-dialog{padding:20px 16px}.p2-team-grid{grid-template-columns:1fr}}
+
+
+/* AI-first spacious interaction polish: progressive disclosure, clear hierarchy, and comfortable task planning. */
+#appHome .app-sidebar #energy-left-planner{display:none!important}
+#planningMount{min-width:0}
+#planningMount>#energy-left-planner{display:block!important;width:100%;max-width:1480px;margin:0 auto 28px}
+#sourceCenterRoot .sc-source-tabs{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 0;padding:8px;border:1px solid #e4e9e4;border-radius:16px;background:#f7faf7}
+#sourceCenterRoot .sc-source-tabs button{display:flex;align-items:center;gap:9px;min-height:46px;padding:11px 16px;border:1px solid transparent;border-radius:11px;background:transparent;color:#526b5f;font:inherit;font-size:14px;font-weight:750;cursor:pointer;transition:background .18s ease,border-color .18s ease,transform .18s ease}
+#sourceCenterRoot .sc-source-tabs button:hover{background:#fff;transform:translateY(-1px)}
+#sourceCenterRoot .sc-source-tabs button[aria-selected=true]{background:#fff;border-color:#e7c9d4;color:#9b4d6b;box-shadow:0 3px 12px #4a263b0a}
+#sourceCenterRoot .sc-source-tabs .sc-tab-step{display:grid;place-items:center;width:25px;height:25px;flex:none;border-radius:8px;background:#e7efe8;color:#37644e;font-size:12px}
+#sourceCenterRoot .sc-source-tabs button[aria-selected=true] .sc-tab-step{background:#f5dfe7;color:#9b4d6b}
+#sourceCenterRoot .sc-grid{grid-template-columns:minmax(0,1fr);gap:0}
+#sourceCenterRoot .sc-grid>.sc-card[hidden]{display:none!important}
+#sourceCenterRoot .sc-grid>.sc-card{padding:clamp(22px,2.2vw,34px);border-radius:22px;min-height:270px}
+#sourceCenterRoot .sc-grid>.sc-card h2{font-size:clamp(21px,1.8vw,26px);margin-bottom:10px}
+#sourceCenterRoot .sc-grid>.sc-card p{max-width:920px;font-size:15px;line-height:1.8}
+#sourceCenterRoot .sc-grid>.sc-card textarea{min-height:180px}
+#sourceCenterRoot .sc-grid>.sc-card .sc-actions{margin-top:18px}
+#sourceCenterRoot .sc-results{margin-top:26px}
+#sourceCenterRoot .sc-results-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+#sourceCenterRoot .sc-results-head h2{font-size:clamp(22px,1.8vw,27px)}
+#sourceCenterRoot .sc-associate{margin-top:22px!important}
+#sourceCenterRoot .sc-card input:focus-visible,#sourceCenterRoot .sc-card textarea:focus-visible,#sourceCenterRoot .sc-associate select:focus-visible,
+#sourceCenterRoot .sc-btn:focus-visible,#sourceCenterRoot .sc-source-tabs button:focus-visible,
+#appNav .app-nav-item:focus-visible,.p2-shell button:focus-visible,.p2-shell a:focus-visible,.p2-shell input:focus-visible,.p2-shell textarea:focus-visible,.p2-shell select:focus-visible{outline:3px solid #d9a5b8;outline-offset:3px}
+#appNav .app-nav-item[aria-current=page]{box-shadow:inset 3px 0 #b65d7d}
+.p2-shell{background:#fbfcfa}
+.p2-topbar{gap:18px}
+.p2-welcome{max-width:1040px}
+.p2-source-strip{box-shadow:0 5px 20px #23493608}
+.p2-composer{border:1px solid #dfe8e1}
+.p2-composer:focus-within{border-color:#c9a0b2;box-shadow:0 0 0 4px #b65d7d12,0 12px 32px #2349360c}
+.p2-prompts button{transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.p2-prompts button:hover{transform:translateY(-2px);box-shadow:0 10px 24px #2349360b;border-color:#d9b2c1}
+@media(max-width:760px){
+ #sourceCenterRoot .sc-source-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:6px}
+ #sourceCenterRoot .sc-source-tabs button{justify-content:flex-start;min-width:0;padding:10px;font-size:13px}
+ #sourceCenterRoot .sc-grid>.sc-card{padding:18px;min-height:0}
+ #sourceCenterRoot .sc-grid>.sc-card textarea{min-height:140px}
+}
