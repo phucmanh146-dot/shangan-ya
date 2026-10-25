@@ -1106,11 +1106,11 @@ function mount(){
  var sidebar=document.querySelector('.app-sidebar'),lists=document.getElementById('sidebarCatLists');
  if(!sidebar||!lists||document.getElementById('energy-left-planner'))return;
  var box=document.createElement('section');box.id='energy-left-planner';
- box.innerHTML='<div class="elp-title">⚡ 按精力排任务</div><p class="elp-sub">选择现在的真实精力，左侧优先显示适合此状态的任务；不改动原任务、清单和四象限。</p><select id="elp-level" aria-label="当前精力"><option value="high">高精力｜深度工作</option><option value="medium">中精力｜推进任务</option><option value="low">低精力｜轻量杂事</option></select><div class="elp-counts" id="elp-counts"></div><div id="elp-tasks"></div><button class="elp-open" id="elp-open-energy" type="button">设置精力时间段 ↗</button>';
+ box.innerHTML='<div class="elp-title">⚡ 按精力排任务</div><p class="elp-sub">选择现在的真实精力，左侧优先显示适合此状态的任务；不改动原任务、清单和四象限。</p><label for="elp-level" style="display:block;font-size:10px;margin-bottom:4px">当前精力评分（你自己明确选择，1–5）</label><select id="elp-level" aria-label="当前精力评分"><option value="1">1 / 5 · 很低：只安排轻量任务</option><option value="2">2 / 5 · 偏低：低阻力任务</option><option value="3">3 / 5 · 一般：推进型任务</option><option value="4">4 / 5 · 较高：主要任务</option><option value="5">5 / 5 · 很高：深度工作</option></select><div class="elp-counts" id="elp-counts"></div><div id="elp-tasks"></div><button class="elp-open" id="elp-open-energy" type="button">设置精力时间段 ↗</button>';
  sidebar.insertBefore(box,lists);
  var a=acct(),p=a&&(a.plannerSettings||{}),saved=p.currentEnergyLevel||'high';
  document.getElementById('elp-level').value=['high','medium','low'].indexOf(saved)>=0?saved:'high';
- document.getElementById('elp-level').addEventListener('change',function(){var d=acct();if(!d)return;d.plannerSettings=d.plannerSettings||{};d.plannerSettings.currentEnergyLevel=this.value;d.plannerSettings.energyLevelUpdatedAt=Date.now();save(d);render()});
+ document.getElementById('elp-level').addEventListener('change',function(){var d=acct();if(!d)return;d.plannerSettings=d.plannerSettings||{};d.plannerSettings.currentEnergyScore=Number(this.value);d.plannerSettings.currentEnergyLevel=Number(this.value)>=4?'high':Number(this.value)<=2?'low':'medium';d.plannerSettings.energyLevelUpdatedAt=Date.now();save(d);render()});
  document.getElementById('elp-open-energy').addEventListener('click',function(){var m=document.getElementById('energyModalOverlay');if(m){m.hidden=false;return}var nav=document.querySelector('[data-view="daily"]');if(nav)nav.click();setTimeout(function(){var x=document.getElementById('energyModalOverlay');if(x)x.hidden=false},150)});
  render();
  var ob=new MutationObserver(function(){render()});ob.observe(document.getElementById('sidebarCatLists'),{childList:true,subtree:true});
@@ -1118,14 +1118,14 @@ function mount(){
 function render(){
  var sel=document.getElementById('elp-level'),host=document.getElementById('elp-tasks');if(!sel||!host)return;
  var a=acct();if(!a){host.innerHTML='<p class="elp-empty">登录后显示你的任务。</p>';return}
- var all=getTasks(a).filter(function(t){return t&&!t.done}),level=sel.value;
+ var all=getTasks(a).filter(function(t){return t&&!t.done}),score=Number(sel.value),level=score>=4?'high':score<=2?'low':'medium';
  var map={heavy:'high',mid:'medium',light:'low'},counts={high:0,medium:0,low:0};
  all.forEach(function(t){counts[map[t.weight]||'medium']++});
  document.getElementById('elp-counts').innerHTML='<div class="elp-count"><b>'+counts.high+'</b>主要</div><div class="elp-count"><b>'+counts.medium+'</b>中等</div><div class="elp-count"><b>'+counts.low+'</b>轻量</div>';
  var acceptable=level==='high'?['heavy','mid']:level==='medium'?['mid','light']:['light'];
  var list=all.filter(function(t){return acceptable.indexOf(t.weight||'mid')>=0});
  list.sort(function(x,y){var dx=x.dueDate||'9999-12-31',dy=y.dueDate||'9999-12-31';if(dx!==dy)return dx.localeCompare(dy);return Number(x.order||999)-Number(y.order||999)});
- var title=level==='high'?'优先：需要专注的任务':level==='medium'?'优先：推进型任务':'优先：低阻力轻量任务';
+ var title=level==='high'?'精力 '+score+'/5 · 优先：需要专注的任务':level==='medium'?'精力 '+score+'/5 · 优先：推进型任务':'精力 '+score+'/5 · 优先：低阻力轻量任务';
  var out='<p class="elp-sub">'+title+'</p>';
  if(!list.length)out+='<p class="elp-empty">当前没有匹配任务。切换精力档位或到「每日清单」添加任务。</p>';
  list.slice(0,5).forEach(function(t){var meta=(t.dueDate?' · 截止 '+esc(t.dueDate):'')+(t.estMinutes?' · '+Number(t.estMinutes)+' 分钟':'');out+='<button type="button" class="elp-task" data-elp-task="'+esc(t.id)+'">○ '+esc(t.name||'未命名任务')+'<span style="display:block;color:#a08a94;font-size:10px">'+esc(t.category||'未分类')+meta+'</span></button>'});
