@@ -40,8 +40,8 @@ function candidates(data){
   const info=El('span','pmaw-hit-name',item.label),btn=El('button','pmaw-light','在微信中定位');
   btn.type='button';
   btn.onclick=async()=>{
-   try{notice('正在微信窗口点击这条候选，完成后请核对截图。');
-    const r=await api('/api/pm/wx/open-hit',{searchId:data.searchId,candidateId:item.id});
+   try{notice('正在本机微信中定位这条候选，完成后请核对画面。');
+    const r=currentSearch?.source==='local-wechat-search'?await historyApi('/wechat/open',{id:item.id}):await api('/api/pm/wx/open-hit',{searchId:data.searchId,candidateId:item.id});
     lastCandidate={label:item.label,scope:selectedScope};preview.src=r.preview;preview.hidden=false;
     notice('已点击候选：'+item.label+'。请核对截图确认群聊正确，再搜索消息或框选。');
    }catch(e){notice('无法定位这条结果：'+e.message,true)}
@@ -57,16 +57,14 @@ async function search(scope){
   if(scope==='group'){
    notice('正在通过本机只读历史目录检索群名…');
    try{const h=await historyApi('/wechat/history-groups',{query:keyword});if(Array.isArray(h.groups)&&h.groups.length){currentSearch={source:'wechat-history-directory',groups:h.groups,total:h.total};showGroupResults(h);notice('群名检索完成：找到 '+(h.total||h.groups.length)+' 个匹配群。选择群名后再搜索消息。');return}}
-   catch(historyError){/* If local history directory is not available, use the visible logged-in WeChat window. */}
+   catch(historyError){notice('历史目录暂不可用，改为搜索当前微信窗口：'+historyError.message)}
   }else if(selectedGroupId){
    notice('正在读取群聊「'+selectedGroup+'」的本机历史消息…');
    try{const h=await historyApi('/wechat/history',{groupId:selectedGroupId,keyword,offset:0,limit:50});showHistoryMessages(h);currentSearch={source:'wechat-history',groupId:selectedGroupId,items:h.items||[],hasMore:!!h.hasMore};notice('本机历史读取返回 '+((h.items||[]).length)+' 条匹配消息。请选中一条再识别和关联。');return}
    catch(historyError){notice('本机历史消息接口不可用，改用当前微信窗口搜索：'+historyError.message)}
   }
-  notice('正在通过已登录的微信窗口搜索“'+keyword.slice(0,50)+'”…');
-  const r=await api('/api/pm/wx/search',{keyword,scope,groupName:selectedGroup,groupOnly:scope==='message'});
-  candidates(r);
-  notice((r.note||'微信窗口搜索已返回。')+(selectedGroup&&scope==='message'?' 当前选中群：'+selectedGroup+'。':'')+(r.candidates?.length?' 找到 '+r.candidates.length+' 条候选，请核对真实群名和消息。':'')+' 窗口搜索不等于完整历史数据库。');
+  const r=await historyApi('/wechat/search',{query:keyword});r.source='local-wechat-search';currentSearch=r;candidates(r);
+  notice((r.note||'本机微信窗口搜索已返回。')+(r.candidates?.length?' 找到 '+r.candidates.length+' 条候选，请核对真实群名和消息。':'')+' 当前窗口搜索不等于完整历史数据库。');
  }catch(e){notice('微信搜索未完成：'+e.message+'。请确认本机桥接服务和微信窗口可用。',true)}
  finally{busy=false}
 }
@@ -167,7 +165,7 @@ function mount(){
  const old=Q('#pma-wx-frame');
  if(old){Q('#pmaw-crop-slot',mini).append(old);old.open=false}
  taskOptions();
- fetch('/api/pm/wx/status').then(r=>r.json()).then(x=>notice(x.available?'微信窗口可用。可以先搜索群聊/消息关键词，再框选真实内容交给已连接的 AI。':'当前未检测到可用的微信窗口搜索能力。请在本机打开并登录微信；这不是完整历史数据库检索。',!x.available)).catch(()=>notice('微信窗口状态检测暂不可用',true));
+ Promise.all([historyApi('/status',{}),historyApi('/wechat/history-status',{retry:false})]).then(([x,h])=>{const parts=[];parts.push(x.available?'本机微信窗口可用':'本机微信窗口暂不可用');parts.push(h.phase==='directory_ready'||h.phase==='history_ready'?'历史群目录已就绪（'+h.groupCount+' 个群）':'历史目录状态：'+(h.error||h.phase||'待核验'));parts.push('目录不包含置顶标记；请按群名搜索并核对。');notice(parts.join(' · '),!x.available)}).catch(e=>notice('本机微信桥暂不可用：'+e.message+'。请确认本机服务已运行。',true));
 }
 document.addEventListener('sywx:crop-ready',e=>catchCrop(e.detail||{}));
 new MutationObserver(()=>{if(Q('#wechatTaskMount')&&!Q('#pmaw-mini'))mount();else if(Q('#pmaw-mini')&&!Q('#pmaw-mini #pma-wx-frame')&&Q('#pma-wx-frame'))Q('#pmaw-crop-slot')?.append(Q('#pma-wx-frame'))}).observe(document.documentElement,{subtree:true,childList:true});
