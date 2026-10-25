@@ -50,22 +50,11 @@ async function search(scope){
  if(!keyword)return notice('先填'+(scope==='group'?'群聊':'群聊消息')+'关键词',true);
  if(busy)return;busy=true;selectedScope=scope;
  try{
-  if(scope==='group'){
-   notice('优先检索本机群列表（包括置顶群）；若列表接口不可用，再搜索已登录微信窗口…');
-   try{
-    const h=await api('/api/sources/wechat',{path:'/wechat/history-groups',method:'POST',data:{query:keyword,keyword,priorityTop:true,onlyImportantGroup:false,limit:120}});
-    const groups=Array.isArray(h.groups)?h.groups:(Array.isArray(h.items)?h.items:(Array.isArray(h.results)?h.results:[]));
-    if(groups.length){
-     const host=Q('#pmaw-results');host.replaceChildren();host.append(El('p','pmaw-note','本机群列表接口返回 '+(h.total||groups.length)+' 个群候选。请核对群名；选择后再搜该群消息。'));
-     groups.slice(0,80).forEach((g,i)=>{const name=String(g.name||g.groupName||g.label||g.nickName||'').trim();if(!name)return;const row=El('div','pmaw-hit'),num=El('span','pmaw-hit-number',String(i+1).padStart(2,'0')),info=El('span','pmaw-hit-name',name),btn=El('button','pmaw-light',g.isTop||g.pinned?'置顶群 · 选中':'选中群聊');btn.type='button';btn.onclick=()=>{selectedGroup=name;notice('已选择群聊「'+name+'」。输入消息关键词后点击“② 搜索群聊消息”。');btn.textContent='已选择 ✓'};row.append(num,info,btn);host.append(row)});
-     currentSearch={source:'local-group-list',groups};return;
-    }
-   }catch(localError){/* Local history list unavailable: fall back to visible-window search, never claim a full history scan. */}
-  }
-  notice('正在已登录微信窗口搜索“'+keyword.slice(0,50)+'”…');
-  const r=await api('/api/pm/wx/search',{keyword,scope,groupName:selectedGroup,groupOnly:scope==='message'});candidates(r);
-  notice((r.note||'窗口搜索完成。')+(selectedGroup&&scope==='message'?' 当前选中群：'+selectedGroup+'。':'')+(r.candidates?.length?' 找到 '+r.candidates.length+' 条窗口候选（需手动核对）。':''));
- }catch(e){notice('搜索未完成：'+e.message+'。当前没有拿到可用结果，不能视为已读取全部群聊。',true)}
+  notice(scope==='group'?'正在通过本机微信搜索群聊关键词…':'正在通过本机微信搜索当前群聊消息…');
+  const r=await api('/api/pm/wx/search',{keyword,scope,groupName:selectedGroup,groupOnly:scope==='message',pinnedFirst:true});
+  candidates(r);
+  notice((r.note||'微信窗口搜索已返回。')+(selectedGroup&&scope==='message'?' 当前选中群：'+selectedGroup+'。':'')+(r.candidates?.length?' 找到 '+r.candidates.length+' 条候选，请核对真实群名和消息。':'')+' 本接口结果不等于完整历史数据库。');
+ }catch(e){notice('微信搜索未完成：'+e.message+'。请确认本机微信已登录且后端窗口控制服务可用。',true)}
  finally{busy=false}
 }
 async function focus(){
@@ -134,13 +123,13 @@ function confirmTask(){
 }
 function make(){
  const root=El('section','pmaw-mini');root.id='pmaw-mini';
- root.innerHTML=`<header class="pmaw-head"><div><strong>💬 微信资料助手</strong><p>进入微信 → 右上角框选内容 → 确认识别 → 核对并关联任务</p></div><button type="button" id="pmaw-focus" class="pmaw-light">进入微信 · 右上角框选 ↗</button></header>
+ root.innerHTML=`<header class="pmaw-head"><div><strong>💬 微信任务收集</strong><p>只处理微信消息；识别后关联原任务。知识库和链接解析在独立页面。</p></div><button type="button" id="pmaw-focus" class="pmaw-light">打开微信并框选 ↗</button></header><ol class="pmaw-flow" aria-label="微信任务处理流程"><li><b>1</b><span>找群</span></li><li><b>2</b><span>找消息</span></li><li><b>3</b><span>识别任务</span></li><li><b>4</b><span>关联确认</span></li></ol>
  <section class="pmaw-optional-search"><div class="pmaw-search-heading"><strong>搜索置顶群及群聊消息</strong><span>只展示本机微信窗口搜索到的候选，不冒充完整历史数据库</span></div><div class="pmaw-filters"><label>群聊关键词<input id="pmaw-group-query" placeholder="例如：挑战杯、项目组"></label><button id="pmaw-search-groups">① 搜索群聊</button><label>群聊消息关键词<input id="pmaw-message-query" placeholder="先选群，再搜：DDL、PPT、老师反馈"></label><button id="pmaw-search-messages">② 搜索当前窗口消息</button></div>
  <div id="pmaw-results" class="pmaw-results"></div>
  <details id="pmaw-window-preview" class="pmaw-preview"><summary>查看微信窗口搜索画面（仅本机显示）</summary><img id="pmaw-search-image" alt="已登录微信窗口截图" hidden></details></section>
  <div class="pmaw-row"><button id="pmaw-crop" type="button" class="pmaw-main">开始框选微信内容 →</button><span>切换群聊或打开微信文章时，浮窗跟随当前微信窗口；点确认后才识别。</span></div>
  <div id="pmaw-crop-slot"></div>
- <section id="pmaw-recognition" class="pmaw-recognition" hidden><h4>④ 核对框选原文 → 绑定任务</h4><pre id="pmaw-ocr"></pre>
+ <section id="pmaw-recognition" class="pmaw-recognition" hidden><h4>第 4 步 · 核对原文并关联任务</h4><pre id="pmaw-ocr"></pre>
  <div class="pmaw-form"><label>关联到哪个任务<select id="pmaw-existing-task"></select></label>
  <div id="pmaw-new-task-fields"><label>新任务名称（请核对）<input id="pmaw-taskname" placeholder="如：补比赛用户调研PPT"></label><label>所属类别<select id="pmaw-category"><option>比赛</option><option>运营</option><option>AI PM</option><option>考研</option><option>副业</option></select></label><label>预计分钟（请确认）<input type="number" id="pmaw-est-minutes" min="5" max="1200" value="30"></label><label>DDL（未确认就留空）<input type="date" id="pmaw-due-date"></label></div></div>
  <div class="pmaw-row"><button id="pmaw-analyze" type="button" class="pmaw-light">🤖 AI根据截图识别任务/DDL</button><button id="pmaw-confirm" type="button" class="pmaw-main">确认关联任务 ✓</button></div>
@@ -157,16 +146,15 @@ function make(){
  return root;
 }
 function mount(){
- const hub=Q('#pma-hub-v3'),root=Q('#pma-root');if(!hub||!root||Q('#pmaw-mini'))return;
- const mini=make(),target=Q('.pmah-themes',hub);
- if(target)target.before(mini);else hub.prepend(mini);
+ const target=Q('#wechatTaskMount');if(!target||Q('#pmaw-mini'))return;
+ const mini=make();target.append(mini);
  const old=Q('#pma-wx-frame');
  if(old){Q('#pmaw-crop-slot',mini).append(old);old.open=false}
  taskOptions();
  fetch('/api/pm/wx/status').then(r=>r.json()).then(x=>notice(x.available?'微信窗口可用。可以先搜索群聊/消息关键词，再框选真实内容交给已连接的 AI。':'当前未检测到可用的微信窗口搜索能力。请在本机打开并登录微信；这不是完整历史数据库检索。',!x.available)).catch(()=>notice('微信窗口状态检测暂不可用',true));
 }
 document.addEventListener('sywx:crop-ready',e=>catchCrop(e.detail||{}));
-new MutationObserver(()=>{if(Q('#pma-hub-v3')&&!Q('#pmaw-mini'))mount();else if(Q('#pmaw-mini')&&!Q('#pmaw-mini #pma-wx-frame')&&Q('#pma-wx-frame'))Q('#pmaw-crop-slot')?.append(Q('#pma-wx-frame'))}).observe(document.documentElement,{subtree:true,childList:true});
+new MutationObserver(()=>{if(Q('#wechatTaskMount')&&!Q('#pmaw-mini'))mount();else if(Q('#pmaw-mini')&&!Q('#pmaw-mini #pma-wx-frame')&&Q('#pma-wx-frame'))Q('#pmaw-crop-slot')?.append(Q('#pma-wx-frame'))}).observe(document.documentElement,{subtree:true,childList:true});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
 // wechat-remote-direct-link: directly open the existing Knowledge view after the user's normal login.
 if(location.hash.startsWith('#wechat-remote')){
@@ -174,7 +162,7 @@ if(location.hash.startsWith('#wechat-remote')){
  const go=()=>{
   if(done||!window.SY?.currentAccountKey)return;
   if(!Q('#pmaw-mini')){
-   window.SY.switchAppView?.('knowledge');
+   window.SY.switchAppView?.('task-intake');
    return;
   }
   const mini=Q('#pmaw-mini');if(!mini)return;
