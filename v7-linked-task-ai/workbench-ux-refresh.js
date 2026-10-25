@@ -119,7 +119,6 @@ function bindSearchLogging(){
 window.SYWorkbenchUX={showHistoryPage:showHistoryPage,refreshHistory:renderHistoryPage,recordSearch:recordSearch,version:'2026-10-25-ux-v1'};
 bindSearchLogging();
 })();
-
 /* 2026-10-25 interaction fixes: keep the planner in its page and progressively disclose source inputs. */
 (function(){
  'use strict';
@@ -137,6 +136,11 @@ bindSearchLogging();
    var cards=Array.prototype.slice.call(grid.querySelectorAll(':scope > .sc-card'));
    if(cards.length<2)return;
    var tabs=root.querySelector('.sc-source-tabs');
+   function selectTab(index){
+     var btns=Array.prototype.slice.call(tabs.querySelectorAll('[data-source-tab]'));
+     cards.forEach(function(card,i){card.hidden=i!==index;card.setAttribute('aria-hidden',String(i!==index));});
+     btns.forEach(function(btn,i){btn.setAttribute('aria-selected',String(i===index));btn.tabIndex=i===index?0:-1;});
+   }
    if(!tabs){
      tabs=document.createElement('div');tabs.className='sc-source-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','选择资料来源');
      var labels=['本机知识库','网页 / 视频链接','本地文件','任务关联'];
@@ -151,11 +155,6 @@ bindSearchLogging();
        b.setAttribute('aria-controls',card.id);
      });
      grid.parentNode.insertBefore(tabs,grid);
-   }
-   function selectTab(index){
-     var btns=Array.prototype.slice.call(tabs.querySelectorAll('[data-source-tab]'));
-     cards.forEach(function(card,i){card.hidden=i!==index;card.setAttribute('aria-hidden',String(i!==index));});
-     btns.forEach(function(btn,i){btn.setAttribute('aria-selected',String(i===index));btn.tabIndex=i===index?0:-1;});
    }
    var selected=tabs.querySelector('[aria-selected=true]'),idx=selected?Number(selected.dataset.sourceTab):0;
    selectTab(Number.isFinite(idx)&&idx>=0&&idx<cards.length?idx:0);
