@@ -92,11 +92,9 @@ def initialize():
     if not os.getenv('FOCUS_AI_BASE_URL'):
         # 优先用本机 Hermes 网关：外部中转站经常整组欠费/无通道，
         # 而本机网关自带模型故障切换，是这台机器上最稳的一条通道。
-        if not connect_local_gateway():
-            try:
-                connect_ccswitch(verify=False)
-            except Exception:
-                pass
+        # Do not silently import or switch to a CC Switch profile.
+        # AI connection must be configured and verified explicitly by the user.
+        connect_local_gateway()
 
 
 GATEWAY_BASE = 'http://127.0.0.1:8642/v1'

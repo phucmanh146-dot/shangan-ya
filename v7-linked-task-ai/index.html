@@ -8,7 +8,14 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%A6%86%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="./core.css">
 <link rel="stylesheet" href="./cover-module-layout.css?v=20261016-six-cover">
-</head>
+<link rel="stylesheet" href="./inline-task-rest.css?v=20261024-1">
+<style id="sy-task-ai-context-style">
+.sy-task-ai-inline{margin-top:12px;padding:14px 16px;border:1px solid #cbdcc4;background:#f2f8ed;border-radius:14px}
+.sy-task-ai-inline p{margin:0 0 10px;line-height:1.65;color:#244a38}
+.sy-task-ai-inline .code-btn{background:#245440;color:#fff;border-radius:10px;padding:10px 14px;font-weight:700}
+.sy-task-ai-inline .code-btn:disabled{opacity:.58;cursor:not-allowed}
+.sy-task-ai-inline .code-hint{margin:10px 0 0;font-size:12px;color:#64756b}
+</style></head>
 <body>
 
 
@@ -312,7 +319,7 @@
         <span>上岸鸭</span>
       </a>
 
-      <button class="app-sidebar-quickcapture" id="quickCaptureBtn" type="button">
+      <button class="app-sidebar-quickcapture" id="quickCaptureBtn" type="button" hidden aria-hidden="true" tabindex="-1" style="display:none!important">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         <span>快速收集</span>
       </button>
@@ -349,13 +356,8 @@
           <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10"/><path d="M12 20V4"/><path d="M20 20v-7"/><path d="M2 20h20"/></svg></span>
           <span>数据档案</span>
         </button>
-        <button class="app-nav-item" data-view="ai-p2" type="button" id="aiP2Nav">
-          <span class="app-nav-icon" aria-hidden="true">✦</span><span>AI 工作区（模型 API / 链接复盘）</span>
-        </button>
-        <button class="app-nav-item" data-view="ai-p2" type="button" id="wechatAiNav">
-          <span class="app-nav-icon" aria-hidden="true">💬</span><span>微信原始数据 AI</span>
-        </button>
-        <button class="app-nav-item" data-view="knowledge" type="button">
+
+                <button class="app-nav-item" data-view="knowledge" type="button">
           <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5v-17Z"/><path d="M4 19a2.5 2.5 0 0 1 2.5-2.5H20"/></svg></span>
           <span>知识库</span>
         </button>
@@ -512,6 +514,7 @@
           <button class="daily-tab" data-tab="month" type="button">月</button>
         </div>
         <div id="dailySub"></div>
+        <!-- Task-linked materials and flexible rest are rendered here inside the original daily view. -->
       </section>
 
       <section class="app-view" data-view="inbox" id="view-inbox" hidden>
@@ -539,10 +542,7 @@
       <section class="app-view" data-view="quadrant" id="view-quadrant" hidden>
         <div id="quadrantBody"></div>
       </section>
-      <section class="app-view app-ai-chat-view" data-view="ai-p2" id="view-ai-p2" hidden>
-        <div class="embedded-p2-head"><div><strong>AI 工作区</strong><span>模型 API 配置 · 官方文档直达 · 网页/文档/视频读取与复盘</span></div><span class="embedded-p2-ready" id="embeddedP2Status">多模型切换 / 真实读取状态 / 图片文档视频</span></div>
-        <iframe id="embeddedP2Frame" title="上岸鸭 P2 多模态 AI 深度问答" src="./ai-p2.html?embedded=1&linkedTaskAi=20261023v7" allow="clipboard-write; microphone" loading="lazy"></iframe>
-      </section>
+
       <section class="app-view" data-view="knowledge" id="view-knowledge" hidden>
         <div id="knowledgeBody"></div>
       </section>
@@ -611,6 +611,11 @@
         </div>
         <p class="code-hint" id="taskMaterialHint">粘贴公开网页、课程或平台分享链接；解析后整张资料卡都可以打开原文。</p>
         <div class="task-material-list" id="taskMaterialList" hidden></div>
+        <div class="sy-task-ai-inline" id="syTaskAiInline">
+          <p><strong>这项任务卡住了？</strong> AI 将围绕当前任务和你已读取的资料给出下一步。</p>
+          <button class="code-btn" id="syTaskAiAsk" type="button">✦ 带着这项任务问 AI</button>
+          <p class="code-hint" id="syTaskAiHint" role="status">关联的是当前任务，不会修改截止日期或完成状态。</p>
+        </div>
       </div>
       <p class="code-hint hint-warn" id="taskFormHint"></p>
       <button class="btn btn-primary submit-btn" id="taskFormNext" type="button">下一步 →</button>
@@ -986,8 +991,8 @@
 <link rel="stylesheet" href="./mini-overrides.css">
 <link rel="stylesheet" href="./focus-quest-companion.css">
 <script src="./focus-quest-companion.js"></script>
-<link rel="stylesheet" href="./task-intake-upgrade.css">
-<script src="./task-intake-upgrade.js"></script>
+<link rel="stylesheet" href="./task-intake-upgrade.css?v=20261025-social-intake-v1">
+<script src="./task-intake-upgrade.js?v=20261025-social-intake-v1"></script>
 <link rel="stylesheet" href="./priority-guard.css">
 <script src="./priority-guard.js"></script>
 <link rel="stylesheet" href="./rescue-help.css">
@@ -1030,7 +1035,7 @@
 <link rel="stylesheet" href="./sy-adaptive.css?v=20261016">
 <script src="./sy-adaptive.js?v=20261016"></script>
 <link rel="stylesheet" href="./sy-wechat-private.css?v=20261016">
-<script src="./sy-wechat-private.js?v=20261018-login-history"></script>
+<script src="./sy-wechat-private.js?v=20261025-task-orchestration-v2"></script>
 <link rel="stylesheet" href="./sy-reference-dynamic.css?v=20261017">
 <script src="./sy-reference-dynamic.js?v=20261017"></script>
 <link rel="stylesheet" href="./smart-planner-20261017.css">
@@ -1042,23 +1047,75 @@
 
 <!-- sy-agent-skills-entry-v1 -->
 <a href="/agent-skills.html" target="_self" aria-label="?? Agent ????" style="position:fixed;right:18px;bottom:18px;z-index:2100;padding:11px 17px;background:#255bb3;color:#fff;text-decoration:none;border-radius:24px;font:600 14px system-ui,sans-serif;box-shadow:0 6px 20px #21417a33">Agent ????</a>
-<script id="wechat-ai-nav-bridge">
+
+<script src="./start-use-hotfix.js?v=20261023v8"></script>
+<script src="./inline-task-rest.js?v=20261024-1"></script>
+<script id="sy-hide-old-schedule-nav-v1">
 (function(){
-  function bind(){
-    var nav=document.getElementById('wechatAiNav');
-    if(!nav||nav.dataset.wechatAiBound)return;
-    nav.dataset.wechatAiBound='1';
-    nav.addEventListener('click',function(){
-      window.setTimeout(function(){
-        var frame=document.getElementById('embeddedP2Frame');
-        if(frame)frame.src='./ai-p2.html?embedded=1&linkedTaskAi=20261023v7#wechat-ai';
-      },120);
-    });
+  'use strict';
+  var obsolete=/^原有排程\s*[\/／|｜·・]\s*项目\s*[\/／|｜·・]\s*复习$/;
+  function clean(root){
+    if(!root || !root.querySelectorAll)return;
+    var nodes=root.querySelectorAll('button, a, [role="button"]');
+    for(var i=0;i<nodes.length;i++){
+      var node=nodes[i],label=(node.textContent||'').replace(/\s+/g,' ').trim();
+      if(obsolete.test(label)){node.hidden=true;node.style.setProperty('display','none','important');node.setAttribute('aria-hidden','true');node.tabIndex=-1;}
+    }
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bind);else bind();
+  function start(){
+    clean(document);
+    new MutationObserver(function(changes){
+      for(var i=0;i<changes.length;i++){
+        var c=changes[i];
+        if(c.type==='characterData'){clean(c.target.parentElement && c.target.parentElement.parentElement);continue;}
+        for(var j=0;j<c.addedNodes.length;j++){
+          var n=c.addedNodes[j];if(n.nodeType===1){clean(n.parentElement||n);clean(n);}
+        }
+      }
+    }).observe(document.body,{childList:true,subtree:true,characterData:true});
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>
-<script src="./start-use-hotfix.js?v=20261023v8"></script>
-</body>
+<script id="sy-task-ai-context-v1">
+(function(){
+'use strict';
+function currentTask(){
+  if(!window.SY||typeof SY.getAcctData!=='function')return null;
+  var data=SY.getAcctData(),tasks=Array.isArray(data.tasks)?data.tasks:[];
+  var modal=document.getElementById('taskModalOverlay');
+  var editId=modal&&modal.dataset&&(modal.dataset.taskId||modal.dataset.editId);
+  var idCandidates=[editId,window.SY.editingTaskId,window.SY.currentEditingTaskId].filter(Boolean);
+  var task=idCandidates.map(function(id){return tasks.find(function(t){return String(t.id)===String(id);});}).find(Boolean);
+  if(task)return task;
+  var input=document.getElementById('taskNameInput');
+  var label=input&&input.value.trim();
+  if(!label)return null;var matches=tasks.filter(function(t){return t.name===label;});return matches.length===1?matches[0]:null;
+}
+function update(){
+ var btn=document.getElementById('syTaskAiAsk'),hint=document.getElementById('syTaskAiHint');
+ if(!btn||!hint)return;
+ var t=currentTask();
+ btn.textContent=t?'✦ 为「'+String(t.name||'当前任务').slice(0,26)+'」解卡':'✦ 保存任务后再关联 AI';
+ hint.textContent=t?'AI 只参考这项任务及实际读取的资料；新行动需要你确认后加入。':'请先保存任务，AI 才能绑定真实的任务 ID，避免错关联。';
+ btn.disabled=!t;
+}
+document.addEventListener('click',function(e){
+ if(e.target&&e.target.closest('#syTaskAiAsk')){
+  var t=currentTask();
+  if(!t){update();return;}
+  if(window.SYRescue&&typeof SYRescue.open==='function'){
+   SYRescue.open({task:t,useNotes:false});
+  }else{
+   var hint=document.getElementById('syTaskAiHint');
+   if(hint)hint.textContent='AI 救援组件尚未加载，请检查页面资源。';
+  }
+ }
+ if(e.target&&e.target.closest('#taskFormNext,#quickCaptureSubmit,#taskModalOverlay,#taskMaterialsField'))setTimeout(update,50);
+});
+document.addEventListener('input',function(e){if(e.target&&e.target.id==='taskNameInput')update();});
+document.addEventListener('DOMContentLoaded',update);
+})();
+</script></body>
 </html>
 

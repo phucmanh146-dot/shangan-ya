@@ -1,6 +1,6 @@
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
-import json, os, socket
+import json, os, socket, secrets
 if os.environ.get('SHANGANYA_WORKER_PORT'):
     os.environ['FOCUS_ALLOW_LOCAL_AI'] = '0'
 else:
@@ -17,12 +17,14 @@ import agent_runtime as agent
 import knowledge_agent_skills as kskills
 import source_workflow as sourceflow
 from public_link_reader import research as source_research
-from local_integrations import initialize, ccswitch_catalog, connect_ccswitch, connect_local_gateway
+from local_integrations import initialize, connect_local_gateway
 from local_tools import vault_info, vault_list, vault_search, vault_read, vault_save, screen_ocr
 from rescue_service import RescueError, ask_ai, extract, extract_uploaded, extract_video, preview_url, read_feishu, search_web, public_config, set_config, test_connection, observe_frame, list_models, provider_catalog, team_public_config, set_team_config
 from desktop_feishu_reader import read_feishu_via_browser
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
+# Short-lived, process-local pairing secret for the trusted hosted workbench's explicit loopback bridge.
+WECHAT_BRIDGE_TOKEN = secrets.token_urlsafe(32)
 # Original credential discovery disabled in hosted copy.
 
 class Handler(SimpleHTTPRequestHandler):
@@ -33,8 +35,10 @@ class Handler(SimpleHTTPRequestHandler):
         path = urlparse(self.path).path
         local_origin = origin is None or origin == 'null' or origin in ('http://' + h for h in hosts)
         # The hosted workbench may call ONLY this narrow, user-triggered Feishu browser-read bridge.
-        public_bridge_origin = (origin == 'https://shanganya-full-public-20261017-production.up.railway.app'
-                                and path == '/api/feishu/desktop-read')
+        trusted_origins = ('https://shanganya-full-public-20261017-production.up.railway.app',
+                           'https://shanganya-v8-workbench-production.up.railway.app')
+        public_bridge_origin = origin in trusted_origins and (
+            path == '/api/feishu/desktop-read' or path.startswith('/api/wechat-private/'))
         return self.headers.get('Host', '') in hosts and (local_origin or public_bridge_origin)
     def end_headers(self):
         origin = self.headers.get('Origin')
@@ -52,17 +56,27 @@ class Handler(SimpleHTTPRequestHandler):
         try: self.wfile.write(raw)
         except (BrokenPipeError, ConnectionResetError): pass
     def wechat_private(self,method,data=None):
-        # Loopback Host and same-origin browser requests only. No bridge token in HTML.
+        # The hosted app can reach only this loopback bridge, and only from an exact trusted origin.
         host=self.headers.get('Host','')
         origin=self.headers.get('Origin')
         site=self.headers.get('Sec-Fetch-Site','')
-        if not self.allowed() or origin=='null' or site in ('cross-site','same-site') or (origin and origin!='http://'+host):
-            return self.send_json({'error':'请从本机上岸鸭页面连接'},403)
+        trusted_origins=('https://shanganya-full-public-20261017-production.up.railway.app',
+                         'https://shanganya-v8-workbench-production.up.railway.app')
+        remote_trusted=origin in trusted_origins and self.allowed()
+        local_same=origin is None or origin=='null' or origin=='http://'+host
+        if not self.allowed() or (not local_same and not remote_trusted) or (site in ('cross-site','same-site') and not remote_trusted):
+            return self.send_json({'error':'来源不允许访问本机微信桥接'},403)
+        route=self.path[len('/api/wechat-private'):]
+        if route=='/pairing':
+            if not remote_trusted:
+                return self.send_json({'error':'配对接口仅用于受信任的上岸鸭工作台'},403)
+            return self.send_json({'ok':True,'token':WECHAT_BRIDGE_TOKEN,'expires':'本机服务进程结束后失效'})
+        if remote_trusted and self.headers.get('X-Focus-Client','') != WECHAT_BRIDGE_TOKEN:
+            return self.send_json({'error':'本机桥接授权已失效，请重新连接'},403)
         import win32gui
         foreground=win32gui.GetForegroundWindow()
         try:
             from sy_wechat_reader import api
-            route=self.path[len('/api/wechat-private'):]
             result=api(method,route,data)
             return self.send_json(result)
         except Exception as ex:
@@ -108,7 +122,6 @@ class Handler(SimpleHTTPRequestHandler):
         if path == '/api/pm/wx/status': return self.send_json(wxdesk.status())
         if path == '/api/pm/events': return self.send_json(pm.obsidian_bridge_events(__import__('urllib.parse',fromlist=['parse_qs']).parse_qs(urlparse(self.path).query).get('after',['0'])[0]))
         if path == '/api/ai-providers': return self.send_json(provider_catalog())
-        if path == '/api/cc-switch': return self.send_json(ccswitch_catalog())
         if path.startswith('/api/'): return self.send_json({'error':'接口不存在'},404)
         if path.endswith(('.py','.pyc','.cmd','.ps1','.env','.log','.zip','.json','.sqlite','.sqlite3','.db','.sqlite3-wal','.sqlite3-shm')) or any(p.startswith('.') for p in path.split('/') if p):
             return self.send_json({'error':'文件不可通过浏览器读取'},403)
@@ -220,7 +233,6 @@ class Handler(SimpleHTTPRequestHandler):
             if self.path=='/api/ai-config': return self.send_json(set_config(data))
             if self.path=='/api/ai-models': return self.send_json(list_models(data))
             if self.path=='/api/ai-test': return self.send_json(test_connection())
-            if self.path=='/api/cc-switch/connect': return self.send_json(connect_ccswitch(data.get('id')))
             return self.send_json({'error':'接口不存在'},404)
         except RescueError as ex: return self.send_json({'error':str(ex),'code':ex.code,**ex.extra},ex.status)
         except Exception: return self.send_json({'error':'服务暂时未完成请求，请检查输入后重试。','code':'SERVER_ERROR'},502)

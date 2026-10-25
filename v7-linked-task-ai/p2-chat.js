@@ -32,6 +32,41 @@ function showDialog(id){const d=$(id);if(d&&!d.open)d.showModal();}
 function addUrl(){const input=$('#p2-link-input'),raw=input.value.trim();try{const normalized=window.SYSourceIO?.normalizeLinks(raw)?.[0]||raw;const u=new URL(normalized);if(!['http:','https:'].includes(u.protocol)||u.username||u.password)throw Error('地址不合法');if(urls.includes(u.href))return $('#p2-link-status').textContent='这条链接已经加入';if(urls.length>=20)return $('#p2-link-status').textContent='一次最多20个网页链接；更多链接请分批提交';urls.push(u.href);drawAttachments();input.value='';$('#p2-link-dialog').close();status('链接已加入，发送时会实际读取网页正文。');}catch(e){$('#p2-link-status').textContent='请输入完整有效的 https:// 网址';}}
 $('#p2-new').onclick=newChat;$('#p2-open-side').onclick=()=>$('#p2-side').classList.toggle('open');$('#p2-close-side').onclick=()=>$('#p2-side').classList.remove('open');
 $('#p2-form').onsubmit=e=>{e.preventDefault();send();};$('#p2-files').onchange=e=>{uploadBatch(e.target.files);e.target.value='';};$('#p2-add-url').onclick=()=>showDialog('#p2-link-dialog');$('#p2-confirm-link').onclick=addUrl;
+function readObsidianIntoChat(){
+ const raw=window.prompt('粘贴要读取的 Obsidian 笔记链接（obsidian://open?...）。只有成功取得正文后才会加入对话。','');
+ if(!raw||!raw.trim()){status('未提供 Obsidian 笔记链接；没有读取任何内容。');return;}
+ let io=window.SYSourceIO;
+ try{if(window.parent&&window.parent!==window&&window.parent.SYSourceIO)io=window.parent.SYSourceIO;}catch(e){}
+ if(!io||typeof io.prepareLink!=='function')return status('Obsidian 读取组件不可用。可从原工作台知识库打开笔记，或上传 Markdown 文件。',true);
+ status('正在读取 Obsidian 笔记正文…');
+ Promise.resolve(io.prepareLink(raw.trim())).then(async doc=>{
+   const body=typeof io.toMarkdown==='function'?io.toMarkdown(doc):String(doc.text||doc.content||'');
+   if(!body.trim())throw Error('已打开链接，但没有取得笔记正文。');
+   await window.P2App.attachText(doc.title||doc.name||'Obsidian 笔记',body);
+   status('已取得 Obsidian 笔记正文并加入本轮附件；请确认问题后发送。');
+ }).catch(e=>status('Obsidian 读取失败：'+(e&&e.message||e)+'。没有把链接冒充成正文。',true));
+}
+function openSourceShortcut(target){
+ if(target==='feishu'){const b=$('#p2-feishu-quick-read');if(b)b.click();return;}
+ if(target==='obsidian'){readObsidianIntoChat();return;}
+ if(target==='wechat'){const b=$('#p2-wechat-open');if(b)b.click();return;}
+ const examples={
+  '公众号':'https://mp.weixin.qq.com/…',
+  '视频号':'粘贴你可访问的视频号分享链接',
+  '小红书':'https://www.xiaohongshu.com/…',
+  '抖音':'https://www.douyin.com/…',
+  'B站':'https://www.bilibili.com/video/…',
+  'YouTube':'https://www.youtube.com/watch?v=…',
+  '网页':'https://…'
+ };
+ const input=$('#p2-link-input'),hint=$('#p2-link-hint');
+ if(input)input.placeholder=examples[target]||'https://…';
+ if(hint)hint.textContent='来源：'+target+'。粘贴分享链接后，系统会尝试读取公开可访问的正文、字幕或视频信息；需要登录或平台限制导致读取失败时会如实提示。';
+ showDialog('#p2-link-dialog');
+ if(input)input.focus();
+}
+$$('.p2-source-shortcut').forEach(b=>b.addEventListener('click',()=>openSourceShortcut(b.dataset.sourceTarget||'网页')));
+$('#p2-feishu-quick-read').onclick=()=>{const input=$('#p2-feishu-test-url');if(input&&!input.value.trim())input.value='https://tcnb3a3fuvtb.feishu.cn/wiki/YD6HwHCS5iXlgmkpLOoccnvon7b';const cfg=$('#p2-open-config');if(cfg)cfg.click();const settings=$('#p2-feishu-settings');if(settings)settings.open=true;const read=$('#p2-feishu-desktop-read');if(read){status('正在读取指定飞书文档；只有读到真实正文后才会加入当前 AI 对话…');read.click();}else{status('请在配置 / 测试 API 中打开飞书设置并检查读取桥接。',true);}};
 $('#p2-video-analyze').onclick=()=>{const hasVideo=files.some(x=>/\.(mp4|mov|webm|mkv|avi|m4v)$/i.test(x.name));if(hasVideo){videoIntent=true;const box=$('#p2-text');if(!box.value.trim())box.value='请对本轮上传的视频进行结构化解析：按视频顺序概括场景变化、人物/物体动作、画面中的文字和关键细节；区分直接观察与推测，并说明抽帧、清晰度或未转写语音造成的限制。不要编造时间戳或声称听过未转写的音频。';box.dispatchEvent(new Event('input',{bubbles:true}));box.focus();status('已切换为视频解析提问。确认问题后点击发送；勾选“同时转写语音”才会尝试音频转写。');return;}$('#p2-video-files').click();};
 $('#p2-video-files').onchange=async e=>{const batch=[...e.target.files];e.target.value='';if(!batch.length)return;videoIntent=true;await uploadBatch(batch);const box=$('#p2-text');if(!box.value.trim())box.value='请对本轮上传的视频进行结构化解析：按视频顺序概括场景变化、人物/物体动作、画面中的文字和关键细节；区分直接观察与推测，并说明抽帧、清晰度或未转写语音造成的限制。不要编造时间戳或声称听过未转写的音频。';box.dispatchEvent(new Event('input',{bubbles:true}));box.focus();};
 $('#p2-text').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();send();}};

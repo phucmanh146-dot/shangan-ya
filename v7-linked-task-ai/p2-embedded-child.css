@@ -1,8 +1,87 @@
-/* Applied only when /ai-p2.html?embedded=1 lives inside the original app */
+/* Unified AI center inside the original Shanganya workbench.
+   Keep chat history as an optional drawer; the default view is the central conversation. */
+body.p2-embedded .p2-shell{height:100%;min-height:360px;position:relative;background:#f7f8f1;overflow:hidden}
+body.p2-embedded .p2-side{position:absolute;z-index:30;left:0;top:0;bottom:0;width:270px;flex-basis:270px;transform:translateX(-105%);transition:transform .2s ease;box-shadow:8px 0 28px #163c281c;padding-top:16px}
+body.p2-embedded .p2-side.open{transform:translateX(0)}
 body.p2-embedded .p2-side-bottom .p2-back,
 body.p2-embedded .p2-workbench{display:none!important}
-body.p2-embedded .p2-side{padding-top:16px;width:232px;flex-basis:232px}
-body.p2-embedded .p2-topbar{height:63px;min-height:63px}
-body.p2-embedded .p2-top-title span{background:#e7f4ea;color:#307351}
-body.p2-embedded .p2-shell{height:100dvh;min-height:340px}
-@media(max-width:850px){body.p2-embedded .p2-side{width:210px;flex-basis:210px}}
+body.p2-embedded .p2-main{width:100%;min-width:0}
+body.p2-embedded .p2-topbar{height:auto;min-height:68px;padding:10px clamp(12px,2vw,26px);gap:12px;background:#fbfcf7;border-bottom:1px solid #e1e8d9}
+body.p2-embedded .p2-menu{display:inline-flex;align-items:center;justify-content:center;border:1px solid #dbe5d7;border-radius:10px;width:36px;height:36px;font-size:18px;background:#fff}
+body.p2-embedded .p2-top-title{font-size:16px}
+body.p2-embedded .p2-top-title span{background:transparent;color:#71836f;padding:0;margin:4px 0 0;display:block;font-size:11px;font-weight:600}
+body.p2-embedded .p2-model-status{margin-top:4px;font-size:11px}
+body.p2-embedded .p2-model-quick{gap:7px;flex-wrap:nowrap}
+body.p2-embedded .p2-top-provider-label,
+body.p2-embedded .p2-api-doc-link,
+body.p2-embedded #p2-reconnect-ai{display:none!important}
+body.p2-embedded #p2-top-provider{min-width:110px;max-width:190px;font-size:12px}
+body.p2-embedded #p2-open-config{white-space:nowrap;font-size:12px;padding:9px 11px}
+body.p2-embedded .p2-timeline{background:#f7f8f1}
+body.p2-embedded .p2-welcome{width:min(900px,100%);max-width:900px;margin:clamp(18px,4vh,42px) auto 20px;padding:0 clamp(14px,3vw,30px)}
+body.p2-embedded .p2-orb{width:54px;height:54px;border-radius:18px}
+body.p2-embedded .p2-welcome h1{font-size:clamp(25px,3vw,34px);margin:10px 0}
+body.p2-embedded .p2-welcome p{max-width:650px;font-size:13px}
+body.p2-embedded .p2-prompts{max-width:760px;margin:22px auto;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+body.p2-embedded .p2-prompts button{min-height:56px;background:#fffef9;border-color:#dce4d2;border-radius:14px;padding:13px 15px}
+body.p2-embedded .p2-composer-wrap{width:min(960px,calc(100% - 32px));padding:10px 0 12px}
+body.p2-embedded .p2-composer{border-radius:18px;background:#fffef9;border-color:#cbd9c4;box-shadow:0 8px 24px #193b2510}
+body.p2-embedded .p2-composer textarea{min-height:68px}
+body.p2-embedded .p2-disclaimer{font-size:10px}
+body.p2-embedded .p2-source-strip{width:min(960px,calc(100% - 32px));margin:0 auto 7px;display:flex;align-items:center;gap:7px;overflow-x:auto;padding:2px 0 5px;scrollbar-width:thin}
+body.p2-embedded .p2-source-strip-label{font-size:11px;font-weight:750;color:#71816f;white-space:nowrap}
+body.p2-embedded .p2-source-shortcut{flex:0 0 auto;border:1px solid #d9e4d1;background:#fffef9;border-radius:999px;padding:7px 10px;font-size:11px;color:#355b43;white-space:nowrap}
+body.p2-embedded .p2-source-shortcut:hover{background:#edf5e7;border-color:#aac7a2}
+body.p2-embedded .p2-attach-lead{display:none}
+body.p2-embedded .p2-controls-left{gap:5px}
+body.p2-embedded .p2-link{border:1px solid #e0e8d9;background:#f8faf3}
+body.p2-embedded .p2-task-context-box{font-size:12px}
+body.p2-embedded .p2-messages{width:min(960px,100%);padding-left:clamp(14px,3vw,28px);padding-right:clamp(14px,3vw,28px)}
+body.p2-embedded .p2-status{font-size:12px}
+@media(max-width:760px){
+ body.p2-embedded .p2-topbar{align-items:flex-start;padding:9px 10px}
+ body.p2-embedded .p2-top-title span{max-width:45vw;white-space:normal}
+ body.p2-embedded .p2-model-quick{gap:4px;max-width:48vw}
+ body.p2-embedded #p2-top-provider{max-width:120px;min-width:75px;padding:7px 5px}
+ body.p2-embedded #p2-open-config{font-size:10px;padding:7px 6px}
+ body.p2-embedded .p2-prompts{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ body.p2-embedded .p2-prompts button{padding:10px;font-size:12px}
+ body.p2-embedded .p2-composer-wrap{width:calc(100% - 16px)}
+ body.p2-embedded .p2-source-strip{width:calc(100% - 16px)}
+ body.p2-embedded .p2-switch{font-size:10px;padding:6px 7px}
+}
+@media(prefers-reduced-motion:reduce){body.p2-embedded .p2-side{transition:none}}
+
+/* The source strip is the single source-entry row in embedded mode; avoid duplicate buttons. */
+body.p2-embedded #p2-add-url,
+body.p2-embedded #p2-feishu-quick-read,
+body.p2-embedded #p2-obsidian-open,
+body.p2-embedded #p2-wechat-open{display:none!important}
+
+
+/* 2026-10-24 clean premium pass: prioritize conversation over controls.
+   Keep all integrations wired; reduce only their default visual prominence. */
+body.p2-embedded .p2-model-quick{gap:8px;flex-wrap:nowrap}
+body.p2-embedded .p2-top-provider-label,
+body.p2-embedded #p2-top-provider,
+body.p2-embedded .p2-api-doc-link,
+body.p2-embedded #p2-reconnect-ai,
+body.p2-embedded .p2-workbench{display:none!important}
+body.p2-embedded #p2-open-config{font-size:12px;font-weight:700;padding:9px 13px;border-radius:11px}
+body.p2-embedded .p2-model-status{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;background:#edf4e8;color:#55745a}
+body.p2-embedded .p2-prompts button:nth-child(n+4){display:none!important}
+body.p2-embedded .p2-prompts{grid-template-columns:repeat(3,minmax(0,1fr));max-width:700px;margin:18px auto}
+body.p2-embedded .p2-source-shortcut:nth-of-type(n+4){display:none!important}
+body.p2-embedded .p2-source-strip{justify-content:center;gap:8px}
+body.p2-embedded .p2-source-shortcut{font-size:12px;padding:8px 12px}
+body.p2-embedded .p2-composer textarea{min-height:74px;font-size:15px}
+body.p2-embedded .p2-controls-left{align-items:center;gap:6px}
+body.p2-embedded .p2-link,
+body.p2-embedded .p2-upload,
+body.p2-embedded .p2-switch{border-radius:10px}
+@media(max-width:760px){
+ body.p2-embedded .p2-model-quick{max-width:none}
+ body.p2-embedded #p2-open-config{font-size:11px;padding:8px}
+ body.p2-embedded .p2-prompts{grid-template-columns:1fr;max-width:440px}
+ body.p2-embedded .p2-source-strip{justify-content:flex-start}
+}
