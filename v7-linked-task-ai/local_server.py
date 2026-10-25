@@ -1,6 +1,6 @@
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
-import json, os, socket
+import json, os, socket, secrets
 if os.environ.get('SHANGANYA_WORKER_PORT'):
     os.environ['FOCUS_ALLOW_LOCAL_AI'] = '0'
 else:
@@ -23,6 +23,8 @@ from rescue_service import RescueError, ask_ai, extract, extract_uploaded, extra
 from desktop_feishu_reader import read_feishu_via_browser
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
+# Short-lived, process-local pairing secret for the trusted hosted workbench's explicit loopback bridge.
+WECHAT_BRIDGE_TOKEN = secrets.token_urlsafe(32)
 # Original credential discovery disabled in hosted copy.
 
 class Handler(SimpleHTTPRequestHandler):
@@ -33,8 +35,10 @@ class Handler(SimpleHTTPRequestHandler):
         path = urlparse(self.path).path
         local_origin = origin is None or origin == 'null' or origin in ('http://' + h for h in hosts)
         # The hosted workbench may call ONLY this narrow, user-triggered Feishu browser-read bridge.
-        public_bridge_origin = (origin == 'https://shanganya-full-public-20261017-production.up.railway.app'
-                                and path == '/api/feishu/desktop-read')
+        trusted_origins = ('https://shanganya-full-public-20261017-production.up.railway.app',
+                           'https://shanganya-v8-workbench-production.up.railway.app')
+        public_bridge_origin = origin in trusted_origins and (
+            path == '/api/feishu/desktop-read' or path.startswith('/api/wechat-private/'))
         return self.headers.get('Host', '') in hosts and (local_origin or public_bridge_origin)
     def end_headers(self):
         origin = self.headers.get('Origin')
@@ -52,17 +56,27 @@ class Handler(SimpleHTTPRequestHandler):
         try: self.wfile.write(raw)
         except (BrokenPipeError, ConnectionResetError): pass
     def wechat_private(self,method,data=None):
-        # Loopback Host and same-origin browser requests only. No bridge token in HTML.
+        # The hosted app can reach only this loopback bridge, and only from an exact trusted origin.
         host=self.headers.get('Host','')
         origin=self.headers.get('Origin')
         site=self.headers.get('Sec-Fetch-Site','')
-        if not self.allowed() or origin=='null' or site in ('cross-site','same-site') or (origin and origin!='http://'+host):
-            return self.send_json({'error':'请从本机上岸鸭页面连接'},403)
+        trusted_origins=('https://shanganya-full-public-20261017-production.up.railway.app',
+                         'https://shanganya-v8-workbench-production.up.railway.app')
+        remote_trusted=origin in trusted_origins and self.allowed()
+        local_same=origin is None or origin=='null' or origin=='http://'+host
+        if not self.allowed() or (not local_same and not remote_trusted) or (site in ('cross-site','same-site') and not remote_trusted):
+            return self.send_json({'error':'来源不允许访问本机微信桥接'},403)
+        route=self.path[len('/api/wechat-private'):]
+        if route=='/pairing':
+            if not remote_trusted:
+                return self.send_json({'error':'配对接口仅用于受信任的上岸鸭工作台'},403)
+            return self.send_json({'ok':True,'token':WECHAT_BRIDGE_TOKEN,'expires':'本机服务进程结束后失效'})
+        if remote_trusted and self.headers.get('X-Focus-Client','') != WECHAT_BRIDGE_TOKEN:
+            return self.send_json({'error':'本机桥接授权已失效，请重新连接'},403)
         import win32gui
         foreground=win32gui.GetForegroundWindow()
         try:
             from sy_wechat_reader import api
-            route=self.path[len('/api/wechat-private'):]
             result=api(method,route,data)
             return self.send_json(result)
         except Exception as ex:
