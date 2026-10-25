@@ -62,7 +62,7 @@ var html='<section class="sy-adaptive-card"><h3>今天精力怎么样？先告�
  '<section class="sy-adaptive-card"><h3>时间安排草案</h3>'+draft.map(function(r){var type=r.kind==='work'?'专注':r.kind==='rest'?'休息':'机动';return '<div class="sy-plan-row"><span>'+fmt(r.from)+'–'+fmt(r.to)+'</span><span>'+esc(r.title)+'</span><span class="sy-chip '+(r.kind==='work'?'':r.kind)+'">'+type+'</span></div>';}).join('')+'</section>'+
  '<section class="sy-adaptive-card"><h3>今天排不下的任务</h3><p class="sy-muted">'+(pending.length?pending.map(esc).join('、'):'目前没有需要顺延的任务。')+'</p><p class="sy-muted">只给出顺延建议，不自动改动截止日期，也不把未完成任务标记为完成。</p></section><p data-status class="sy-status">'+esc(msg||'排程为建议稿，保存后仍可重新生成。')+'</p>';
 var x=panel(html);x.querySelector('[data-generate]').onclick=setPrefs;
-x.querySelector('[data-saveplan]').onclick=function(){save('plan',{at:new Date().toISOString(),rows:draft,waiting:pending,taskCount:tasks().length});status('计划已经独立保存到当前账号，不覆盖任务和截止日期。');};
+x.querySelector('[data-saveplan]').onclick=function(){var rec={id:'plan-'+Date.now(),at:new Date().toISOString(),day:today(),rows:draft,waiting:pending,taskCount:tasks().length};save('plan',rec);var history=store('planHistory')||[];if(!Array.isArray(history))history=[];history.push(rec);save('planHistory',history.slice(-100));status('计划已保存，并追加到排程历史；不会覆盖原任务和截止日期。');};
 x.querySelector('[data-rescue]').onclick=function(){rescue();};x.querySelector('[data-notes]').onclick=function(){close();if(window.SYKnowledge)SYKnowledge.open();};
 x.querySelector('[data-newtask]').onclick=addUrgent;
 }
