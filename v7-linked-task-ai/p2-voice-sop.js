@@ -4,6 +4,7 @@ const $=s=>document.querySelector(s);
 const VOICE_KEY='sy_p2_voice_reply_v1';
 let recognition=null,listening=false,lastAutoSpoken='',observer=null;
 function status(text,bad){const n=$('#p2-status');if(n){n.textContent=text;n.classList.toggle('error',!!bad);}}
+async function appApi(){for(let i=0;i<20;i++){if(window.P2App&&typeof window.P2App.api==='function')return window.P2App.api.apply(window.P2App,arguments);await new Promise(resolve=>setTimeout(resolve,100));}throw new Error('AI 主界面尚未初始化，请刷新页面后重试。');}
 function add(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;}
 function promptFor(kind){
  const prompts={
@@ -82,11 +83,11 @@ function addDocsAndAudioConfig(){
  const keyLabel=add('label','p2-audio-label','语音转写 API Key');const key=add('input');key.type='password';key.id='p2-audio-key';key.autocomplete='new-password';key.placeholder='sk-…（只发给当前会话后端）';keyLabel.append(key);
  const save=add('button','p2-audio-save','保存语音配置');save.type='button';save.id='p2-audio-save';
  const state=add('p','p2-audio-status','正在读取语音转写状态…');state.id='p2-audio-status';
- save.addEventListener('click',async()=>{save.disabled=true;state.textContent='正在保存配置…';try{const data={base:'https://api.openai.com/v1',model:model.value,key:key.value.trim(),enabled:true};const r=await P2App.api('/api/pm/transcribe-config',data,15000);key.value='';state.textContent=r.apiConfigured?'语音转写 API 已配置；上传音频后才会验证实际可用性。':r.configured?'本机语音识别可用；未保存新的 API Key。':'已保存配置，但语音转写尚未验证。';}catch(e){state.textContent='保存失败：'+e.message;}finally{save.disabled=false;}});
+ save.addEventListener('click',async()=>{save.disabled=true;state.textContent='正在保存配置…';try{const data={base:'https://api.openai.com/v1',model:model.value,key:key.value.trim(),enabled:true};const r=await appApi('/api/pm/transcribe-config',data,15000);key.value='';state.textContent=r.apiConfigured?'语音转写 API 已配置；上传音频后才会验证实际可用性。':r.configured?'本机语音识别可用；未保存新的 API Key。':'已保存配置，但语音转写尚未验证。';}catch(e){state.textContent='保存失败：'+e.message;}finally{save.disabled=false;}});
  section.append(modelLabel,keyLabel,save,state);docs.insertAdjacentElement('afterend',section);
  const open=$('#p2-open-config');if(open)open.addEventListener('click',()=>loadAudioConfig());
 }
-async function loadAudioConfig(){const state=$('#p2-audio-status'),model=$('#p2-audio-model');if(!state||!model)return;state.textContent='正在读取语音转写状态…';try{const r=await P2App.api('/api/pm/status',undefined,12000);const t=r.transcription||{};if(t.model)model.value=t.model;state.textContent=t.apiConfigured?'语音转写 API 已配置（密钥不会回显）。':t.local?.available?'本机语音识别已就绪，无需额外 Key。':'尚未配置语音转写 API；上传音频会尝试本机识别，失败时会显示原因。';}catch(e){state.textContent='读取状态失败：'+e.message;}}
+async function loadAudioConfig(){const state=$('#p2-audio-status'),model=$('#p2-audio-model');if(!state||!model)return;state.textContent='正在读取语音转写状态…';try{const r=await appApi('/api/pm/status',undefined,12000);const t=r.transcription||{};if(t.model)model.value=t.model;state.textContent=t.apiConfigured?'语音转写 API 已配置（密钥不会回显）。':t.local?.available?'本机语音识别已就绪，无需额外 Key。':'尚未配置语音转写 API；上传音频会尝试本机识别，失败时会显示原因。';}catch(e){state.textContent='读取状态失败：'+e.message;}}
 function init(){
  addControls();addSopPanel();addDocsAndAudioConfig();
  const messages=$('#p2-messages');if(messages&&!observer){observer=new MutationObserver(()=>{decorateAnswers();});observer.observe(messages,{childList:true,subtree:true});}
