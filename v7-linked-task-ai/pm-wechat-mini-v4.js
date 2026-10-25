@@ -25,7 +25,7 @@ async function loadMoreHistory(){
 async function search(scope){
  const input=Q(scope==='group'?'#pmaw-group-query':'#pmaw-message-query'),keyword=input?.value.trim()||'';
  if(!keyword)return notice('先填'+(scope==='group'?'群聊':'群聊消息')+'关键词',true);
- if(busy)return;busy=true;selectedScope=scope;setFlowStep(scope==='group'?1:2);
+ if(busy)return;if(scope==='group'){selectedGroup='';selectedGroupId='';selectedHistoryMessage=null}busy=true;selectedScope=scope;setFlowStep(scope==='group'?1:2);
  try{
   if(scope==='group'){
    notice('正在通过本机只读历史目录检索群名…');
@@ -111,7 +111,7 @@ function confirmTask(){
 function make(){
  const root=El('section','pmaw-mini');root.id='pmaw-mini';
  root.innerHTML=`<header class="pmaw-head"><div><strong>💬 微信任务收集</strong><p>只处理微信消息；识别后关联原任务。知识库和链接解析在独立页面。</p></div><button type="button" id="pmaw-focus" class="pmaw-light">打开微信并框选 ↗</button></header><ol class="pmaw-flow" aria-label="微信任务处理流程"><li><b>1</b><span>找群</span></li><li><b>2</b><span>找消息</span></li><li><b>3</b><span>识别任务</span></li><li><b>4</b><span>关联确认</span></li></ol>
- <section class="pmaw-optional-search"><div class="pmaw-search-heading"><strong>搜索置顶群及群聊消息</strong><span>只展示本机微信窗口搜索到的候选，不冒充完整历史数据库</span></div><div class="pmaw-filters"><label>群聊关键词<input id="pmaw-group-query" placeholder="例如：挑战杯、项目组"></label><button id="pmaw-search-groups">① 搜索群聊</button><label>群聊消息关键词<input id="pmaw-message-query" placeholder="先选群，再搜：DDL、PPT、老师反馈"></label><button id="pmaw-search-messages">② 搜索当前窗口消息</button></div>
+ <section class="pmaw-optional-search"><div class="pmaw-search-heading"><strong>搜索群名及群聊消息</strong><span>先查本机历史群目录；若不可用，再查当前微信窗口。置顶标记需按真实界面核对</span></div><div class="pmaw-filters"><label>群聊关键词<input id="pmaw-group-query" placeholder="例如：挑战杯、项目组"></label><button id="pmaw-search-groups">① 搜索群聊</button><label>群聊消息关键词<input id="pmaw-message-query" placeholder="先选群，再搜：DDL、PPT、老师反馈"></label><button id="pmaw-search-messages">② 搜索当前窗口消息</button></div>
  <div id="pmaw-results" class="pmaw-results"></div>
  <details id="pmaw-window-preview" class="pmaw-preview"><summary>查看微信窗口搜索画面（仅本机显示）</summary><img id="pmaw-search-image" alt="已登录微信窗口截图" hidden></details></section>
  <div class="pmaw-row"><button id="pmaw-crop" type="button" class="pmaw-main">开始框选微信内容 →</button><span>切换群聊或打开微信文章时，浮窗跟随当前微信窗口；点确认后才识别。</span></div>
