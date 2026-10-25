@@ -105,7 +105,12 @@ function syncRenderedResults(){
 }
 function observeSourceCenter(){
  var root=$('#sourceCenterRoot');if(!root||root.dataset.uxSearchObserver==='true')return;root.dataset.uxSearchObserver='true';
- var attach=function(){var results=$('#scResults');if(!results||results.dataset.uxObserved==='true')return;results.dataset.uxObserved='true';var ob=new MutationObserver(syncRenderedResults);ob.observe(results,{childList:true,subtree:true,characterData:true});};
+ var attach=function(){
+  var results=$('#scResults');
+  if(results&&results.dataset.uxObserved!=='true'){results.dataset.uxObserved='true';var ob=new MutationObserver(syncRenderedResults);ob.observe(results,{childList:true,subtree:true,characterData:true});}
+  var notes=$('#scObsidianResults');
+  if(notes&&notes.dataset.uxObserved!=='true'){notes.dataset.uxObserved='true';var no=new MutationObserver(function(){var q=String($('#scObsidianQuery')?.value||'').trim();if(!q)return;var rows=searchRecords(),rec=rows.find(function(r){return r.action==='Obsidian 检索'&&r.query===q;});if(rec){rec.status='检索列表已更新，请核对匹配结果';rec.title=short(notes.textContent,180);rec.at=Date.now();try{localStorage.setItem(recordsKey(),JSON.stringify(rows));}catch(_){}if($('#view-history')&&!$('#view-history').hidden&&activeTab==='search')renderHistoryBody();}});no.observe(notes,{childList:true,subtree:true,characterData:true});}
+ };
  var ob=new MutationObserver(attach);ob.observe(root,{childList:true,subtree:true});attach();
 }
 function bindSearchLogging(){

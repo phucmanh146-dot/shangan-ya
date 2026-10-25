@@ -1,6 +1,6 @@
 /* Shanganya workbench UX refresh: larger scale, clearer page hierarchy, and task-first navigation. */
 :root{--ux-ink:#244238;--ux-muted:#6d8178;--ux-line:#dce7e0;--ux-paper:#fffdfd;--ux-rose:#b65d7d;--ux-rose-soft:#fff5f8;--ux-green:#2f6b54}
-.app-sidebar{width:248px;flex:0 0 248px;padding:20px 12px}
+.app-sidebar{width:224px;flex:0 0 224px;padding:20px 12px}
 #appNav{gap:5px}
 #appNav .app-nav-group-label{font-size:12px;letter-spacing:.04em;margin:15px 12px 7px}
 #appNav .app-nav-item{min-height:46px;padding:10px 13px;border-radius:12px;font-size:14px;gap:11px;transition:background .18s ease,transform .18s ease,border-color .18s ease}
