@@ -64,8 +64,11 @@ function open(){
  var body=el('main','syhc-body');dialog.append(body);document.body.append(dialog);dialog.addEventListener('cancel',function(e){e.preventDefault();if(dialog){dialog.close();dialog.remove();dialog=null;}});dialog.showModal();openTab('overview');
 }
 function mount(){
- var nav=document.querySelector('#appNav');if(!nav||document.querySelector('[data-syhc-open]'))return;
- var b=el('button','app-nav-item');b.type='button';b.dataset.syhcOpen='true';b.innerHTML='<span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h17"/><path d="m7 15 4-4 3 2 5-6"/></svg></span><span>历史与复盘</span>';b.addEventListener('click',function(){open();});var inbox=nav.querySelector('[data-view="inbox"]');if(inbox)nav.insertBefore(b,inbox);else nav.append(b);
+ var nav=document.querySelector('#appNav');if(!nav)return;
+ var existing=nav.querySelector('[data-view="history"]');
+ if(existing){if(existing.dataset.syhcBound==='true')return;existing.dataset.syhcBound='true';existing.addEventListener('click',function(){if(window.SYWorkbenchUX&&typeof SYWorkbenchUX.showHistoryPage==='function')SYWorkbenchUX.showHistoryPage();else open();});return;}
+ if(document.querySelector('[data-syhc-open]'))return;
+ var b=el('button','app-nav-item');b.type='button';b.dataset.view='history';b.dataset.syhcOpen='true';b.innerHTML='<span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h17"/><path d="m7 15 4-4 3 2 5-6"/></svg></span><span>历史与复盘</span>';b.addEventListener('click',function(){if(window.SYWorkbenchUX&&typeof SYWorkbenchUX.showHistoryPage==='function')SYWorkbenchUX.showHistoryPage();else open();});var inbox=nav.querySelector('[data-view="inbox"]');if(inbox)nav.insertBefore(b,inbox);else nav.append(b);
 }
 window.SYHistoryCenter={open:open,refresh:function(){if(dialog)openTab(active);},version:'2026-10-25-history-tables-v1'};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
