@@ -18,6 +18,18 @@
 .inline-life-panel .itw-actions #itw-web-research{background:#eaf2ff;color:#254e86}
 .inline-life-panel .itw-actions #itw-analyze{background:#fff0e9;color:#8b4937}
 @media(max-width:760px){.inline-life-panel .itw-actions button{flex:1 1 42%}}
+
+/* Left-side energy-aware task planner */
+#energy-left-planner{margin:14px 10px;padding:12px;border:1px solid #f0d5dd;border-radius:16px;background:linear-gradient(155deg,#fff8fa,#fff 78%);color:#633e4c}
+#energy-left-planner .elp-title{font-size:12px;font-weight:850;margin-bottom:8px}
+#energy-left-planner .elp-sub{font-size:10px;color:#94717d;line-height:1.45;margin:4px 0 8px}
+#energy-left-planner select{width:100%;min-height:34px;border:1px solid #edc8d3;border-radius:9px;background:#fff;color:#633e4c;padding:6px;font-size:12px}
+#energy-left-planner .elp-counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:8px 0}
+#energy-left-planner .elp-count{padding:6px 3px;border-radius:8px;background:#fff;border:1px solid #f2e0e5;text-align:center;font-size:10px}
+#energy-left-planner .elp-count b{display:block;font-size:14px;color:#a95d78}
+#energy-left-planner .elp-task{display:block;width:100%;text-align:left;border:0;border-top:1px solid #f3e4e8;background:transparent;padding:7px 2px;color:#624653;font-size:11px;line-height:1.4;cursor:pointer}
+#energy-left-planner .elp-empty{font-size:10px;color:#9c8590;padding:5px 0}
+#energy-left-planner .elp-open{width:100%;margin-top:5px;border:1px solid #e8b8c8;background:#fff;border-radius:9px;padding:7px;color:#994a68;font-size:11px;font-weight:750;cursor:pointer}
 </style>
 </head>
 <body>
@@ -1080,6 +1092,48 @@
     }).observe(document.body,{childList:true,subtree:true,characterData:true});
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
+</script>
+
+<script id="energy-left-planner-script">
+(function(){
+'use strict';if(window.__SYEnergyLeftPlanner)return;window.__SYEnergyLeftPlanner=true;
+function acct(){return window.SY&&window.SY.getAcctData?window.SY.getAcctData():null}
+function save(a){if(window.SY&&window.SY.saveAcctData)window.SY.saveAcctData(a)}
+function getTasks(a){return a&&Array.isArray(a.tasks)?a.tasks:[]}
+function esc(s){return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function mount(){
+ var sidebar=document.querySelector('.app-sidebar'),lists=document.getElementById('sidebarCatLists');
+ if(!sidebar||!lists||document.getElementById('energy-left-planner'))return;
+ var box=document.createElement('section');box.id='energy-left-planner';
+ box.innerHTML='<div class="elp-title">⚡ 按精力排任务</div><p class="elp-sub">选择现在的真实精力，左侧优先显示适合此状态的任务；不改动原任务、清单和四象限。</p><select id="elp-level" aria-label="当前精力"><option value="high">高精力｜深度工作</option><option value="medium">中精力｜推进任务</option><option value="low">低精力｜轻量杂事</option></select><div class="elp-counts" id="elp-counts"></div><div id="elp-tasks"></div><button class="elp-open" id="elp-open-energy" type="button">设置精力时间段 ↗</button>';
+ sidebar.insertBefore(box,lists);
+ var a=acct(),p=a&&(a.plannerSettings||{}),saved=p.currentEnergyLevel||'high';
+ document.getElementById('elp-level').value=['high','medium','low'].indexOf(saved)>=0?saved:'high';
+ document.getElementById('elp-level').addEventListener('change',function(){var d=acct();if(!d)return;d.plannerSettings=d.plannerSettings||{};d.plannerSettings.currentEnergyLevel=this.value;d.plannerSettings.energyLevelUpdatedAt=Date.now();save(d);render()});
+ document.getElementById('elp-open-energy').addEventListener('click',function(){var m=document.getElementById('energyModalOverlay');if(m){m.hidden=false;return}var nav=document.querySelector('[data-view="daily"]');if(nav)nav.click();setTimeout(function(){var x=document.getElementById('energyModalOverlay');if(x)x.hidden=false},150)});
+ render();
+ var ob=new MutationObserver(function(){render()});ob.observe(document.getElementById('sidebarCatLists'),{childList:true,subtree:true});
+}
+function render(){
+ var sel=document.getElementById('elp-level'),host=document.getElementById('elp-tasks');if(!sel||!host)return;
+ var a=acct();if(!a){host.innerHTML='<p class="elp-empty">登录后显示你的任务。</p>';return}
+ var all=getTasks(a).filter(function(t){return t&&!t.done}),level=sel.value;
+ var map={heavy:'high',mid:'medium',light:'low'},counts={high:0,medium:0,low:0};
+ all.forEach(function(t){counts[map[t.weight]||'medium']++});
+ document.getElementById('elp-counts').innerHTML='<div class="elp-count"><b>'+counts.high+'</b>主要</div><div class="elp-count"><b>'+counts.medium+'</b>中等</div><div class="elp-count"><b>'+counts.low+'</b>轻量</div>';
+ var acceptable=level==='high'?['heavy','mid']:level==='medium'?['mid','light']:['light'];
+ var list=all.filter(function(t){return acceptable.indexOf(t.weight||'mid')>=0});
+ list.sort(function(x,y){var dx=x.dueDate||'9999-12-31',dy=y.dueDate||'9999-12-31';if(dx!==dy)return dx.localeCompare(dy);return Number(x.order||999)-Number(y.order||999)});
+ var title=level==='high'?'优先：需要专注的任务':level==='medium'?'优先：推进型任务':'优先：低阻力轻量任务';
+ var out='<p class="elp-sub">'+title+'</p>';
+ if(!list.length)out+='<p class="elp-empty">当前没有匹配任务。切换精力档位或到「每日清单」添加任务。</p>';
+ list.slice(0,5).forEach(function(t){var meta=(t.dueDate?' · 截止 '+esc(t.dueDate):'')+(t.estMinutes?' · '+Number(t.estMinutes)+' 分钟':'');out+='<button type="button" class="elp-task" data-elp-task="'+esc(t.id)+'">○ '+esc(t.name||'未命名任务')+'<span style="display:block;color:#a08a94;font-size:10px">'+esc(t.category||'未分类')+meta+'</span></button>'});
+ host.innerHTML=out;
+ host.querySelectorAll('[data-elp-task]').forEach(function(b){b.addEventListener('click',function(){var nav=document.querySelector('[data-view="daily"]');if(nav)nav.click();var id=this.getAttribute('data-elp-task');setTimeout(function(){var row=document.querySelector('[data-task-id="'+CSS.escape(id)+'"]');if(row)row.scrollIntoView({behavior:'smooth',block:'center'})},250)})});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
+var obs=new MutationObserver(function(){if(document.querySelector('.app-sidebar')&&!document.getElementById('energy-left-planner'))mount()});obs.observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
 </body>
