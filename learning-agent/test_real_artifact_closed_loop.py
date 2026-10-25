@@ -57,7 +57,8 @@ class RealArtifactClosedLoopTests(unittest.TestCase):
         )
         for item in self.corpus.get("results", []):
             with self.subTest(work=item["id"]):
-                self.assertIn("unverified", item.get("status", "unverified"))
+                status = item.get("status", "")
+                self.assertTrue("unverified" in status or status == "not_text_verified", status)
 
     def test_unparsed_or_image_only_materials_are_not_marked_verified(self):
         restricted = ("not_parsed", "image_only_needs_visual_review",
