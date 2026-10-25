@@ -13,7 +13,7 @@
 - 语料检查记录为 126 项通过，但文件明确标记 `not_model_or_human_result=true`，各条记录的状态也将语义核验标为未验证。这些结果只能支持提取/定位门的部分检查，不能代替 A 的内容复核。
 - `work-012` 的滴水润疆 PPT 是 `image_only_needs_visual_review`；`work-013` 的菌润乡土 DOC 是 `not_parsed`；其他若干 PPT/图片需要视觉复核。此类输入不得直接生成“已核验”的语义结论。
 - 当前工作副本中，闭环相关四组测试（`test_team`、`test_action_planner`、`test_captain_review_gates`、`test_team_recovery`）共 29 项通过。
-- 全量 Python 测试初次运行发现 Windows 默认 GBK 读取 UTF-8 前端文件的测试环境错误。已将 `test_recovery.py` 中读取 `team.html` 和 `team-recovery.js` 的调用显式改为 UTF-8；定向回归测试通过，全量 239 项测试随后通过。该结果是在独立本地副本中测得；合入分支后应由 CI 再跑一次。
+- 全量 Python 测试初次运行发现 Windows 默认 GBK 读取 UTF-8 前端文件的测试环境错误。已将 `test_recovery.py` 中读取 `team.html` 和 `team-recovery.js` 的调用显式改为 UTF-8；定向回归测试通过。加入新增作品清单/状态保护测试后，全量 244 项测试通过。该结果是在拉取该分支后的独立本地副本中测得；合入分支后仍应由 CI 再跑一次。
 - **尚未通过的门：** 原始作品逐页/逐段语义诊断、真实模型验证、真人执行形成的 V2、A 独立复核、第三人可执行性测试。没有原始文件/版本/定位时标 `blocked` 或 `unknown`，不能用元数据替代原件。
 
 ## 2. 八个样本：真实材料映射与闭环验收
@@ -67,5 +67,6 @@
 - 修复 `test_recovery.py` 的 Windows 编码依赖：读取 UTF-8 HTML/JS 时显式指定 `encoding='utf-8'`。
 - 新增 `test_real_artifact_closed_loop.py`：检查八个总调度样本均映射到真实作品清单；清单没有虚报模型/目标通过；126 项语料提取检查不会被误解为语义/人工通过；图片型与未解析材料保持阻断。
 - 定向编码回归：通过。
-- 修复后全量 Python 测试：239 项通过。
+- 新增作品闭环清单测试：5 项通过；与编码回归合计 6 项通过。
+- 修复后全量 Python 测试：244 项通过。
 - 以上测试只验证工程回归和作品清单/状态保护；不代表八个原始作品已经完成真人闭环。
