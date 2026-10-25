@@ -41,3 +41,10 @@
 .pmaw-filters label{display:grid;gap:6px;color:var(--text,#38584f);font-size:.9rem;font-weight:650}
 .pmaw-filters input{min-height:42px;padding:9px 12px;border:1px solid #dce9e3;border-radius:10px;background:#fff;font:inherit;color:inherit}
 @media(max-width:680px){.pmaw-filters{grid-template-columns:1fr}.pmaw-filters button{width:100%}}
+
+/* Four-step task loop: visible and compact, not another large dashboard. */
+.pmaw-flow{list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0 18px;padding:0;counter-reset:flow}
+.pmaw-flow li{display:flex;align-items:center;gap:7px;min-width:0;padding:8px 10px;border:1px solid #e8d9df;border-radius:12px;background:#fff8fa;color:#775565;font-size:12px}
+.pmaw-flow li b{display:inline-flex;flex:0 0 24px;width:24px;height:24px;align-items:center;justify-content:center;border-radius:50%;background:#f2dce5;color:#9a4d6c;font-size:11px}
+.pmaw-flow li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:620px){.pmaw-flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
