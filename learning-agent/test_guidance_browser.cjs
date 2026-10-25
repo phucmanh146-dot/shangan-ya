@@ -21,7 +21,7 @@ async function state(id) {return (await fetch(base + '/api/agent/team?id=' + id)
       await new Promise(r => setTimeout(r, 100));
     }
     assert.ok(ready, 'temporary server did not start');
-    const fixtures = JSON.parse(execFileSync('python', ['-c',
+    const fixtures = JSON.parse(execFileSync('python', ['-X', 'utf8', '-c',
       "import json; from test_guidance import diagnosis_fixture,plan_fixture; p={'goal':'人工测试目标'}; d=diagnosis_fixture(p); print(json.dumps({'diagnosis':d,'plan':plan_fixture(d,p)},ensure_ascii=False))"
     ], {cwd: __dirname, encoding: 'utf8'}));
     const {diagnosis, plan} = fixtures;
