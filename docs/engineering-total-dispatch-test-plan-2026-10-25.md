@@ -178,3 +178,34 @@ V1/V2 与 diff：
 - `AWARD_READINESS`：必须在上述证据齐备后另行评审；任何工程测试数量都不能直接推出获奖概率或“达到省一”。
 
 任何一层未通过，就保留相应状态，不用综合分掩盖阻断项。
+
+
+## 10. 已执行的现场验证记录（2026-10-25）
+
+执行设备：Desktop Commander 连接的 Windows 工作副本  
+本地路径：`C:\\Users\\jiang\\code\\shangan-ya-captain`  
+**注意：本次本地代码与本文目标分支不是同一个 ref，且工作区存在未提交修改；以下结果只属于本地 HEAD，不代表 GitHub PR #42 的 head 已经通过。**
+
+### 10.1 本地单元回归
+
+- 本地分支：`captain/contest-conversion-20261025`
+- 本地 HEAD：`12adc0a1520d1a89587a1761b5293938e1b8c2e1`
+- 工作区状态：存在未提交修改 `evidence/first-prize-v5/prove_existing.py`、`learning-agent/test_guidance_browser.cjs`，以及未跟踪文件 `docs/AB-acceptance-2026-10-25.md`、`evidence/first-prize-v5/report/acceptance-engineering-20261025.txt`。
+- 命令：在 `learning-agent` 目录运行 `python -m unittest -q test_agent.py test_team.py`
+- 实际结果：**36 tests passed，退出码 0**。
+- 结论：`test_agent.py` 与 `test_team.py` 的这次回归通过；不代表真实模型、真实材料质量或真人闭环通过。
+
+### 10.2 工程证据复现脚本
+
+- 命令：`python .\\evidence\\first-prize-v5\\prove_existing.py --output $env:TEMP\\shangan-ya-engineering-proof-20261025.json`
+- 实际结果：**失败，退出码 1**。
+- 失败点：`source_audit` 检查 `learning-agent/learning_agent.py` 时触发 `Source differs from pinned input`。
+- 结论：`ENGINEERING_PROOF_SCRIPT=blocked`。这不是通过；需要先比对当前文件、provenance 的 `module_blobs`、输入 commit 和工作区改动。禁止删除或跳过 SHA 校验。
+- 未执行：本轮没有切换本地分支、没有覆盖工作区、没有修改本地未提交文件；也没有运行真实模型请求。
+
+### 10.3 下一步
+
+1. 队长先保存/确认上述未提交修改归属，避免切分支造成丢失。
+2. 在本地确认 `git rev-parse HEAD:learning-agent/learning_agent.py`、`git diff -- learning-agent/learning_agent.py`、provenance 中对应 SHA 与 `input_commit`。
+3. 在干净的目标分支工作副本中，重新执行 T0、T1、T2；测试报告中明确写出分支和 commit。
+4. 只有目标分支的脚本复现通过，才可把该分支的 `ENGINEERING_PASS` 标为通过；36 项单测通过不得覆盖脚本失败状态。
