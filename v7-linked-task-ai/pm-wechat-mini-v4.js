@@ -29,7 +29,7 @@ function candidates(data){
  if(!(data.candidates||[]).length){
   host.append(El('p','pmaw-note','没有可识别的候选列表。可以在微信里手动检索后使用下方框选。'));return;
  }
- const title=El('p','pmaw-note','仅列出当前微信窗口画面可识别的候选；请核对画面后选择。');
+ const title=El('p','pmaw-note','候选来自当前微信窗口的实际搜索画面，不等于完整聊天历史。请核对群名和消息内容后再继续。');
  host.append(title);
  data.candidates.slice(0,35).forEach((item,i)=>{
   const row=El('div','pmaw-hit'),num=El('span','pmaw-hit-number',String(i+1).padStart(2,'0'));
@@ -122,7 +122,7 @@ function confirmTask(){
 function make(){
  const root=El('section','pmaw-mini');root.id='pmaw-mini';
  root.innerHTML=`<header class="pmaw-head"><div><strong>💬 微信资料助手</strong><p>进入微信 → 右上角框选内容 → 确认识别 → 核对并关联任务</p></div><button type="button" id="pmaw-focus" class="pmaw-light">进入微信 · 右上角框选 ↗</button></header>
- <details class="pmaw-optional-search"><summary>可选：按关键词定位群聊或消息</summary><div class="pmaw-filters"><label>群聊关键词<input id="pmaw-group-query" placeholder="例如：挑战杯、项目组"></label><button id="pmaw-search-groups">① 搜索群聊</button><label>消息关键词<input id="pmaw-message-query" placeholder="例如：DDL、PPT、老师反馈"></label><button id="pmaw-search-messages">② 搜索当前窗口消息</button></div>
+ <section class="pmaw-optional-search"><div class="pmaw-search-heading"><strong>按关键词搜索群聊 / 消息</strong><span>只展示本机微信窗口搜索到的候选，不冒充完整历史数据库</span></div><div class="pmaw-filters"><label>群聊关键词<input id="pmaw-group-query" placeholder="例如：挑战杯、项目组"></label><button id="pmaw-search-groups">① 搜索群聊</button><label>消息关键词<input id="pmaw-message-query" placeholder="例如：DDL、PPT、老师反馈"></label><button id="pmaw-search-messages">② 搜索当前窗口消息</button></div>
  <div id="pmaw-results" class="pmaw-results"></div>
  <details id="pmaw-window-preview" class="pmaw-preview"><summary>查看微信窗口搜索画面（仅本机显示）</summary><img id="pmaw-search-image" alt="已登录微信窗口截图" hidden></details></details>
  <div class="pmaw-row"><button id="pmaw-crop" type="button" class="pmaw-main">开始框选微信内容 →</button><span>切换群聊或打开微信文章时，浮窗跟随当前微信窗口；点确认后才识别。</span></div>
@@ -132,7 +132,7 @@ function make(){
  <div id="pmaw-new-task-fields"><label>新任务名称（请核对）<input id="pmaw-taskname" placeholder="如：补比赛用户调研PPT"></label><label>所属类别<select id="pmaw-category"><option>比赛</option><option>运营</option><option>AI PM</option><option>考研</option><option>副业</option></select></label><label>预计分钟（请确认）<input type="number" id="pmaw-est-minutes" min="5" max="1200" value="30"></label><label>DDL（未确认就留空）<input type="date" id="pmaw-due-date"></label></div></div>
  <div class="pmaw-row"><button id="pmaw-analyze" type="button" class="pmaw-light">🤖 AI根据截图识别任务/DDL</button><button id="pmaw-confirm" type="button" class="pmaw-main">确认关联任务 ✓</button></div>
  <p id="pmaw-last-confirmed" class="pmaw-note"></p></section>
- <p class="pmaw-status" id="pmaw-status" role="status">不会在后台扫描聊天数据库；仅搜索微信窗口当前可见文字。截图和任务证据由你确认后保存。</p>`;
+ <p class="pmaw-status" id="pmaw-status" role="status">不扫描私聊数据库、不假装读取完整历史。关键词搜索基于当前微信窗口可见内容；AI识别后选择原有任务，只有你确认后才保存关联证据。</p>`;
  Q('#pmaw-focus',root).onclick=focus;
  Q('#pmaw-search-groups',root).onclick=()=>search('group');
  Q('#pmaw-search-messages',root).onclick=()=>search('message');
@@ -150,7 +150,7 @@ function mount(){
  const old=Q('#pma-wx-frame');
  if(old){Q('#pmaw-crop-slot',mini).append(old);old.open=false}
  taskOptions();
- fetch('/api/pm/wx/status').then(r=>r.json()).then(x=>notice(x.available?'微信已连接。点“进入微信”，在右上角浮窗框选需要读取的内容。':'当前没有检测到可见微信窗口。请先打开并登录微信。',!x.available)).catch(()=>notice('微信窗口状态检测暂不可用',true));
+ fetch('/api/pm/wx/status').then(r=>r.json()).then(x=>notice(x.available?'微信窗口可用。可以先搜索群聊/消息关键词，再框选真实内容交给已连接的 AI。':'当前未检测到可用的微信窗口搜索能力。请在本机打开并登录微信；这不是完整历史数据库检索。',!x.available)).catch(()=>notice('微信窗口状态检测暂不可用',true));
 }
 document.addEventListener('sywx:crop-ready',e=>catchCrop(e.detail||{}));
 new MutationObserver(()=>{if(Q('#pma-hub-v3')&&!Q('#pmaw-mini'))mount();else if(Q('#pmaw-mini')&&!Q('#pmaw-mini #pma-wx-frame')&&Q('#pma-wx-frame'))Q('#pmaw-crop-slot')?.append(Q('#pma-wx-frame'))}).observe(document.documentElement,{subtree:true,childList:true});
