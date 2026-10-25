@@ -8,6 +8,7 @@
 - [Agent 闭环优化与三类真实作品联调方案](agent-closed-loop-optimization-and-three-artifact-integration-2026-10-26.md)
 - [三人总调度与省一对照验收表](team-total-dispatch-and-provincial-first-prize-acceptance-2026-10-25.md)
 - [工程总调度测试方案](engineering-total-dispatch-test-plan-2026-10-25.md)
+- [省一目标下的个性化首步与真实作品闭环总调度](personalized-first-step-provincial-prize-dispatch-2026-10-26.md)
 - 用户提供的《上岸鸭竞品拆解与过程干预方案（含大模型技术分析）》
 
 > 本文把最终产品目的、原有功能、当前 Agent 技术和团队排期连在一起。它是落地总调度，不代表所有能力已经实现。未在目标 commit 上真实运行的能力必须标为 not_run、unknown 或 blocked，不得用设计文档代替运行证据。
