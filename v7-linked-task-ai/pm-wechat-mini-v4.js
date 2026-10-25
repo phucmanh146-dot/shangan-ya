@@ -5,6 +5,7 @@ const Q=(s,r=document)=>r.querySelector(s);
 const El=(t,c,v)=>{const n=document.createElement(t);if(c)n.className=c;if(v!==undefined)n.textContent=String(v);return n};
 let currentSearch=null,lastCandidate=null,lastCrop=null,busy=false,selectedScope='group',selectedGroup='';
 function notice(t,bad=false){let x=Q('#pmaw-status');if(x){x.textContent=t;x.dataset.error=String(bad)}}
+function setFlowStep(step){Q('.pmaw-flow')?.querySelectorAll('li').forEach((n,i)=>{n.classList.toggle('is-active',i+1===step);n.classList.toggle('is-done',i+1<step)})}
 async function api(url,data){
  const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),50000);
  try{const r=await fetch(url,{method:data===undefined?'GET':'POST',headers:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data),signal:ctrl.signal,cache:'no-store'});const j=await r.json().catch(()=>({error:'没有收到有效数据'}));if(!r.ok||j.error)throw Error(j.error||('HTTP '+r.status));return j}
@@ -48,7 +49,7 @@ function candidates(data){
 async function search(scope){
  const input=Q(scope==='group'?'#pmaw-group-query':'#pmaw-message-query'),keyword=input?.value.trim()||'';
  if(!keyword)return notice('先填'+(scope==='group'?'群聊':'群聊消息')+'关键词',true);
- if(busy)return;busy=true;selectedScope=scope;
+ if(busy)return;busy=true;selectedScope=scope;setFlowStep(scope==='group'?1:2);
  try{
   notice(scope==='group'?'正在通过本机微信搜索群聊关键词…':'正在通过本机微信搜索当前群聊消息…');
   const r=await api('/api/pm/wx/search',{keyword,scope,groupName:selectedGroup,groupOnly:scope==='message',pinnedFirst:true});
@@ -58,14 +59,14 @@ async function search(scope){
  finally{busy=false}
 }
 async function focus(){
- if(busy)return;busy=true;const button=Q('#pmaw-focus');if(button)button.disabled=true;
+ setFlowStep(3);if(busy)return;busy=true;const button=Q('#pmaw-focus');if(button)button.disabled=true;
  notice('正在切到微信并打开右上角浮窗；你点框选后才会截图…');
  try{if(!window.SYPMScreenSelect?.openDesktop)throw Error('浮窗入口尚未加载，请刷新工作台');const d=await SYPMScreenSelect.openDesktop();notice(d.note)}
  catch(e){notice(e.message,true)}finally{busy=false;if(button)button.disabled=false}
 }
 async function crop(){return focus()}
 function catchCrop(detail){
- lastCrop=detail;const box=Q('#pmaw-recognition');if(!box)return;
+ setFlowStep(4);lastCrop=detail;const box=Q('#pmaw-recognition');if(!box)return;
  box.hidden=false;
  const content=String(detail.content||'').trim(),msg=Q('#pmaw-ocr');
  msg.textContent=content||'本次 OCR 未读出可用的中文。原始截图仍关联在 AI 附件中，可点“AI根据截图识别”。';
@@ -106,19 +107,22 @@ function confirmTask(){
    createdAt:Date.now(),materials:[],aiScheduled:false};
   tasks.push(task);a.tasks=tasks;
  }
+ const rawText=String(d.content||'').slice(0,14000);
+ const extractedLinks=(rawText.match(/(?:https?:\/\/|obsidian:\/\/)[^\s\])）<>"'，。；;]+/gi)||[]).map(x=>x.replace(/[),.，。；;]+$/,'')).filter((x,i,a)=>a.indexOf(x)===i).slice(0,20);
  const record={id:'wx-proof-'+Date.now().toString(36),
   taskId:String(task.id),taskName:String(task.name),groupQuery:(Q('#pmaw-group-query')?.value||'').trim(),
   messageQuery:(Q('#pmaw-message-query')?.value||'').trim(),
   selectedResult:lastCandidate?.label||'',
-  text:String(d.content||'').slice(0,14000),fileId:d.file.id,
+  text:rawText,links:extractedLinks,fileId:d.file.id,
   capturedAt:new Date().toISOString(),source:'windows-wechat-selected-region',
   ddlCandidate:(String(d.content||'').split(/\n/).find(x=>/DDL|截止|提交|deadline|明天|今晚/i.test(x))||'').slice(0,250),
   confirmedByUser:true};
  const prior=Array.isArray(a.wxTaskEvidence)?a.wxTaskEvidence:[];
  if(prior.some(x=>x.fileId===record.fileId&&x.taskId===record.taskId))return notice('这份截图已经归入该任务，无须重复保存。');
  prior.unshift(record);a.wxTaskEvidence=prior.slice(0,180);
+ if(extractedLinks.length){task.materials=Array.isArray(task.materials)?task.materials:[];extractedLinks.forEach(function(url){if(!task.materials.some(function(m){return (typeof m==='string'?m:m&&(m.url||m.href||m.link))===url}))task.materials.push({id:'wx-link-'+Date.now().toString(36)+'-'+task.materials.length,url:url,title:url,source:'wechat-message',readStatus:'pending',addedAt:Date.now()})});}
  save(a);taskOptions();
- Q('#pmaw-last-confirmed').textContent='已确认：'+task.name+' · 保存1条真实微信框选证据；DDL以实际截图和你手动填写为准。';
+ Q('#pmaw-last-confirmed').textContent='已确认：'+task.name+' · 保存1条微信证据'+(extractedLinks.length?'，提取 '+extractedLinks.length+' 条链接并附加到任务资料':'')+'；DDL以实际截图和你手动填写为准。';
  notice('任务证据已关联到《'+task.name+'》。'+(create?'新任务已加入原有任务列表。':'没有更改该任务的原计划。'));
 }
 function make(){
