@@ -3,7 +3,7 @@
 'use strict';if(window.SYPMWeChatV4)return;
 const Q=(s,r=document)=>r.querySelector(s);
 const El=(t,c,v)=>{const n=document.createElement(t);if(c)n.className=c;if(v!==undefined)n.textContent=String(v);return n};
-let currentSearch=null,lastCandidate=null,lastCrop=null,busy=false,selectedScope='group';
+let currentSearch=null,lastCandidate=null,lastCrop=null,busy=false,selectedScope='group',selectedGroup='';
 function notice(t,bad=false){let x=Q('#pmaw-status');if(x){x.textContent=t;x.dataset.error=String(bad)}}
 async function api(url,data){
  const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),50000);
@@ -46,13 +46,26 @@ function candidates(data){
  });
 }
 async function search(scope){
- const input=Q(scope==='group'?'#pmaw-group-query':'#pmaw-message-query');
- let keyword=input?.value.trim()||'';
- if(!keyword)return notice('先填'+(scope==='group'?'群聊':'消息')+'关键词',true);
- if(busy)return;busy=true;selectedScope=scope;notice('正在已登录的微信窗口搜索“'+keyword.slice(0,50)+'”…');
- try{const r=await api('/api/pm/wx/search',{keyword,scope});candidates(r);
-  notice(r.note+(r.candidates?.length?' 找到 '+r.candidates.length+' 条窗口候选（需手动核对）。':''));
- }catch(e){notice('搜索没有完成：'+e.message+'。可直接点“打开微信/截图框选”继续。',true)}
+ const input=Q(scope==='group'?'#pmaw-group-query':'#pmaw-message-query'),keyword=input?.value.trim()||'';
+ if(!keyword)return notice('先填'+(scope==='group'?'群聊':'群聊消息')+'关键词',true);
+ if(busy)return;busy=true;selectedScope=scope;
+ try{
+  if(scope==='group'){
+   notice('优先检索本机群列表（包括置顶群）；若列表接口不可用，再搜索已登录微信窗口…');
+   try{
+    const h=await api('/api/sources/wechat',{path:'/wechat/history-groups',method:'POST',data:{query:keyword,keyword,priorityTop:true,onlyImportantGroup:false,limit:120}});
+    const groups=Array.isArray(h.groups)?h.groups:(Array.isArray(h.items)?h.items:(Array.isArray(h.results)?h.results:[]));
+    if(groups.length){
+     const host=Q('#pmaw-results');host.replaceChildren();host.append(El('p','pmaw-note','本机群列表接口返回 '+(h.total||groups.length)+' 个群候选。请核对群名；选择后再搜该群消息。'));
+     groups.slice(0,80).forEach((g,i)=>{const name=String(g.name||g.groupName||g.label||g.nickName||'').trim();if(!name)return;const row=El('div','pmaw-hit'),num=El('span','pmaw-hit-number',String(i+1).padStart(2,'0')),info=El('span','pmaw-hit-name',name),btn=El('button','pmaw-light',g.isTop||g.pinned?'置顶群 · 选中':'选中群聊');btn.type='button';btn.onclick=()=>{selectedGroup=name;notice('已选择群聊「'+name+'」。输入消息关键词后点击“② 搜索群聊消息”。');btn.textContent='已选择 ✓'};row.append(num,info,btn);host.append(row)});
+     currentSearch={source:'local-group-list',groups};return;
+    }
+   }catch(localError){/* Local history list unavailable: fall back to visible-window search, never claim a full history scan. */}
+  }
+  notice('正在已登录微信窗口搜索“'+keyword.slice(0,50)+'”…');
+  const r=await api('/api/pm/wx/search',{keyword,scope,groupName:selectedGroup,groupOnly:scope==='message'});candidates(r);
+  notice((r.note||'窗口搜索完成。')+(selectedGroup&&scope==='message'?' 当前选中群：'+selectedGroup+'。':'')+(r.candidates?.length?' 找到 '+r.candidates.length+' 条窗口候选（需手动核对）。':''));
+ }catch(e){notice('搜索未完成：'+e.message+'。当前没有拿到可用结果，不能视为已读取全部群聊。',true)}
  finally{busy=false}
 }
 async function focus(){
@@ -77,7 +90,7 @@ function catchCrop(detail){
 function analyzeCrop(){
  if(!lastCrop?.file?.id)return notice('先框选微信窗口并点击“加入资料池”',true);
  const q=Q('#pma-question'),button=Q('#pma-ask');if(!q||!button)return notice('AI 问答入口暂未加载',true);
- const group=Q('#pmaw-group-query')?.value.trim()||'（未知群聊）';
+ const group=selectedGroup||Q('#pmaw-group-query')?.value.trim()||'（未知群聊）';
  const message=Q('#pmaw-message-query')?.value.trim()||'（未设）';
  q.value='只根据这次授权的微信框选图片及已识别文字，识别对应任务、明确的DDL原话、责任人和下一步。群聊搜索词：'+group+'；消息搜索词：'+message+'。未知内容请标注“未确认”，不能编造截止日期。OCR文字：\n'+String(lastCrop.content||'').slice(0,3500);
  q.dispatchEvent(new Event('input',{bubbles:true}));
@@ -122,7 +135,7 @@ function confirmTask(){
 function make(){
  const root=El('section','pmaw-mini');root.id='pmaw-mini';
  root.innerHTML=`<header class="pmaw-head"><div><strong>💬 微信资料助手</strong><p>进入微信 → 右上角框选内容 → 确认识别 → 核对并关联任务</p></div><button type="button" id="pmaw-focus" class="pmaw-light">进入微信 · 右上角框选 ↗</button></header>
- <section class="pmaw-optional-search"><div class="pmaw-search-heading"><strong>按关键词搜索群聊 / 消息</strong><span>只展示本机微信窗口搜索到的候选，不冒充完整历史数据库</span></div><div class="pmaw-filters"><label>群聊关键词<input id="pmaw-group-query" placeholder="例如：挑战杯、项目组"></label><button id="pmaw-search-groups">① 搜索群聊</button><label>消息关键词<input id="pmaw-message-query" placeholder="例如：DDL、PPT、老师反馈"></label><button id="pmaw-search-messages">② 搜索当前窗口消息</button></div>
+ <section class="pmaw-optional-search"><div class="pmaw-search-heading"><strong>搜索置顶群及群聊消息</strong><span>只展示本机微信窗口搜索到的候选，不冒充完整历史数据库</span></div><div class="pmaw-filters"><label>群聊关键词<input id="pmaw-group-query" placeholder="例如：挑战杯、项目组"></label><button id="pmaw-search-groups">① 搜索群聊</button><label>群聊消息关键词<input id="pmaw-message-query" placeholder="先选群，再搜：DDL、PPT、老师反馈"></label><button id="pmaw-search-messages">② 搜索当前窗口消息</button></div>
  <div id="pmaw-results" class="pmaw-results"></div>
  <details id="pmaw-window-preview" class="pmaw-preview"><summary>查看微信窗口搜索画面（仅本机显示）</summary><img id="pmaw-search-image" alt="已登录微信窗口截图" hidden></details></section>
  <div class="pmaw-row"><button id="pmaw-crop" type="button" class="pmaw-main">开始框选微信内容 →</button><span>切换群聊或打开微信文章时，浮窗跟随当前微信窗口；点确认后才识别。</span></div>
