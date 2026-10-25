@@ -48,3 +48,10 @@
 .pmaw-flow li.is-active{border-color:#b96b88;background:#f9e8ef;color:#783c54;box-shadow:0 0 0 2px #f4dbe5}.pmaw-flow li.is-done{border-color:#c8d9cf;background:#f0f7f2;color:#426d55}.pmaw-flow li.is-done b{background:#d7eadf;color:#2e704b}.pmaw-flow li.is-active b{background:#b96b88;color:#fff}.pmaw-flow li b{display:inline-flex;flex:0 0 24px;width:24px;height:24px;align-items:center;justify-content:center;border-radius:50%;background:#f2dce5;color:#9a4d6c;font-size:11px}
 .pmaw-flow li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(max-width:620px){.pmaw-flow{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.pmaw-hit.is-selected,.pmaw-history-hit.is-selected{border-color:#bd6d89;background:#fff4f8;box-shadow:0 0 0 2px #f4dce5}
+.pmaw-history-hit{border:1px solid #e8d9df;border-radius:12px;padding:11px 12px;margin:8px 0;background:#fff}
+.pmaw-history-meta{font-size:10px;color:#927783;margin-bottom:7px;line-height:1.5}
+.pmaw-history-text{font-size:12px;color:#624b56;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;margin:0 0 10px}
+.pmaw-history-more{display:block;width:100%;margin:10px 0;padding:10px;border:1px dashed #c89aab;border-radius:11px;background:#fff8fa;color:#874c65;font-weight:750;cursor:pointer}
+.pmaw-history-more:disabled{opacity:.6;cursor:wait}
