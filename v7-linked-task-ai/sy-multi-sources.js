@@ -1,7 +1,7 @@
 /* Multi-source search and visible-page monitoring, preserving the original workbench. */
 (function(){'use strict';if(window.SYMultiSources)return;
 const native=location.hostname==='127.0.0.1'||location.hostname==='localhost';
-const base=native&&location.port==='8892'?'http://127.0.0.1:8901':'';
+const publicWorkbench=location.origin==='https://shanganya-v8-workbench-production.up.railway.app';const base=((native&&location.port==='8892')||publicWorkbench)?'http://127.0.0.1:8901':'';
 const el=(tag,parent,text)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(parent)parent.append(e);return e};
 let modal=null,watchBusy=false,lastSources=[];
 function storageKey(){return 'sy-multi-sources-v1:'+(window.SY?.currentAccountKey||'guest')}
