@@ -42,8 +42,8 @@ host.append(el('p','', '已检索「'+(notes.name||'知识库')+'」'+notes.tota
 checks.push(historySearch());
 await Promise.all(checks);
 }
-async function historyState(retry=false){
-try{var d=await api('/wechat/history-status',{retry});var box=dialog.querySelector('[data-wp-history-status]');
+async function historyState(retry=false,attempt=0){
+try{var d=await api('/wechat/history-status',{retry});if(d.phase==='initializing'&&attempt<12){await new Promise(function(resolve){setTimeout(resolve,750);});return historyState(false,attempt+1);}var box=dialog.querySelector('[data-wp-history-status]');
 box.textContent=d.phase==='initializing'?'正在验证微信授权与历史访问权限…':d.phase==='history_ready'?'历史原文已真实读取 · '+new Date(d.checkedAt*1000).toLocaleTimeString():d.phase==='directory_ready'?'已读取 '+d.groupCount+' 个真实群目录；历史正文待检索。':'尚未取得历史记录：'+(d.error||'授权状态待验证');
 return d;
 }catch(e){var box=dialog.querySelector('[data-wp-history-status]');if(box)box.textContent='历史读取尚未可用：'+e.message;return {phase:'unavailable',error:e.message};}}
@@ -79,7 +79,22 @@ if(r.candidates){r.candidates.forEach(function(c){dest.append(button(c.label,asy
 if(r.rows){var a=el('textarea');a.value=r.rows.map(function(x){return x.text;}).join('\n');a.placeholder='当前微信画面 OCR 原文，可删除无关内容或修正错字';a.style.cssText='width:100%;min-height:180px';dest.append(el('p','','以下为当前画面的识别文字，不是全部历史消息。核对后再保存。'),a,button('核对后保存到选中群',async function(){var sel=dialog.querySelector('[data-wp-groups]');if(!sel.value)return msg('先填写准确群名并关注，再从下拉列表选中该群。');if(!a.value.trim())return msg('没有需要保存的文字。');if(!confirm('请确认这段识别文字来自“'+sel.value+'”，并已修正错字。保存到当前授权资料空间？'))return;try{var result=await api('/import',{group:sel.value,messages:[{text:a.value.trim()}]});await search();msg('已保存 '+result.added+' 条真实画面资料；重复内容不会重复保存。');}catch(e){msg(e.message);}}));}
 }
 function render(){var dest=dialog.querySelector('.sywp-list');dest.replaceChildren();if(!items.length){dest.append(el('p','sywp-caption','还没有采集到匹配消息。历史消息尚未同步；只有实际读取后，才会出现历史搜索结果。'));return;}
-items.forEach(function(m){var c=el('article','sywp-item'),top=el('div','sywp-meta');top.append(el('strong','',m.group),el('span','',m.time||''),el('span','',m.tag));c.append(top,el('p','sywp-text',m.text));var actions=el('div','sywp-row');
+var toolbar=el('div','sywp-row');
+toolbar.append(
+  el('span','sywp-caption','勾选真实群消息，最多20条一批，关联 AI 分类并形成待确认任务。'),
+  button('全选当前页',function(){dest.querySelectorAll('input[data-sywp-select]').forEach(function(e){e.checked=true;});}),
+  button('取消选择',function(){dest.querySelectorAll('input[data-sywp-select]').forEach(function(e){e.checked=false;});}),
+  button('批量 AI 分析所选消息',function(){
+    var selected=Array.from(dest.querySelectorAll('input[data-sywp-select]:checked')).map(function(e){return items[Number(e.dataset.sywpSelect)];}).filter(Boolean);
+    if(!selected.length)return msg('请先勾选真实群消息。');
+    if(selected.length>20)return msg('每次最多20条，请分批分析。');
+    if(!window.SYRescue||!SYRescue.open)return msg('AI模块未就绪，未发送消息。');
+    var raw=selected.map(function(m){return '【群：'+(m.group||'未标注')+'，时间：'+(m.time||'未知')+'，发送者：'+(m.sender||'未知')+'】\n'+(m.text||'');}).join('\n\n').slice(0,16000);
+    dialog.close();
+    SYRescue.open({question:'请只分析下列真实微信消息，不要补造信息：1. 分成通知、资料、可执行任务、时间要求及风险；2. 每一项保留群名、消息时间、原文依据、原始链接；3. 从消息中提取任务标题、下一步动作、期限和来源；4. 不明确的截止时间标注待核对；5. 对照现有任务去重，候选任务待我确认后入库；6. 结合现有任务重要紧急程度、精力状态、真实耗时和休息时间给出排期建议。\n\n'+raw,useNotes:true});
+  })
+);dest.append(toolbar);
+items.forEach(function(m,index){var c=el('article','sywp-item'),top=el('div','sywp-meta');var pick=el('input');pick.type='checkbox';pick.dataset.sywpSelect=String(index);pick.setAttribute('aria-label','选择此条微信消息');top.append(pick,el('strong','',m.group),el('span','',m.time||''),el('span','',m.tag));c.append(top,el('p','sywp-text',m.text));var actions=el('div','sywp-row');
 actions.append(button('加入今日任务',function(){if(!window.SY||!SY.getAcctData||!SY.saveAcctData)return msg('原任务系统尚未登录。');var title=prompt('确认这是你的任务，并修改标题：',m.text.slice(0,85));if(!title||!title.trim())return;var date=new Date(),day=date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');var a=SY.getAcctData();a.tasks=a.tasks||[];var id='sy-wx-'+m.id;if(a.tasks.some(x=>x.id===id))return msg('这条消息已加过任务，不重复创建。');if(!confirm('添加任务「'+title+'」到今天的原任务清单？'))return;a.tasks.push({id:id,name:title.trim(),date:day,category:'其他',done:false,completedAt:null,estMinutes:30,plannedMinutes:30,startMinutes:null,firstTime:false,multiplier:1,weight:'light',createdAt:Date.now(),order:a.tasks.reduce((v,t)=>Math.max(v,Number(t.order||0)),0)+1,noteFramework:'来自微信 '+m.group+'；原消息：'+m.text.slice(0,1400)});SY.saveAcctData(a);msg('已保存到原任务清单。默认估时30分钟，需要按你的历史耗时校正。');}));
 actions.append(button('AI总结 / 识别任务',function(){if(window.SYRescue&&SYRescue.open){dialog.close();SYRescue.open({question:'请从下面微信消息中识别任务、资料或副业机会；只提取原文明确的信息，标记不确定的时间，给我一个下一步：\n'+m.text,useNotes:true});}else msg('原 AI 救援尚未加载，请确认模型连接。');}));
 var links=m.text.match(/https?:\/\/[^\s<>"'，。）》]+/g)||[];if(links.length)actions.append(button('读取原链接',function(){if(window.SYHub){dialog.close();SYHub.open(links.join('\n'),'sources');}else msg('原资料读取入口还未加载。');}));c.append(actions);dest.append(c);});}
