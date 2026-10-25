@@ -358,6 +358,7 @@
           <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l2-5h14l2 5"/><path d="M3 9h5l1.5 3h5L16 9h5"/><path d="M3 9v9a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V9"/></svg></span>
           <span>收集箱</span>
         </button>
+        <button class="app-nav-item" data-view="task-intake" type="button"><span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5h16v13H4z"/><path d="M8 9h8M8 13h5"/><path d="m15 16 2 2 4-5"/></svg></span><span>收集任务</span></button>
         <p class="app-nav-group-label">专注</p>
         <button class="app-nav-item" data-view="pomodoro" type="button">
           <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/><path d="M9 2h6"/></svg></span>
@@ -545,6 +546,7 @@
         <div id="inboxBody"></div>
       </section>
 
+      <section class="app-view" data-view="task-intake" id="view-task-intake" hidden><div class="app-main-topbar" style="margin-bottom:18px;"><div><p class="app-greeting-eyebrow">COLLECT → VERIFY → LINK</p><h1 style="font-size:1.45rem;">收集任务</h1><p style="color:var(--text-soft);font-size:.92rem;">微信只负责消息采集与任务关联；Obsidian、飞书、网页和视频解析请进入独立的「知识库」页。</p></div></div><div id="wechatTaskMount"></div></section>
       <section class="app-view" data-view="pomodoro" id="view-pomodoro" hidden>
         <div id="pomodoroBody"></div>
       </section>
