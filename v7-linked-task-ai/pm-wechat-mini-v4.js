@@ -4,15 +4,36 @@
 const Q=(s,r=document)=>r.querySelector(s);
 const El=(t,c,v)=>{const n=document.createElement(t);if(c)n.className=c;if(v!==undefined)n.textContent=String(v);return n};
 let currentSearch=null,lastCandidate=null,lastCrop=null,busy=false,selectedScope='group',selectedGroup='',selectedGroupId='',selectedHistoryMessage=null;
+let selectedHistoryBatch=[];
 function notice(t,bad=false){let x=Q('#pmaw-status');if(x){x.textContent=t;x.dataset.error=String(bad)}}
 function setFlowStep(step){Q('.pmaw-flow')?.querySelectorAll('li').forEach((n,i)=>{n.classList.toggle('is-active',i+1===step);n.classList.toggle('is-done',i+1<step)})}
 async function historyApi(path,data){if(!window.SYMultiSources?.api)throw Error('本机资料桥未加载；请确认本机读取服务正在运行。');return window.SYMultiSources.api('/api/sources/wechat',{path,method:'POST',data:data||{}})}
 function showGroupResults(result){const host=Q('#pmaw-results');host.replaceChildren();const groups=Array.isArray(result.groups)?result.groups:[];host.append(El('p','pmaw-note','本机历史群目录匹配 '+(result.total||groups.length)+' 个群。此目录不提供置顶标记；请核对群名后选择。'));groups.slice(0,200).forEach((g,i)=>{const name=String(g.name||'').trim();if(!name)return;const row=El('div','pmaw-hit'),num=El('span','pmaw-hit-number',String(i+1).padStart(2,'0')),info=El('span','pmaw-hit-name',name),btn=El('button','pmaw-light','选中此群');btn.type='button';btn.onclick=()=>{selectedGroup=name;selectedGroupId=String(g.id||'');selectedHistoryMessage=null;Q('#pmaw-message-query')?.focus();setFlowStep(2);notice('已选中群聊「'+name+'」。输入消息关键词后，搜索本机历史记录。');host.querySelectorAll('.pmaw-hit').forEach(x=>x.classList.remove('is-selected'));row.classList.add('is-selected');btn.textContent='已选中 ✓'};row.append(num,info,btn);host.append(row)});if(result.partial)host.append(El('p','pmaw-note','匹配结果超过本批显示上限；请缩小群名关键词。'))}
 function showHistoryMessages(result,append=false){
- const host=Q('#pmaw-results');if(!append)host.replaceChildren();else host.querySelector('.pmaw-history-more')?.remove();
+ const host=Q('#pmaw-results');if(!append){host.replaceChildren();selectedHistoryBatch=[];}else host.querySelector('.pmaw-history-more')?.remove();
  const items=Array.isArray(result.items)?result.items:[];
  if(!append)host.append(El('p','pmaw-note','群聊「'+String(result.group||selectedGroup)+'」本机历史搜索结果：'+items.length+' 条。只显示匹配到的真实记录；图片/语音/视频等媒体消息可能需要另行识别。'));
- items.forEach((item,i)=>{const row=El('article','pmaw-history-hit'),meta=El('div','pmaw-history-meta',String(item.time||'')+' · '+String(item.sender||'未知发送者')),body=El('p','pmaw-history-text',String(item.text||'').slice(0,1200)),btn=El('button','pmaw-light','选择并识别任务');btn.type='button';btn.onclick=()=>{selectedHistoryMessage=item;lastCandidate={label:String(item.text||'').slice(0,180),scope:'history'};lastCrop=null;const box=Q('#pmaw-recognition');if(box)box.hidden=false;const ocr=Q('#pmaw-ocr');if(ocr)ocr.textContent=String(item.text||'');const taskName=Q('#pmaw-taskname');if(taskName&&!taskName.value){const lines=String(item.text||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);taskName.value=(lines.find(x=>/提交|完成|讨论|汇报|截止|任务|制作|设计|PPT|DDL/i.test(x))||lines[0]||'').slice(0,70)}taskOptions();setFlowStep(3);notice('已选择一条本机历史消息。点击“AI 识别任务/链接”，核对后再关联任务。');row.classList.add('is-selected')};row.append(meta,body,btn);host.append(row)});
+ if(!append){
+ const toolbar=El('div','pmaw-row');
+ const selectAll=El('button','pmaw-light','全选本页消息');
+ selectAll.type='button';selectAll.onclick=()=>host.querySelectorAll('input[data-pmaw-batch]').forEach(x=>x.checked=true);
+ const clear=El('button','pmaw-light','取消勾选');
+ clear.type='button';clear.onclick=()=>host.querySelectorAll('input[data-pmaw-batch]').forEach(x=>x.checked=false);
+ const analyze=El('button','pmaw-light','批量 AI 分析');
+ analyze.type='button';analyze.onclick=()=>{
+  const selected=Array.from(host.querySelectorAll('input[data-pmaw-batch]:checked')).map(x=>selectedHistoryBatch[Number(x.dataset.pmawBatch)]).filter(Boolean);
+  if(!selected.length)return notice('先勾选至少一条真实微信消息。',true);
+  if(selected.length>20)return notice('每次最多分析20条消息，请分批操作。',true);
+  const promptBox=Q('#pma-question'),ask=Q('#pma-ask');
+  if(!promptBox||!ask)return notice('AI问答入口尚未加载，本次没有发送消息。',true);
+  const corpus=selected.map(m=>'【群：'+selectedGroup+'；时间：'+(m.time||'未确认')+'；发送人：'+(m.sender||'未确认')+'】\\n'+String(m.text||'')).join('\\n\\n').slice(0,16000);
+  promptBox.value='请分析以下本机真实读取的微信原文：按通知、资料、任务、风险分类；逐条保留来源、原始链接、明确DDL和下一步动作；与已有任务去重；生成候选任务供我确认，不要自动写入；结合原任务重要紧急程度、精力和实际耗时建议排期；无法确认的内容必须注明。\\n\\n'+corpus;
+  promptBox.dispatchEvent(new Event('input',{bubbles:true}));ask.click();
+  notice('已将勾选的 '+selected.length+' 条真实微信消息送入现有 AI 问答流程，请在回答区核对结果。');
+ };
+ toolbar.append(selectAll,clear,analyze);host.append(toolbar);
+}
+items.forEach((item,i)=>{const row=El('article','pmaw-history-hit'),meta=El('div','pmaw-history-meta',String(item.time||'')+' · '+String(item.sender||'未知发送者')),body=El('p','pmaw-history-text',String(item.text||'').slice(0,1200)),btn=El('button','pmaw-light','选择并识别任务');btn.type='button';btn.onclick=()=>{selectedHistoryMessage=item;lastCandidate={label:String(item.text||'').slice(0,180),scope:'history'};lastCrop=null;const box=Q('#pmaw-recognition');if(box)box.hidden=false;const ocr=Q('#pmaw-ocr');if(ocr)ocr.textContent=String(item.text||'');const taskName=Q('#pmaw-taskname');if(taskName&&!taskName.value){const lines=String(item.text||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);taskName.value=(lines.find(x=>/提交|完成|讨论|汇报|截止|任务|制作|设计|PPT|DDL/i.test(x))||lines[0]||'').slice(0,70)}taskOptions();setFlowStep(3);notice('已选择一条本机历史消息。点击“AI 识别任务/链接”，核对后再关联任务。');row.classList.add('is-selected')};const c=El('input');c.type='checkbox';c.dataset.pmawBatch=String(selectedHistoryBatch.length);c.setAttribute('data-pmaw-batch','');c.setAttribute('aria-label','选择微信原文');selectedHistoryBatch.push(item);row.append(c,meta,body,btn);host.append(row)});
  if(!items.length&&!append)host.append(El('p','pmaw-note','没有匹配消息。可换关键词，或切换到微信窗口搜索。'));
  if(result.hasMore){const more=El('button','pmaw-history-more','继续读取更早消息 →');more.type='button';more.onclick=loadMoreHistory;host.append(more)}
 }
