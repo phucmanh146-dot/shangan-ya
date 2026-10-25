@@ -9,7 +9,7 @@ var save=function(k,v){localStorage.setItem('sy_adaptive_v1:'+acct()+':'+k,JSON.
 var owner=function(){return window.SY&&SY.getAcctData?SY.getAcctData():{tasks:[]};};
 var tasks=function(){return (owner().tasks||[]).filter(function(t){return !t.done&&!t.completedAt&& (!t.date||t.date<=today());});};
 var getActive=function(){var a=owner(),id=(a.activeTimer||{}).taskId||a.priorityFocusTaskId;return (a.tasks||[]).find(function(t){return String(t.id)===String(id);})||tasks()[0]||null;};
-var prefs=function(){return Object.assign({energy:3,morning:4,afternoon:3,evening:2,start:'09:00',end:'21:00',buffer:25},store('prefs')||{});};
+var prefs=function(){return Object.assign({energy:3,morning:4,afternoon:3,evening:2,start:'09:00',end:'21:00',buffer:25,leisure:45},store('prefs')||{});};
 function el(tag,cl,t){var x=document.createElement(tag);if(cl)x.className=cl;if(t!=null)x.textContent=t;return x;}
 function status(s){var x=dlg&&dlg.querySelector('[data-status]');if(x)x.textContent=s;}
 function open(tab){if(!window.SY){return;}if(dlg){dlg.close();dlg.remove();}dlg=el('dialog','sy-adaptive-dialog');dlg.innerHTML='<header><div><h2>上岸鸭 · 精力友好型学习规划</h2><p class="sy-subtitle">休息不被挤掉，困难随时能求助，突发情况可以重排</p></div><button class="sy-close" aria-label="关闭">×</button></header><nav class="sy-adaptive-tabs" role="tablist">'+[['plan','每日排程'],['project','项目 / 视频'],['review','间隔复习'],['knowledge','知识与救援']].map(function(t){return '<button type="button" data-tab="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</nav><main class="sy-adaptive-body"></main>';
@@ -23,16 +23,23 @@ function fmt(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60)
 function budget(p){return Math.max(0,Math.floor(Math.max(0,minTime(p.end)-minTime(p.start)-120)*Math.max(.42,Math.min(.8,(100-p.buffer)/100))*Math.min(1,(.55+p.energy*.09))));}
 function createSchedule(){
  var p=prefs(),allowed=budget(p),remaining=allowed,from=minTime(p.start),end=minTime(p.end),slots=[],rows=[],paused=0;
+ var fixedItems=(store('fixed')||[]).filter(function(x){return x.day===today()}).map(function(x){return {from:minTime(x.start),to:minTime(x.end),title:x.title,kind:x.kind||'fixed'};}).filter(function(x){return x.to>x.from&&x.from<end&&x.to>from;}).sort(function(a,b){return a.from-b.from;});
+ var leisure=Math.max(0,Math.min(180,Number(p.leisure||0))),leisureStart=Math.max(from,Math.min(end-leisure,Math.round((from+end)/2)));
+ if(leisure>=10&&leisureStart>=from){var candidates=[leisureStart,Math.max(from,end-leisure),from];var spot=candidates.find(function(s){return s>=from&&s+leisure<=end&&!fixedItems.some(function(x){return s<x.to&&s+leisure>x.from;});});if(spot!==undefined)fixedItems.push({from:spot,to:spot+leisure,title:'自由躺平 · 玩手机 / 发呆 / 看剧（可调整）',kind:'leisure'});else fixedItems.push({from:leisureStart,to:Math.min(end,leisureStart+leisure),title:'弹性休息（固定活动优先）',kind:'leisure'});}
+ fixedItems.sort(function(a,b){return a.from-b.from;});
  var items=tasks().map(function(t){return {id:String(t.id),title:t.name||'未命名任务',left:Math.max(10,Math.min(900,Number(t.plannedMinutes||t.estMinutes||40))),energy:t.weight==='heavy'?4:2,priority: t.weight==='heavy'?2:1,due:t.date||today()};});
  var rev=(store('reviews')||[]).filter(function(r){return r.due<=today();}).map(function(r){return {id:'review:'+r.id,title:'复习 · '+r.title,left:Math.max(5,r.minutes||10),energy:2,priority:3,due:r.due};});
  items=items.concat(rev);
  var active=getActive();items.sort(function(a,b){if(active&&a.id===String(active.id))return -1;if(active&&b.id===String(active.id))return 1;return b.priority-a.priority||a.due.localeCompare(b.due);});
  for(var t=from;t<end&&remaining>0;){
+   var busy=fixedItems.find(function(x){return t>=x.from&&t<x.to;});
+   if(busy){var busyEnd=Math.min(end,busy.to);rows.push({from:t,to:busyEnd,kind:busy.kind,title:busy.title});t=busyEnd;paused=0;continue;}
+   var nextFixed=fixedItems.filter(function(x){return x.from>t;}).reduce(function(v,x){return Math.min(v,x.from);},end);
    var fixed=t>=720&&t<780?780:t>=1080&&t<1140?1140:t;
    if(fixed!==t){rows.push({from:t,to:Math.min(fixed,end),kind:'rest',title:t<780?'午餐与休息':'晚餐与恢复'});t=fixed;paused=0;continue;}
-   var nextBoundary=t<720?720:t<1080?1080:end;
+   var nextBoundary=Math.min(nextFixed,t<720?720:t<1080?1080:end);
    var part=t<720?'morning':t<1080?'afternoon':'evening',level=Number(p[part]||3),len=Math.min(level<=2?25:45,remaining,nextBoundary-t);
-   if(len<10){t+=Math.max(10,Math.min(20,nextBoundary-t));continue;}
+   if(len<10){t=Math.max(t+1,nextBoundary);continue;}
    var eligible=items.filter(function(x){return x.left>0;});
    if(!eligible.length)break;
    eligible.sort(function(a,b){return Math.abs(level-a.energy)-Math.abs(level-b.energy)||b.priority-a.priority;});
@@ -46,7 +53,7 @@ function createSchedule(){
 }
 function setPrefs(){
 var p=prefs(),form=dlg.querySelector('[data-prefs]');if(!form)return;
-['energy','morning','afternoon','evening','buffer','start','end'].forEach(function(k){var f=form.querySelector('[name="'+k+'"]');if(f)p[k]=k==='start'||k==='end'?f.value:Number(f.value);});
+['energy','morning','afternoon','evening','buffer','leisure','start','end'].forEach(function(k){var f=form.querySelector('[name="'+k+'"]');if(f)p[k]=k==='start'||k==='end'?f.value:Number(f.value);});
 if(minTime(p.end)<=minTime(p.start)+180){status('可安排时段至少要有 3 小时。');return;}save('prefs',p);var next=createSchedule();draft=next.rows;pending=next.waiting;showPlan('已根据精力、休息及预留时间重新生成草案。');
 }
 function showPlan(msg){
@@ -56,13 +63,18 @@ var s=draft.length?{rows:draft,waiting:pending,allowed:budget(p),used:0}:createS
 if(!draft.length){draft=s.rows;pending=s.waiting;}
 var all=tasks(),total=all.reduce(function(a,t){return a+Number(t.plannedMinutes||t.estMinutes||40);},0);
 var html='<section class="sy-adaptive-card"><h3>今天精力怎么样？先告诉上岸鸭</h3><form data-prefs class="sy-adaptive-grid">'+
- [['energy','整体精力','1|很疲惫,2|偏低,3|一般,4|不错,5|精力充沛'],['morning','上午状态','1|低,2|较低,3|一般,4|高,5|非常高'],['afternoon','下午状态','1|低,2|较低,3|一般,4|高,5|非常高'],['evening','晚上状态','1|低,2|较低,3|一般,4|高,5|非常高'],['start','开始时间',''],['end','结束时间',''],['buffer','突发缓冲比例','20|20%,25|25%,30|30%,35|35%,40|40%']].map(function(f){var v=p[f[0]];return '<label>'+f[1]+(f[2]?'<select name="'+f[0]+'">'+f[2].split(',').map(function(o){var z=o.split('|');return '<option value="'+z[0]+'" '+(String(v)===z[0]?'selected':'')+'>'+z[1]+'</option>';}).join('')+'</select>':'<input name="'+f[0]+'" type="time" value="'+esc(v)+'">')+'</label>';}).join('')+'</form>'+
+ [['energy','整体精力','1|很疲惫,2|偏低,3|一般,4|不错,5|精力充沛'],['morning','上午状态','1|低,2|较低,3|一般,4|高,5|非常高'],['afternoon','下午状态','1|低,2|较低,3|一般,4|高,5|非常高'],['evening','晚上状态','1|低,2|较低,3|一般,4|高,5|非常高'],['start','开始时间',''],['end','结束时间',''],['buffer','突发缓冲比例','20|20%,25|25%,30|30%,35|35%,40|40%'],['leisure','自由躺平时间','15|15分钟,30|30分钟,45|45分钟,60|60分钟,90|90分钟,120|120分钟']].map(function(f){var v=p[f[0]];return '<label>'+f[1]+(f[2]?'<select name="'+f[0]+'">'+f[2].split(',').map(function(o){var z=o.split('|');return '<option value="'+z[0]+'" '+(String(v)===z[0]?'selected':'')+'>'+z[1]+'</option>';}).join('')+'</select>':'<input name="'+f[0]+'" type="time" value="'+esc(v)+'">')+'</label>';}).join('')+'</form>'+
+ '<section class="sy-adaptive-card"><h3>先留出不能占用的时间</h3><p class="sy-muted">班会、上课、出行、朋友聚会等优先锁定；娱乐与发呆可在重排时弹性移动，但不会被任务吞掉。</p><div class="sy-adaptive-grid"><label>事件名称<input data-fixed-name placeholder="例如：班级会议 / 上课"></label><label>开始<input type="time" data-fixed-start value="14:00"></label><label>结束<input type="time" data-fixed-end value="15:00"></label></div><div class="sy-actions"><button type="button" data-addfixed>锁定这段时间</button></div><div data-fixed-list></div></section>'+
  '<div class="sy-actions"><button class="sy-adaptive-primary" data-generate>根据今天精力重新排程</button><button data-saveplan>保存当前计划</button><button data-newtask>突发任务来了 · 插入并重排</button></div><div class="sy-muted">原则：午餐和晚餐时段不安排学习；任务之间有休息；永远留出缓冲。计划草案不改动原始任务顺序与截止日期。</div></section>'+
  '<div class="sy-adaptive-grid two"><section class="sy-adaptive-card"><h3>今天的容量</h3><strong>'+s.allowed+' 分钟</strong><p class="sy-muted">待做任务估算 '+total+' 分钟 · 当前需要安排 '+all.length+' 项任务</p><div class="sy-bar"><span style="width:'+Math.min(100,Math.round(100*total/Math.max(1,s.allowed)))+'%"></span></div><p class="sy-muted">'+(total>s.allowed?'已超出舒适容量，系统会把做不完的任务列在下方。':'有余地，今天不必排满。')+'</p></section><section class="sy-adaptive-card"><h3>当前学习断点</h3><p>'+esc((getActive()||{}).name||'先在今日任务中选中一个任务')+'</p><div class="sy-actions"><button data-rescue>遇到困难 · 从知识库找办法</button><button data-notes>连接 Obsidian</button></div></section></div>'+
  '<section class="sy-adaptive-card"><h3>时间安排草案</h3>'+draft.map(function(r){var type=r.kind==='work'?'专注':r.kind==='rest'?'休息':'机动';return '<div class="sy-plan-row"><span>'+fmt(r.from)+'–'+fmt(r.to)+'</span><span>'+esc(r.title)+'</span><span class="sy-chip '+(r.kind==='work'?'':r.kind)+'">'+type+'</span></div>';}).join('')+'</section>'+
  '<section class="sy-adaptive-card"><h3>今天排不下的任务</h3><p class="sy-muted">'+(pending.length?pending.map(esc).join('、'):'目前没有需要顺延的任务。')+'</p><p class="sy-muted">只给出顺延建议，不自动改动截止日期，也不把未完成任务标记为完成。</p></section><p data-status class="sy-status">'+esc(msg||'排程为建议稿，保存后仍可重新生成。')+'</p>';
-var x=panel(html);x.querySelector('[data-generate]').onclick=setPrefs;
-x.querySelector('[data-saveplan]').onclick=function(){var rec={id:'plan-'+Date.now(),at:new Date().toISOString(),day:today(),rows:draft,waiting:pending,taskCount:tasks().length};save('plan',rec);var history=store('planHistory')||[];if(!Array.isArray(history))history=[];history.push(rec);save('planHistory',history.slice(-100));status('计划已保存，并追加到排程历史；不会覆盖原任务和截止日期。');};
+var x=panel(html);var fixedHost=x.querySelector('[data-fixed-list]');var fixed=(store('fixed')||[]).filter(function(z){return z.day===today();});
+ fixedHost.innerHTML=fixed.length?fixed.map(function(z){return '<p class="sy-muted">'+esc(z.start)+'–'+esc(z.end)+' · '+esc(z.title)+' <button type="button" data-removefixed="'+esc(z.id)+'">移除</button></p>';}).join(''):'<p class="sy-muted">暂无固定事项，班会和课程可在这里加。</p>';
+ fixedHost.querySelectorAll('[data-removefixed]').forEach(function(b){b.onclick=function(){save('fixed',(store('fixed')||[]).filter(function(z){return String(z.id)!==b.dataset.removefixed;}));draft=[];showPlan('固定事项已移除，可重新生成排期。');};});
+ x.querySelector('[data-addfixed]').onclick=function(){var name=x.querySelector('[data-fixed-name]').value.trim(),start=x.querySelector('[data-fixed-start]').value,end=x.querySelector('[data-fixed-end]').value;if(!name||minTime(end)<=minTime(start))return status('请填写事项名称，确保结束时间晚于开始时间。');var all=store('fixed')||[];all.push({id:String(Date.now()),day:today(),title:name,start:start,end:end,kind:'fixed'});save('fixed',all);draft=[];showPlan('已锁定 '+name+'，重新排程时不会占用这段时间。');};
+ x.querySelector('[data-generate]').onclick=setPrefs;
+x.querySelector('[data-saveplan]').onclick=function(){save('plan',{at:new Date().toISOString(),rows:draft,waiting:pending,taskCount:tasks().length});status('计划已经独立保存到当前账号，不覆盖任务和截止日期。');};
 x.querySelector('[data-rescue]').onclick=function(){rescue();};x.querySelector('[data-notes]').onclick=function(){close();if(window.SYKnowledge)SYKnowledge.open();};
 x.querySelector('[data-newtask]').onclick=addUrgent;
 }
@@ -90,8 +102,9 @@ x.querySelector('[data-link]').onclick=function(){close();if(window.SYHub)SYHub.
 x.querySelector('[data-krescue]').onclick=function(){var q=x.querySelector('[data-knowledge-q]').value.trim();rescue(q?'我在“'+(t?t.name:'学习任务')+'”中遇到问题：'+q+'。请结合我的授权知识库提供可验证的一步。':'');};
 x.querySelector('[data-ksearch]').onclick=async function(){var q=x.querySelector('[data-knowledge-q]').value.trim();if(!q)return status('请先输入检索词。');if(!window.SYKnowledge){status('知识库模块未加载。');return;}var btn=x.querySelector('[data-ksearch]');btn.disabled=true;status('正在检索你授权的本机笔记…');try{var r=await SYKnowledge.search(q),host=x.querySelector('[data-results]');host.replaceChildren();if(!r||!r.length){status('未找到匹配的笔记，检查 Obsidian 是否已经连接。');return;}r.slice(0,15).forEach(function(n){var box=el('div','sy-source'),strong=el('strong','',n.title||n.path||'笔记'),para=el('p','sy-muted',String(n.text||'').slice(0,400));box.append(strong,para);if(n.url&&/^obsidian:\/\/open\?/.test(n.url)){var a=el('a','', '在 Obsidian 中打开 ↗');a.href=n.url;box.append(a);}host.append(box);});status('匹配 '+r.length+' 篇笔记，点击笔记可打开原文。');}catch(e){status('真实检索失败：'+(e.message||e));}finally{btn.disabled=false;}};
 }
-function mount(){if(!window.SY||!document.querySelector('.app-main-topbar'))return;var target=document.querySelector('.app-topbar-right');if(target&&!target.querySelector('.sy-adaptive-launch')){var btn=el('button','btn btn-sm sy-adaptive-launch','智能排程 · 休息与复习');btn.type='button';btn.onclick=function(){open('plan');};target.prepend(btn);}
-var main=document.querySelector('.app-main'),summary=document.getElementById('sy-adaptive-summary');if(!summary&&main){summary=el('section','sy-adaptive-summary');summary.id='sy-adaptive-summary';summary.innerHTML='<div><strong>☀️ 今天别排太满，给自己留点余地</strong><p>先看精力，再安排学习与休息；卡住可检索知识库，突发任务自动重排剩余计划。</p></div>';var b=el('button','','生成今日舒适排程 →');b.type='button';b.onclick=function(){open('plan');};summary.append(b);var bar=main.querySelector('.app-main-topbar');if(bar)bar.after(summary);else main.prepend(summary);}
+function mount(){if(!window.SY||!document.querySelector('.app-main-topbar'))return;document.querySelectorAll('.sy-adaptive-launch,#sy-adaptive-summary').forEach(function(n){n.remove();});
+ var sidebar=document.querySelector('.app-sidebar, .sidebar, aside');if(sidebar&&!sidebar.querySelector('[data-comfort-entry]')){var entry=el('button','btn btn-sm sy-comfort-nav','☕ 舒适排期 · 精力与躺平');entry.setAttribute('data-comfort-entry','');entry.type='button';entry.style.cssText='display:block;width:calc(100% - 20px);margin:12px 10px;padding:12px 8px;border:1px solid #e6b9c9;background:#fff1f4;color:#793e58;border-radius:12px;font-weight:700;cursor:pointer;text-align:left';entry.onclick=function(){open('plan')};sidebar.append(entry);}
+
 }
 window.SYAdaptive={open:open,replan:function(){draft=[];pending=[];open('plan');},version:'1.0'};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();document.addEventListener('sy:ready',mount);
