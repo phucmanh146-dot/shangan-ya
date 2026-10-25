@@ -209,3 +209,14 @@
 **最终队长判断：** 现有工程底座值得继续复用，但当前证据不足以证明真实模型质量、三人真实闭环和传播场景效果。下一步不扩功能，先把 8 个测试样本和一次真实传播内容的完整闭环跑通；能被第三人复现的结果，才进入比赛展示。
 
 [executed on device: 江月的诗 (1527971c-6917-4fd0-9778-01f40b451bc0)]
+
+## 10. 2026-10-25 队长现场复测补记
+
+本次在远程 Windows 工作副本 `C:\\Users\\jiang\\code\\shangan-ya-captain` 执行：
+
+- `python -m unittest -q test_agent.py test_team.py`（工作目录为 `learning-agent`）：**36 tests passed**，退出码 0。日志中包括 team 页面/API 请求及预期的 409/403 分支响应。该结果只覆盖这两个测试模块，不代表真实模型已连通。
+- `python evidence/first-prize-v5/prove_existing.py --output <TEMP>\\shangan-v5-engineering-results-20261025.json`：**未通过**，因 `source_audit` 发现 `learning-agent/learning_agent.py` 与 `provenance.json` 中固定的 SHA 不一致。脚本在核对源码快照时停止，不能把旧工程结果直接套到当前工作副本。
+- 工作区原本已有未提交修改：`evidence/first-prize-v5/prove_existing.py`、`learning-agent/test_guidance_browser.cjs`。本次没有丢弃、覆盖或纳入这些修改。下一步应先审查这些差异及 `learning_agent.py` 与固定 SHA 不一致的原因，再为当前代码建立新的 provenance 快照并重跑证据脚本；不能通过删除断言来“修复”测试。
+- Railway 预览服务仍报告 `configured=false`、`hasKey=false`、`verified=false`；真实模型列表、对话和资料分析三项仍待有权限的 Key 后执行。当前没有 Key 时不继续发起计费调用。
+
+这条复测记录补充了当前工作副本的结果，不能替代对 8 个真实样本逐项跑完 A/B/V2/独立复核的要求。
