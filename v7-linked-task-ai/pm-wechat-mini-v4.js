@@ -8,46 +8,19 @@ function notice(t,bad=false){let x=Q('#pmaw-status');if(x){x.textContent=t;x.dat
 function setFlowStep(step){Q('.pmaw-flow')?.querySelectorAll('li').forEach((n,i)=>{n.classList.toggle('is-active',i+1===step);n.classList.toggle('is-done',i+1<step)})}
 async function historyApi(path,data){if(!window.SYMultiSources?.api)throw Error('本机资料桥未加载；请确认本机读取服务正在运行。');return window.SYMultiSources.api('/api/sources/wechat',{path,method:'POST',data:data||{}})}
 function showGroupResults(result){const host=Q('#pmaw-results');host.replaceChildren();const groups=Array.isArray(result.groups)?result.groups:[];host.append(El('p','pmaw-note','本机历史群目录匹配 '+(result.total||groups.length)+' 个群。此目录不提供置顶标记；请核对群名后选择。'));groups.slice(0,200).forEach((g,i)=>{const name=String(g.name||'').trim();if(!name)return;const row=El('div','pmaw-hit'),num=El('span','pmaw-hit-number',String(i+1).padStart(2,'0')),info=El('span','pmaw-hit-name',name),btn=El('button','pmaw-light','选中此群');btn.type='button';btn.onclick=()=>{selectedGroup=name;selectedGroupId=String(g.id||'');selectedHistoryMessage=null;Q('#pmaw-message-query')?.focus();setFlowStep(2);notice('已选中群聊「'+name+'」。输入消息关键词后，搜索本机历史记录。');host.querySelectorAll('.pmaw-hit').forEach(x=>x.classList.remove('is-selected'));row.classList.add('is-selected');btn.textContent='已选中 ✓'};row.append(num,info,btn);host.append(row)});if(result.partial)host.append(El('p','pmaw-note','匹配结果超过本批显示上限；请缩小群名关键词。'))}
-function showHistoryMessages(result){const host=Q('#pmaw-results');host.replaceChildren();const items=Array.isArray(result.items)?result.items:[];host.append(El('p','pmaw-note','群聊「'+String(result.group||selectedGroup)+'」本机历史搜索结果：'+items.length+' 条。只显示匹配到的真实记录；图片/语音/视频等媒体消息可能需要另行识别。'));items.forEach((item,i)=>{const row=El('article','pmaw-history-hit'),meta=El('div','pmaw-history-meta',String(item.time||'')+' · '+String(item.sender||'未知发送者')),body=El('p','pmaw-history-text',String(item.text||'').slice(0,1200)),btn=El('button','pmaw-light','选择并识别任务');btn.type='button';btn.onclick=()=>{selectedHistoryMessage=item;lastCandidate={label:String(item.text||'').slice(0,180),scope:'history'};lastCrop=null;const box=Q('#pmaw-recognition');if(box)box.hidden=false;const ocr=Q('#pmaw-ocr');if(ocr)ocr.textContent=String(item.text||'');taskOptions();setFlowStep(3);notice('已选择一条本机历史消息。请点击“AI 识别任务/链接”，核对后再关联任务。');row.classList.add('is-selected')};row.append(meta,body,btn);host.append(row)});if(!items.length)host.append(El('p','pmaw-note','没有匹配消息。可换关键词，或切换到微信窗口搜索。'));if(result.hasMore)host.append(El('p','pmaw-note','本批消息还有更多记录；当前先展示前 '+items.length+' 条。'))}
-async function api(url,data){
- const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),50000);
- try{const r=await fetch(url,{method:data===undefined?'GET':'POST',headers:{'Content-Type':'application/json'},body:data===undefined?undefined:JSON.stringify(data),signal:ctrl.signal,cache:'no-store'});const j=await r.json().catch(()=>({error:'没有收到有效数据'}));if(!r.ok||j.error)throw Error(j.error||('HTTP '+r.status));return j}
- finally{clearTimeout(timer)}
+function showHistoryMessages(result,append=false){
+ const host=Q('#pmaw-results');if(!append)host.replaceChildren();else host.querySelector('.pmaw-history-more')?.remove();
+ const items=Array.isArray(result.items)?result.items:[];
+ if(!append)host.append(El('p','pmaw-note','群聊「'+String(result.group||selectedGroup)+'」本机历史搜索结果：'+items.length+' 条。只显示匹配到的真实记录；图片/语音/视频等媒体消息可能需要另行识别。'));
+ items.forEach((item,i)=>{const row=El('article','pmaw-history-hit'),meta=El('div','pmaw-history-meta',String(item.time||'')+' · '+String(item.sender||'未知发送者')),body=El('p','pmaw-history-text',String(item.text||'').slice(0,1200)),btn=El('button','pmaw-light','选择并识别任务');btn.type='button';btn.onclick=()=>{selectedHistoryMessage=item;lastCandidate={label:String(item.text||'').slice(0,180),scope:'history'};lastCrop=null;const box=Q('#pmaw-recognition');if(box)box.hidden=false;const ocr=Q('#pmaw-ocr');if(ocr)ocr.textContent=String(item.text||'');const taskName=Q('#pmaw-taskname');if(taskName&&!taskName.value){const lines=String(item.text||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);taskName.value=(lines.find(x=>/提交|完成|讨论|汇报|截止|任务|制作|设计|PPT|DDL/i.test(x))||lines[0]||'').slice(0,70)}taskOptions();setFlowStep(3);notice('已选择一条本机历史消息。点击“AI 识别任务/链接”，核对后再关联任务。');row.classList.add('is-selected')};row.append(meta,body,btn);host.append(row)});
+ if(!items.length&&!append)host.append(El('p','pmaw-note','没有匹配消息。可换关键词，或切换到微信窗口搜索。'));
+ if(result.hasMore){const more=El('button','pmaw-history-more','继续读取更早消息 →');more.type='button';more.onclick=loadMoreHistory;host.append(more)}
 }
-function account(){return window.SY?.getAcctData?.()||{}}
-function save(a){window.SY?.saveAcctData?.(a)}
-function taskOptions(){
- const drop=Q('#pmaw-existing-task');if(!drop)return;const old=drop.value,a=account();
- drop.replaceChildren();
- let opt=El('option','','新建任务（须自行确认名称）');opt.value='new';drop.append(opt);
- (Array.isArray(a.tasks)?a.tasks:[]).filter(t=>t&&!t.done).slice(0,120).forEach(t=>{
- const o=El('option','',String(t.name||'未命名任务').slice(0,100)+' · '+String(t.date||''));o.value=String(t.id);drop.append(o)
- });
- if([...drop.options].some(o=>o.value===old))drop.value=old;
- updateNewTask();
-}
-function updateNewTask(){const node=Q('#pmaw-new-task-fields');if(node)node.hidden=Q('#pmaw-existing-task')?.value!=='new'}
-function candidates(data){
- currentSearch=data;const host=Q('#pmaw-results'),preview=Q('#pmaw-search-image');
- host.replaceChildren();preview.src=data.preview||'';preview.hidden=!data.preview;
- if(!(data.candidates||[]).length){
-  host.append(El('p','pmaw-note','没有可识别的候选列表。可以在微信里手动检索后使用下方框选。'));return;
- }
- const title=El('p','pmaw-note','候选来自当前微信窗口的实际搜索画面，不等于完整聊天历史。请核对群名和消息内容后再继续。');
- host.append(title);
- data.candidates.slice(0,35).forEach((item,i)=>{
-  const row=El('div','pmaw-hit'),num=El('span','pmaw-hit-number',String(i+1).padStart(2,'0'));
-  const info=El('span','pmaw-hit-name',item.label),btn=El('button','pmaw-light','在微信中定位');
-  btn.type='button';
-  btn.onclick=async()=>{
-   try{notice('正在本机微信中定位这条候选，完成后请核对画面。');
-    const r=currentSearch?.source==='local-wechat-search'?await historyApi('/wechat/open',{id:item.id}):await api('/api/pm/wx/open-hit',{searchId:data.searchId,candidateId:item.id});
-    lastCandidate={label:item.label,scope:selectedScope};preview.src=r.preview;preview.hidden=false;
-    notice('已点击候选：'+item.label+'。请核对截图确认群聊正确，再搜索消息或框选。');
-   }catch(e){notice('无法定位这条结果：'+e.message,true)}
-  };
-  row.append(num,info,btn);host.append(row)
- });
+async function loadMoreHistory(){
+ if(busy||!selectedGroupId||!currentSearch)return;busy=true;const more=Q('.pmaw-history-more');if(more){more.disabled=true;more.textContent='正在读取…'}
+ try{const keyword=Q('#pmaw-message-query')?.value.trim()||'',offset=Number(currentSearch.nextOffset||0);const h=await historyApi('/wechat/history',{groupId:selectedGroupId,keyword,offset,limit:50});currentSearch=Object.assign({},currentSearch,{nextOffset:h.nextOffset,hasMore:!!h.hasMore});showHistoryMessages(h,true);notice('已继续读取更早消息：本批 '+((h.items||[]).length)+' 条。')}
+ catch(e){notice('读取更早消息失败：'+e.message,true);if(more){more.disabled=false;more.textContent='重试读取更早消息 →'}}
+ finally{busy=false}
 }
 async function search(scope){
  const input=Q(scope==='group'?'#pmaw-group-query':'#pmaw-message-query'),keyword=input?.value.trim()||'';
@@ -60,7 +33,7 @@ async function search(scope){
    catch(historyError){notice('历史目录暂不可用，改为搜索当前微信窗口：'+historyError.message)}
   }else if(selectedGroupId){
    notice('正在读取群聊「'+selectedGroup+'」的本机历史消息…');
-   try{const h=await historyApi('/wechat/history',{groupId:selectedGroupId,keyword,offset:0,limit:50});showHistoryMessages(h);currentSearch={source:'wechat-history',groupId:selectedGroupId,items:h.items||[],hasMore:!!h.hasMore};notice('本机历史读取返回 '+((h.items||[]).length)+' 条匹配消息。请选中一条再识别和关联。');return}
+   try{const h=await historyApi('/wechat/history',{groupId:selectedGroupId,keyword,offset:0,limit:50});showHistoryMessages(h);currentSearch={source:'wechat-history',groupId:selectedGroupId,items:h.items||[],hasMore:!!h.hasMore,nextOffset:Number(h.nextOffset||0)};notice('本机历史读取返回 '+((h.items||[]).length)+' 条匹配消息。请选中一条再识别和关联。');return}
    catch(historyError){notice('本机历史消息接口不可用，改用当前微信窗口搜索：'+historyError.message)}
   }
   const r=await historyApi('/wechat/search',{query:keyword});r.source='local-wechat-search';currentSearch=r;candidates(r);
