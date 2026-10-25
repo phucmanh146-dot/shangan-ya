@@ -16,11 +16,11 @@ if(localOnly&&!native){
   if(!['https://shanganya-v8-workbench-production.up.railway.app','https://shanganya-full-public-20261017-production.up.railway.app'].includes(origin)){
     throw Error('本机微信连接仅允许从上岸鸭官方工作台发起；当前页面来源不在白名单内。');
   }
-  var localBase='http://127.0.0.1:8877/api/wechat-private';
+  var localBase='http://127.0.0.1:8892/api/wechat-private';
   if(!bridgeToken){
     var pair=await fetch(localBase+'/pairing',{method:'GET',cache:'no-store',mode:'cors',credentials:'omit'});
     var pairData=await pair.json().catch(function(){return {};});
-    if(!pair.ok||!pairData.token)throw Error('没有检测到本机微信桥接。请先在这台电脑启动上岸鸭本机服务（127.0.0.1:8877），并允许浏览器访问本机网络。');
+    if(!pair.ok||!pairData.token)throw Error('没有检测到本机微信桥接。请先在这台电脑启动上岸鸭本机服务（127.0.0.1:8892），并允许浏览器访问本机网络。');
     bridgeToken=pairData.token;
   }
   path=localBase+url;
