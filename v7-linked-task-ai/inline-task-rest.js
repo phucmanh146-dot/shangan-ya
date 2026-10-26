@@ -6,7 +6,7 @@ function api(){return window.SY&&SY.getAcctData&&SY.saveAcctData?SY:null}
 function data(){try{return api()?api().getAcctData():null}catch(e){return null}}
 function plan(d){if(!d.wellbeingPlan||typeof d.wellbeingPlan!=='object')d.wellbeingPlan={};return d.wellbeingPlan}
 function save(patch){var a=api(),d=data();if(!a||!d)return false;var p=plan(d);Object.keys(patch).forEach(function(k){p[k]=patch[k]});d.wellbeingPlan=p;a.saveAcctData(d);return true}
-function pushEnergyRecord(d,score,source){if(!d)return;var n=Date.now(),v=Math.max(1,Math.min(5,Number(score)||2)),rows=Array.isArray(d.energyHistory)?d.energyHistory:[];rows.push({at:n,date:new Date(n).toISOString().slice(0,10),hour:new Date(n).getHours(),score:v,source:source||'self-report'});d.energyHistory=rows.slice(-500)}
+function pushEnergyRecord(d,score,source){if(!d)return;var n=Date.now(),dt=new Date(n),v=Math.max(1,Math.min(5,Number(score)||2)),rows=Array.isArray(d.energyHistory)?d.energyHistory:[],date=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');rows.push({at:n,date:date,hour:dt.getHours(),score:v,source:source||'self-report'});d.energyHistory=rows.slice(-500)}
 function tasks(){var d=data();return d&&Array.isArray(d.tasks)?d.tasks:[]}
 function url(v){try{var u=new URL(String(v||'').trim());return /^https?:$/.test(u.protocol)&&!u.username&&!u.password?u.href:''}catch(e){return ''}}
 function host(v){try{return new URL(v).hostname}catch(e){return ''}}
