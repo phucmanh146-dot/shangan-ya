@@ -1,0 +1,22 @@
+/* Recreate the screenshot-2 sidebar ordering without replacing the V8 dark-green theme. */
+.app-sidebar #energy-left-planner,.app-sidebar [data-comfort-entry]{display:none!important}
+#view-daily .sy-energy-daily-details{display:block;max-width:1080px;margin:12px auto 24px;background:#fffaf9;border:1px solid #ecd9da;border-radius:16px;color:#59434a;overflow:hidden}
+#view-daily .sy-energy-daily-details>summary{cursor:pointer;list-style:none;padding:15px 19px;font-size:15px;font-weight:750;color:#8a5864}
+#view-daily .sy-energy-daily-details>summary::-webkit-details-marker{display:none}
+#view-daily .sy-energy-daily-details>summary:after{content:'⌄';float:right}
+#view-daily .sy-energy-daily-details[open]>summary:after{content:'⌃'}
+#view-daily .sy-energy-daily-details #energy-left-planner{margin:0;padding:20px;border:0;border-top:1px solid #f0e1e4;background:transparent;border-radius:0;max-width:none}
+#view-daily .sy-energy-daily-details #energy-left-planner .elp-title{font-size:18px}
+#view-daily .sy-energy-daily-details #energy-left-planner .elp-counts,#view-daily .sy-energy-daily-details #energy-left-planner .elp-metrics{grid-template-columns:repeat(3,minmax(0,1fr));max-width:860px;gap:12px}
+#view-daily .sy-energy-daily-details #energy-left-planner .elp-metric{padding:16px}
+#view-daily .sy-energy-daily-details #energy-left-planner .elp-task-card{max-width:900px}
+#view-daily .sy-energy-daily-details #energy-left-planner .elp-open{width:auto;padding:12px 18px}
+#appNav.sy-original-nav{gap:3px}
+#appNav .sy-original-home{margin-bottom:14px}
+#appNav .sy-original-done .app-nav-icon{font-size:21px}
+.app-sidebar .sy-original-more{margin:16px 15px 12px;border-top:1px solid #36534b;padding-top:14px}
+.app-sidebar .sy-original-more summary{color:#c3d7cb;cursor:pointer;font-size:15px;padding:8px 10px}
+.app-sidebar .sy-original-more[open] summary{color:#f0e8ca}
+.app-sidebar .sy-original-more-items{padding-top:8px;display:grid;gap:5px}
+.app-sidebar .sy-original-more-items .app-nav-item{width:100%}
+@media(max-width:740px){#view-daily .sy-energy-daily-details{margin:12px 0}#view-daily .sy-energy-daily-details #energy-left-planner{padding:12px}#view-daily .sy-energy-daily-details #energy-left-planner .elp-counts,#view-daily .sy-energy-daily-details #energy-left-planner .elp-metrics{gap:5px}}
