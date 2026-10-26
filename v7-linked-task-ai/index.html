@@ -690,17 +690,14 @@
     </div>
 
     <div id="taskStep2" hidden>
-      <h2>是否第一次做这个项目？</h2>
-      <p class="modal-sub">先按你对这类任务的熟练度保守估时；1.2× / 1.3× 只是历史不足时的起始缓冲，后续优先参考你的真实用时。</p>
+      <h2>先确认这项任务的熟练程度</h2>
+      <p class="modal-sub">有同名任务的真实完成记录时，优先参考你的个人中位耗时与波动；历史不足时才使用初始估算和弹性缓冲。缓冲是可校准的起点，不是人人相同的脑科学定律。</p>
       <div class="firsttime-choice">
-        <button class="firsttime-btn" type="button" id="firstTimeYes">
-          <b>是，第一次做</b>
-          <span>更容易卡壳、踩坑，按预计时长的 1.3 倍留缓冲</span>
-        </button>
-        <button class="firsttime-btn" type="button" id="firstTimeNo">
-          <b>不是，做过类似的</b>
-          <span>已经有经验，按预计时长的 1.2 倍留缓冲</span>
-        </button>
+        <button class="firsttime-btn" type="button" id="experienceUnknown"><b>还不确定</b><span>先用保守范围，完成后再校准</span></button>
+        <button class="firsttime-btn" type="button" id="experienceNew"><b>第一次做</b><span>预留更多试错与卡壳缓冲</span></button>
+        <button class="firsttime-btn" type="button" id="experienceLearning"><b>做过，但还不熟</b><span>允许查资料、试错和返工</span></button>
+        <button class="firsttime-btn" type="button" id="experienceFamiliar"><b>比较熟悉</b><span>参考同类任务的实际耗时</span></button>
+        <button class="firsttime-btn" type="button" id="experienceExpert"><b>熟练 / 老手</b><span>缩小缓冲，但保留必要余量</span></button>
       </div>
       <button class="btn btn-ghost btn-sm" id="taskStepBack" type="button">← 上一步</button>
     </div>
