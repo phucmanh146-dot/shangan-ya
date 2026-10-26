@@ -3,7 +3,7 @@
 if(window.SYEnergyEngine)return;
 function clamp(n,a,b){return Math.max(a,Math.min(b,n))}
 function median(xs){if(!xs.length)return 0;xs=xs.slice().sort((a,b)=>a-b);var m=Math.floor(xs.length/2);return xs.length%2?xs[m]:(xs[m-1]+xs[m])/2}
-function logs(a,t){return (Array.isArray(a.durationLog)?a.durationLog:[]).filter(r=>Number(r.actualMinutes)>0&&r.completed!==false&&((String(r.taskId||'')===String(t.id))||(String(r.taskName||'').trim().toLowerCase()===String(t.name||'').trim().toLowerCase()&&String(r.category||'')===String(t.category||''))))}
+function logs(a,t){var raw=(Array.isArray(a.durationLog)?a.durationLog:[]).filter(r=>Number(r.actualMinutes)>0&&((String(r.taskId||'')===String(t.id))||(String(r.taskName||'').trim().toLowerCase()===String(t.name||'').trim().toLowerCase()&&String(r.category||'')===String(t.category||'')))).sort((x,y)=>Number(x.loggedAt||0)-Number(y.loggedAt||0));var out=[],sum=0;raw.forEach(function(r){sum+=Number(r.actualMinutes)||0;if(r.completedTask===true){out.push({actualMinutes:sum,loggedAt:r.loggedAt});sum=0}});if(!out.length){var legacy=raw.filter(r=>r.completed===true);return legacy.map(r=>({actualMinutes:Number(r.actualMinutes),loggedAt:r.loggedAt}))}return out}
 function estimate(a,t){
  var hist=logs(a,t),xs=hist.slice(-8).map(r=>Number(r.actualMinutes)).filter(n=>n>0),level=t.experienceLevel||((t.firstTime)?'new':'unknown');
  var base=median(xs)||Number(t.estMinutes)||Number(t.plannedMinutes)||({heavy:60,main:60,light:15}[String(t.weight||'').toLowerCase()]||30);
