@@ -1,6 +1,6 @@
 (function(){
 'use strict'; if(window.SYAdaptive) return;
-var dlg=null,activeTab='plan',draft=[],pending=[],timer=null;
+var dlg=null,activeTab='plan',draft=[],pending=[],timer=null,leisureUnplaced=0;
 var today=function(){var d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
 var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(x){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x];});};
 var acct=function(){return window.SY?String(SY.currentAccountKey||'guest'):'guest';};
@@ -34,10 +34,23 @@ function personalEnergyLevel(part,p){
  return Math.max(1,Math.min(5,Math.round((m*.7+Number(p[part]||3)*.3)*10)/10));
 }
 function createSchedule(){
- var p=prefs(),allowed=budget(p),remaining=allowed,from=minTime(p.start),end=minTime(p.end),slots=[],rows=[],paused=0;
+ var p=prefs(),allowed=budget(p),remaining=allowed,from=minTime(p.start),end=minTime(p.end),slots=[],rows=[],paused=0;leisureUnplaced=0;
  var fixedItems=(store('fixed')||[]).filter(function(x){return x.day===today()}).map(function(x){return {from:minTime(x.start),to:minTime(x.end),title:x.title,kind:x.kind||'fixed'};}).filter(function(x){return x.to>x.from&&x.from<end&&x.to>from;}).sort(function(a,b){return a.from-b.from;});
  var leisure=Math.max(0,Math.min(180,Number(p.leisure||0))),leisureStart=Math.max(from,Math.min(end-leisure,Math.round((from+end)/2)));
- if(leisure>=10&&leisureStart>=from){var candidates=[leisureStart,Math.max(from,end-leisure),from];var spot=candidates.find(function(s){return s>=from&&s+leisure<=end&&!fixedItems.some(function(x){return s<x.to&&s+leisure>x.from;});});if(spot!==undefined)fixedItems.push({from:spot,to:spot+leisure,title:'自由躺平 · 玩手机 / 发呆 / 看剧（可调整）',kind:'leisure'});else fixedItems.push({from:leisureStart,to:Math.min(end,leisureStart+leisure),title:'弹性休息（固定活动优先）',kind:'leisure'});}
+ if(leisure>=10&&leisureStart>=from){
+  var candidates=[leisureStart,Math.max(from,end-leisure),from];
+  var spot=candidates.find(function(s){return s>=from&&s+leisure<=end&&!fixedItems.some(function(x){return s<x.to&&s+leisure>x.from;});});
+  if(spot!==undefined)fixedItems.push({from:spot,to:spot+leisure,title:'自由躺平 · 玩手机 / 发呆 / 看剧（可调整）',kind:'leisure'});
+  else{
+   var cursor=from,gaps=[];
+   fixedItems.slice().sort(function(a,b){return a.from-b.from;}).forEach(function(x){if(x.from>cursor)gaps.push({from:cursor,to:Math.min(end,x.from)});cursor=Math.max(cursor,x.to);});
+   if(cursor<end)gaps.push({from:cursor,to:end});
+   gaps.sort(function(a,b){return (b.to-b.from)-(a.to-a.from);});
+   var leftLeisure=leisure,blocks=[];
+   gaps.forEach(function(g){if(leftLeisure<=0)return;var avail=g.to-g.from,take=Math.min(leftLeisure,avail);if(take>=10||take===leftLeisure){blocks.push({from:g.from,to:g.from+take,title:'自由躺平 · 分段保护（可调整）',kind:'leisure'});leftLeisure-=take;}});
+   fixedItems=fixedItems.concat(blocks);leisureUnplaced=leftLeisure;
+  }
+ }
  fixedItems.sort(function(a,b){return a.from-b.from;});
  var items=tasks().map(function(t){return {id:String(t.id),title:t.name||'未命名任务',left:Math.max(10,Math.min(900,Number(t.plannedMinutes||t.estMinutes||40))),energy:t.weight==='heavy'?4:t.weight==='medium'?3:2,priority: t.weight==='heavy'?2:1,due:t.date||today()};});
  var rev=(store('reviews')||[]).filter(function(r){return r.due<=today();}).map(function(r){return {id:'review:'+r.id,title:'复习 · '+r.title,left:Math.max(5,r.minutes||10),energy:2,priority:3,due:r.due};});
@@ -80,7 +93,7 @@ var html='<section class="sy-adaptive-card"><h3>今天精力怎么样？先告�
  '<div class="sy-actions"><button class="sy-adaptive-primary" data-generate>根据今天精力重新排程</button><button data-saveplan>保存当前计划</button><button data-newtask>突发任务来了 · 插入并重排</button></div><div class="sy-muted">原则：午餐和晚餐时段不安排学习；任务之间有休息；永远留出缓冲。最近 14 天每个时段至少 3 条精力自评后，系统会以个人历史中位数（70%）+你设置的时段偏好（30%）调整匹配；样本不足时沿用手动设置。计划草案不改动原始任务顺序与截止日期。</div></section>'+
  '<div class="sy-adaptive-grid two"><section class="sy-adaptive-card"><h3>今天的容量</h3><strong>'+s.allowed+' 分钟</strong><p class="sy-muted">待做任务估算 '+total+' 分钟 · 当前需要安排 '+all.length+' 项任务</p><div class="sy-bar"><span style="width:'+Math.min(100,Math.round(100*total/Math.max(1,s.allowed)))+'%"></span></div><p class="sy-muted">'+(total>s.allowed?'已超出舒适容量，系统会把做不完的任务列在下方。':'有余地，今天不必排满。')+'</p></section><section class="sy-adaptive-card"><h3>当前学习断点</h3><p>'+esc((getActive()||{}).name||'先在今日任务中选中一个任务')+'</p><div class="sy-actions"><button data-rescue>遇到困难 · 从知识库找办法</button><button data-notes>连接 Obsidian</button></div></section></div>'+
  '<section class="sy-adaptive-card"><h3>时间安排草案</h3>'+draft.map(function(r){var type=r.kind==='work'?'专注':r.kind==='rest'?'休息':'机动';return '<div class="sy-plan-row"><span>'+fmt(r.from)+'–'+fmt(r.to)+'</span><span>'+esc(r.title)+'</span><span class="sy-chip '+(r.kind==='work'?'':r.kind)+'">'+type+'</span></div>';}).join('')+'</section>'+
- '<section class="sy-adaptive-card"><h3>今天排不下的任务</h3><p class="sy-muted">'+(pending.length?pending.map(esc).join('、'):'目前没有需要顺延的任务。')+'</p><p class="sy-muted">只给出顺延建议，不自动改动截止日期，也不把未完成任务标记为完成。</p></section><p data-status class="sy-status">'+esc(msg||'排程为建议稿，保存后仍可重新生成。')+'</p>';
+ '<section class="sy-adaptive-card"><h3>今天排不下的任务</h3><p class="sy-muted">'+(pending.length?pending.map(esc).join('、'):'目前没有需要顺延的任务。')+'</p><p class="sy-muted">只给出顺延建议，不自动改动截止日期，也不把未完成任务标记为完成。</p><p class="sy-muted">'+(leisureUnplaced?'仍有 '+leisureUnplaced+' 分钟自由休息未能放入无冲突空档；系统不会覆盖固定事项，请缩短任务或调整休息时段。':'自由休息已纳入时间轴；若与固定事项冲突，会拆成多个空档，不覆盖班会/上课。')+'</p></section><p data-status class="sy-status">'+esc(msg||'排程为建议稿，保存后仍可重新生成。')+'</p>';
 var x=panel(html);var fixedHost=x.querySelector('[data-fixed-list]');var fixed=(store('fixed')||[]).filter(function(z){return z.day===today();});
  fixedHost.innerHTML=fixed.length?fixed.map(function(z){return '<p class="sy-muted">'+esc(z.start)+'–'+esc(z.end)+' · '+esc(z.title)+' <button type="button" data-removefixed="'+esc(z.id)+'">移除</button></p>';}).join(''):'<p class="sy-muted">暂无固定事项，班会和课程可在这里加。</p>';
  fixedHost.querySelectorAll('[data-removefixed]').forEach(function(b){b.onclick=function(){save('fixed',(store('fixed')||[]).filter(function(z){return String(z.id)!==b.dataset.removefixed;}));draft=[];showPlan('固定事项已移除，可重新生成排期。');};});
