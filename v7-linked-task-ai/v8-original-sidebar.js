@@ -34,7 +34,26 @@ function arrange(){
  // Legacy energy widgets are never allowed inside the left rail.
  document.querySelectorAll('.app-sidebar #energy-left-planner,.app-sidebar [data-comfort-entry]').forEach(function(n){n.remove()});
 }
+function reconcile(){
+ var nav=document.getElementById('appNav');if(!nav||nav.dataset.screenshotTwo!=='1')return;
+ var more=nav.querySelector('.sy-original-more-items');if(!more)return;
+ var primary={'每日清单':1,'轻重缓急':1,'截止雷达':1,'已完成':1,'收集任务':1,'专注陪伴':1,'习惯养成':1,'进度复盘':1,'知识与路线':1,'资料中心':1,'工作台首页':1};
+ var canonical=Array.prototype.slice.call(nav.querySelectorAll(':scope > .app-nav-item'));
+ var existing=new Set(canonical.map(function(n){return (n.textContent||'').trim()}));
+ Array.prototype.slice.call(nav.children).forEach(function(node){
+  if(node.classList.contains('cv-primary-nav')||node.classList.contains('cv-nav-more')){node.hidden=true;node.setAttribute('aria-hidden','true');return;}
+  if(node.classList.contains('app-nav-item')&&!node.classList.contains('sy-original-home')&&!node.classList.contains('sy-original-done')){
+    var title=(node.textContent||'').trim();
+    if(!primary[title]||canonical.indexOf(node)<0)more.appendChild(node);
+  }
+ });
+ // No additional energy score, energy curve or old eight-link navigation in the left rail.
+ Array.prototype.slice.call(document.querySelectorAll('.app-sidebar #energy-left-planner,.app-sidebar [data-comfort-entry]')).forEach(function(n){n.remove()});
+}
+var pending=false;
+function scheduleReconcile(){if(pending)return;pending=true;setTimeout(function(){pending=false;reconcile()},40)}
 document.addEventListener('DOMContentLoaded',arrange);
 document.addEventListener('sy:ready',arrange);
-if(document.readyState!=='loading')arrange();
+if(document.readyState!=='loading'){arrange();reconcile();}
+new MutationObserver(scheduleReconcile).observe(document.documentElement,{childList:true,subtree:true});
 })();
