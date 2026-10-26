@@ -22,8 +22,8 @@ function renderShell(){
  var root=$('#sourceCenterRoot');if(!root)return;
  root.innerHTML='<div class="sc-page">'+
  '<header class="sc-head"><div><p class="sc-eyebrow">SOURCE CENTER · READ · VERIFY · LINK</p><h1>资料中心</h1><p class="sc-subtitle">Obsidian、飞书 Wiki、网页、视频链接和本地文档在这里读取与核对。微信消息不放在这里，请前往「收集任务」逐条识别并关联任务。</p></div><div id="scApiState" class="sc-api-state">后端 API 状态待检测</div></header>'+
- '<ol class="sc-flow"><li><b>1</b><span>选择资料来源</span></li><li><b>2</b><span>逐条读取正文</span></li><li><b>3</b><span>核对原文与状态</span></li><li><b>4</b><span>关联任务 / AI 分析</span></li></ol>'+
- '<div class="sc-loop-back"><b>↻</b><span>资料闭环：读取 → 核对 → 关联任务 → 执行 / 复盘 → 回到资料中心补充</span></div>'+
+ '<ol class="sc-flow" id="scFlow" aria-label="读取与关联进度"><li data-sc-step="1"><b>1</b><span>选择资料来源</span></li><li data-sc-step="2"><b>2</b><span>逐条读取正文</span></li><li data-sc-step="3"><b>3</b><span>核对原文与状态</span></li><li data-sc-step="4"><b>4</b><span>关联任务 / AI 分析</span></li></ol>'+
+ '<div class="sc-loop-back"><b>↻</b><span id="scFlowHint" role="status" aria-live="polite">先选择来源，读取成功后再核对并关联任务。整个过程不改变原任务。</span><button class="sc-btn sc-next" type="button" id="scNextStep">前往读取结果 →</button></div>'+
  '<div class="sc-workspace">'+
  '<nav class="sc-subnav" aria-label="资料中心子目录">'+
  '<p class="sc-subnav-title">资料来源</p>'+
@@ -33,7 +33,7 @@ function renderShell(){
  '<button type="button" class="sc-subnav-item" data-sc-tab="file"><span class="sc-subnav-icon">▧</span><span><b>本地文件</b><small>Word · PDF · 图片 · 字幕</small></span></button>'+
  '<button type="button" class="sc-subnav-item" data-sc-tab="video"><span class="sc-subnav-icon">▷</span><span><b>视频链接</b><small>B站 · YouTube · 视频来源</small></span></button>'+
  '<button type="button" class="sc-subnav-item" data-sc-tab="results"><span class="sc-subnav-icon">☷</span><span><b>读取结果与任务</b><small>核对原文 · 关联已有任务</small></span></button>'+
- '<div class="sc-subnav-note">每次只打开一个资料子页面。读取和任务关联分开进行，未成功读取的资料不会显示为已解析。</div>'+
+ '<div class="sc-subnav-note">一次只专注一种来源；读取成功后前往结果页核对。连接成功不代表已读取正文。</div>'+
  '</nav>'+
  '<div class="sc-workspace-main">'+
  '<section class="sc-card sc-source-panel is-active" data-sc-panel="obsidian"><div class="sc-panel-kicker">SOURCE 01</div><h2>本机知识库 · Obsidian</h2><p id="scVaultState">正在检查本机连接…</p><div class="sc-vault-name">指定知识库：<strong>韩奕知识复盘</strong></div><label for="scObsidianQuery">搜索笔记标题和正文<input id="scObsidianQuery" type="text" placeholder="例如：Agent、提示词、比赛复盘、工作流"></label><div class="sc-actions"><button class="sc-btn primary" id="scSearchObsidian" type="button">搜索本机笔记</button><button class="sc-btn" id="scConnectVault" type="button">选择 / 连接知识库</button><button class="sc-btn secondary" id="scOpenVault" type="button">打开 Obsidian</button></div><div id="scObsidianResults" class="sc-results-list"></div><p class="sc-mini-status">先搜索，再逐篇读取真实全文。只有读取成功的笔记才能关联任务或交给 AI 分析；不会把普通网页自动写入 Obsidian。</p></section>'+
@@ -41,7 +41,7 @@ function renderShell(){
  '<section class="sc-card sc-source-panel" data-sc-panel="feishu" hidden><div class="sc-panel-kicker">SOURCE 03</div><h2>飞书文档 / Wiki</h2><p>单独读取飞书 Wiki 或文档分享链接。请使用你有权限访问的链接；若需要登录或授权，会显示实际失败原因，不会假装读取成功。</p><label for="scFeishuLinks">粘贴飞书链接<textarea id="scFeishuLinks" placeholder="https://xxx.feishu.cn/wiki/…&#10;https://xxx.feishu.cn/docx/…"></textarea></label><div class="sc-actions"><button class="sc-btn primary" id="scReadFeishu" type="button">读取飞书正文</button><button class="sc-btn" id="scOpenAdvancedFeishu" type="button">检查飞书 / API 连接</button></div><p class="sc-mini-status">按目录整理飞书内容时保留原文、来源链接和真实人物信息；未核实的姓名不猜测。</p></section>'+
  '<section class="sc-card sc-source-panel" data-sc-panel="file" hidden><div class="sc-panel-kicker">SOURCE 04</div><h2>本地文件</h2><p>选择本机文件后解析正文，支持 Word、PDF、Markdown、TXT、CSV、字幕和常见图片。单个文件最大 5 MB；无法解析时显示原因。</p><input id="scFiles" type="file" multiple accept=".txt,.md,.csv,.json,.srt,.vtt,.html,.htm,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.gif,.bmp" hidden><div class="sc-file-drop" id="scFileDrop"><strong>将文件拖到这里，或点击选择</strong><span>文件只在你主动选择后读取，不会自动上传到公开页面。</span><button class="sc-btn primary" id="scChooseFiles" type="button">选择文件并解析</button></div><div class="sc-actions"><button class="sc-btn" id="scClear" type="button">清空本次读取结果</button></div><p class="sc-mini-status">解析结果会进入“读取结果与任务”，核对后再决定是否关联任务。</p></section>'+
  '<section class="sc-card sc-source-panel" data-sc-panel="video" hidden><div class="sc-panel-kicker">SOURCE 05</div><h2>视频链接解析</h2><p>单独处理 B 站、YouTube 等视频链接。系统会尝试读取可访问的标题、描述或字幕；拿不到字幕/正文时会如实标注，不会编造视频内容。</p><label for="scVideoLinks">粘贴视频链接<textarea id="scVideoLinks" placeholder="https://www.bilibili.com/video/…&#10;https://www.youtube.com/watch?v=…"></textarea></label><div class="sc-actions"><button class="sc-btn primary" id="scReadVideo" type="button">读取视频资料</button><button class="sc-btn" id="scGoAI" type="button">打开 AI 工作助手</button></div><p class="sc-mini-status">读取成功后可在结果页核对来源、选择任务，再交给 AI 做逐段分析或生成讲解脚本。</p></section>'+
- '<section class="sc-card sc-source-panel sc-results-panel" data-sc-panel="results" hidden><div class="sc-panel-kicker">READ · VERIFY · LINK</div><h2>读取结果与任务关联</h2><p>先核对每条资料的原文、来源和读取状态，再手动勾选要关联的内容。任务不会因读取资料而自动改动。</p><div class="sc-results-head"><h2>本次读取结果</h2><span class="sc-mini-status" id="scStatus" role="status">尚未读取资料。</span></div><div class="sc-results-list" id="scResults"></div><div class="sc-associate-inline"><h2>关联到已有任务</h2><div class="sc-associate-row"><label for="scTask">选择任务<select id="scTask"></select></label><div class="sc-actions"><button class="sc-btn primary" id="scAssociate" type="button">关联选中资料</button><button class="sc-btn secondary" id="scAnalyze" type="button">交给 AI 分析</button><button class="sc-btn" id="scGoRoute" type="button">带入航线工坊</button></div></div><p class="sc-mini-status">只关联已成功读取正文的资料；原始链接、来源类型和读取状态会保留。</p></div><div class="sc-actions"><button class="sc-btn" id="scGoWechat" type="button">微信消息 → 收集任务</button></div></section>'+
+ '<section class="sc-card sc-source-panel sc-results-panel" data-sc-panel="results" hidden><div class="sc-panel-kicker">READ · VERIFY · LINK</div><h2>读取结果与任务关联</h2><p>先核对每条资料的原文、来源和读取状态，再手动勾选要关联的内容。任务不会因读取资料而自动改动。</p><div class="sc-results-head"><h2>本次读取结果</h2><span class="sc-mini-status" id="scStatus" role="status">尚未读取资料。</span></div><div class="sc-results-toolbar"><span id="scResultCount" role="status">0 份资料</span><div class="sc-actions"><button type="button" class="sc-btn" id="scSelectAll">选择已读正文</button><button type="button" class="sc-btn" id="scSelectNone">清除选择</button></div></div><div class="sc-results-list" id="scResults"></div><div class="sc-associate-inline"><h2>关联到已有任务</h2><div class="sc-associate-row"><label for="scTask">选择任务<select id="scTask"></select></label><div class="sc-actions"><button class="sc-btn primary" id="scAssociate" type="button">关联选中资料</button><button class="sc-btn secondary" id="scAnalyze" type="button">交给 AI 分析</button><button class="sc-btn" id="scGoRoute" type="button">带入航线工坊</button></div></div><p class="sc-mini-status">只关联已成功读取正文的资料；原始链接、来源类型和读取状态会保留。</p></div><div class="sc-actions"><button class="sc-btn" id="scGoWechat" type="button">微信消息 → 收集任务</button></div></section>'+
  '</div></div>';
  '</div>';
  bind();renderTasks();renderResults();refreshHealth();refreshVaultState();
@@ -54,16 +54,18 @@ function renderTasks(){
 }
 function renderResults(){
  var host=$('#scResults');if(!host)return;host.replaceChildren();
+ var count=$('#scResultCount');if(count){var good=items.filter(function(x){return x.readStatus==='fulltext'}).length;count.textContent=items.length+' 份资料 · '+good+' 份可关联 · '+items.filter(function(x){return x.selected&&x.readStatus==='fulltext'}).length+' 份已选';}
+ updateFlow();
  if(!items.length){host.append(el('div','sc-empty','读取结果会显示在这里。每条资料都有独立状态，可单独勾选、查看原文并关联任务。'));return}
  items.forEach(function(item){
-  var card=el('article','sc-result'),head=el('div','sc-result-head'),check=el('input');check.type='checkbox';check.checked=!!item.selected;check.dataset.scPick=item.id;check.setAttribute('aria-label','选择资料 '+item.title);
+  var card=el('article','sc-result'),head=el('div','sc-result-head'),check=el('input');check.type='checkbox';check.checked=!!item.selected&&item.readStatus==='fulltext';check.disabled=item.readStatus!=='fulltext';check.dataset.scPick=item.id;check.setAttribute('aria-label','选择资料 '+item.title);check.addEventListener('change',function(){item.selected=check.checked;renderResults()});
   var meta=el('div');meta.style.minWidth='0';meta.append(el('div','sc-result-title',item.title),el('div','sc-result-meta',(item.type||'资料')+' · '+(item.url||item.sourceRef||'本地文件')));
   var badge=el('span','sc-result-status',item.readStatus==='fulltext'?'已读取正文':item.readStatus==='failed'?'未读到正文':'待核对');badge.dataset.ok=String(item.readStatus==='fulltext');meta.append(badge);head.append(check,meta);card.append(head);
   if(item.error)card.append(el('p','sc-mini-status',item.error));
-  if(item.content)card.append(el('pre','sc-result-excerpt',item.content.slice(0,1600)));
+  if(item.content){var details=el('details','sc-preview'),summary=el('summary','', '预览已读取原文 · '+item.content.length+' 字'),excerpt=el('pre','sc-result-excerpt',item.content.slice(0,6000)+(item.content.length>6000?'\n…（仅展示前 6000 字）':''));details.append(summary,excerpt);card.append(details)}
   var actions=el('div','sc-actions');
   if(item.url&&/^(https?:|obsidian:)/i.test(item.url)){var a=el('a','sc-btn','打开原文 ↗');a.href=item.url;if(!/^obsidian:/i.test(item.url)){a.target='_blank';a.rel='noopener noreferrer'}actions.append(a)}
-  var pool=el('button','sc-btn','加入 AI 资料池');pool.type='button';pool.onclick=function(){if(item.readStatus!=='fulltext')return noteStatus('这条资料没有读取到正文，先重试或手动打开原文。',true);addToPool(item);noteStatus('已把《'+item.title+'》加入 AI 资料池。')};actions.append(pool);card.append(actions);host.append(card);
+  var pool=el('button','sc-btn','加入 AI 资料池');pool.type='button';pool.onclick=function(){if(item.readStatus!=='fulltext')return noteStatus('这条资料没有读取到正文，先重试或手动打开原文。',true);addToPool(item);noteStatus('已把《'+item.title+'》加入 AI 资料池。')};actions.append(pool);if(item.readStatus==='failed'&&item.url&&/^https?:/.test(item.url)){var retry=el('button','sc-btn','重新读取');retry.type='button';retry.onclick=async function(){if(busy)return;busy=true;retry.disabled=true;retry.textContent='正在重新读取…';try{var doc=await SYSourceIO.readLink(item.url),content=contentFor(doc);if(!content.trim())throw Error('接口没有返回正文');item.content=content;item.title=titleFor(doc,item.url);item.readStatus='fulltext';item.error='';item.selected=true;addToPool(item);noteStatus('重试成功：《'+item.title+'》已读取全文。')}catch(e){item.error=e.message||'读取失败';noteStatus('重新读取失败：'+item.error,true)}finally{busy=false;renderResults()}};actions.append(retry)}card.append(actions);host.append(card);
  });
 }
 function selectedItems(){var ids=Array.from(document.querySelectorAll('[data-sc-pick]:checked')).map(function(n){return n.dataset.scPick});return items.filter(function(x){return ids.indexOf(x.id)>=0})}
@@ -86,7 +88,7 @@ async function refreshVaultState(){
 }
 async function searchObsidian(){
  var input=$('#scObsidianQuery'),host=$('#scObsidianResults'),query=String(input&&input.value||'').trim();
- if(!query)return noteStatus('先输入 Obsidian 搜索词。',true);
+ if(!query){input.focus();return noteStatus('先输入 Obsidian 搜索词。',true)}
  if(!host)return;host.replaceChildren();host.append(el('div','sc-empty','正在搜索本机 Obsidian 标题和正文…'));
  try{
   var r=await SY.backendCall('/api/pm/tutorials?q='+encodeURIComponent(query),undefined,45000);
@@ -121,7 +123,7 @@ async function readLinks(kind){
  var fieldId=kind==='feishu'?'scFeishuLinks':kind==='video'?'scVideoLinks':'scLinks';
  var buttonId=kind==='feishu'?'scReadFeishu':kind==='video'?'scReadVideo':'scReadLinks';
  var urls=window.SYSourceIO?SYSourceIO.normalizeLinks($('#'+fieldId)&&$('#'+fieldId).value||[]):[];
- if(!urls.length){noteStatus('请先粘贴至少一条完整链接。',true);return}
+ if(!urls.length){var field=$('#'+fieldId);if(field)field.focus();noteStatus('请先粘贴至少一条完整链接。',true);return}
  busy=true;var button=$('#'+buttonId);if(button){button.disabled=true;button.textContent='逐条读取中…'}
  var ok=0,fail=0;
  try{for(var i=0;i<urls.slice(0,12).length;i++){
@@ -188,13 +190,17 @@ function importMaterial(data){
  var item={id:String(data.id||uid()),title:titleFor(data,data.url,data.sourceRef),type:data.source==='obsidian'?'Obsidian 笔记':'导入资料',sourceKey:data.source||'web',sourceRef:data.sourceRef||data.path||data.url||'',url:data.url||'',content:content,readStatus:'fulltext',selected:true,error:''};
  upsert(item);addToPool(item);renderResults();noteStatus('已导入《'+item.title+'》全文到资料中心，可关联任务或带入航线工坊。');
 }
+function updateFlow(){var root=$('#sourceCenterRoot');if(!root)return;var active=$('[data-sc-tab].is-active',root),key=active&&active.dataset.scTab||'obsidian',ready=items.filter(function(x){return x.readStatus==='fulltext'}).length,selected=items.filter(function(x){return x.selected&&x.readStatus==='fulltext'}).length,step=key==='results'?(selected?4:3):(ready?2:1),hint=$('#scFlowHint');root.querySelectorAll('[data-sc-step]').forEach(function(li){var n=Number(li.dataset.scStep);li.classList.toggle('is-current',n===step);li.classList.toggle('is-done',n<step)});if(hint)hint.textContent=key==='results'?(selected?'已选择 '+selected+' 份真实正文，选择任务后即可关联或交给 AI 分析。':'请先勾选已成功读取正文的资料。'):ready?'目前有 '+ready+' 份已读正文，点击“前往读取结果”核对与关联。':'选择一种资料来源，读取完成后自动进入结果页；连接状态不等于正文读取成功。';}
 function activateSourceTab(key){
  var root=$('#sourceCenterRoot');if(!root)return;
  root.querySelectorAll('[data-sc-tab]').forEach(function(btn){var active=btn.getAttribute('data-sc-tab')===key;btn.classList.toggle('is-active',active);btn.setAttribute('aria-current',active?'page':'false')});
- root.querySelectorAll('[data-sc-panel]').forEach(function(panel){var active=panel.getAttribute('data-sc-panel')===key;panel.hidden=!active;panel.classList.toggle('is-active',active)});
+ root.querySelectorAll('[data-sc-panel]').forEach(function(panel){var active=panel.getAttribute('data-sc-panel')===key;panel.hidden=!active;panel.classList.toggle('is-active',active)});updateFlow();
 }
 function bind(){
  var root=$('#sourceCenterRoot');
+ $('#scNextStep').onclick=function(){activateSourceTab('results');$('#scResults').scrollIntoView({behavior:'smooth',block:'nearest'})};
+ $('#scSelectAll').onclick=function(){items.forEach(function(x){x.selected=x.readStatus==='fulltext'});renderResults()};
+ $('#scSelectNone').onclick=function(){items.forEach(function(x){x.selected=false});renderResults()};
  if(root)root.querySelectorAll('[data-sc-tab]').forEach(function(btn){btn.onclick=function(){activateSourceTab(btn.getAttribute('data-sc-tab'))}});
  $('#scSearchObsidian').onclick=searchObsidian;
  $('#scObsidianQuery').onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();searchObsidian()}};
