@@ -16,7 +16,7 @@ function arrange(){
  var group=function(title){var p=document.createElement('p');p.className='app-nav-group-label';p.textContent=title;nav.append(p)};
  var add=function(key,name){var b=buttons[key];if(!b)return;label(b,name);nav.append(b)};
  var home=document.createElement('button');home.type='button';home.className='app-nav-item sy-original-home';home.setAttribute('aria-label','工作台首页');home.innerHTML='<span class="app-nav-icon" aria-hidden="true">🏠</span><span>工作台首页</span>';
- home.onclick=function(){openView('daily');var daily=document.getElementById('view-daily');if(daily)daily.scrollIntoView({block:'start',behavior:'smooth'})};
+ home.onclick=function(){if(window.SYCoverModules&&typeof SYCoverModules.home==='function')SYCoverModules.home();else openView('daily');};
  nav.append(home);
  group('任务');add('daily','每日清单');add('quadrant','轻重缓急');add('deadlines','截止雷达');
  var done=document.createElement('button');done.type='button';done.className='app-nav-item sy-original-done';done.innerHTML='<span class="app-nav-icon" aria-hidden="true">📦</span><span>已完成</span>';
