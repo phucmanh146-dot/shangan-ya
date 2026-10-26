@@ -131,7 +131,7 @@ function showCalibration(){
  '<section class="sy-adaptive-card"><h3>精力状态自评</h3><p class="sy-muted">这是你主动报告的主观状态，不是摄像头监测或医学诊断。记录用于以后判断什么时段更适合你。</p><div class="sy-adaptive-grid two"><label>此刻精力（1–5）<select data-energy-now><option value="1">1 · 很疲惫</option><option value="2">2 · 偏低</option><option value="3" selected>3 · 一般</option><option value="4">4 · 不错</option><option value="5">5 · 精力充沛</option></select></label><label>状态备注（选填）<input data-energy-note placeholder="例如：开会后脑子很累 / 睡眠不足"></label></div><div class="sy-actions"><button type="button" data-energy-save>记录当前精力</button></div></section>';
  var x=panel(html),form=x.querySelector('[data-cal-form]');
  form.querySelector('[name="estimate"]').addEventListener('input',function(){this.dataset.touched='1';recommend();});
- form.querySelectorAll('select').forEach(function(n){n.addEventListener('change',function(){if(n.name==='level'||n.name==='stage'||n.name==='taskType'){var e=form.querySelector('[name="estimate"]');delete e.dataset.touched;}recommend();});});
+ form.querySelectorAll('select').forEach(function(n){n.addEventListener('change',function(){if(n.name==='level'||n.name==='stage'||n.name==='taskType'){var e=form.querySelector('[name="estimate"]');if(!e.dataset.touched)e.value='40';delete e.dataset.touched;}recommend();});});
  recommend();
  x.querySelector('[data-cal-refresh]').onclick=function(){delete form.querySelector('[name="estimate"]').dataset.touched;recommend();};
  x.querySelector('[data-cal-add]').onclick=function(){
@@ -147,7 +147,7 @@ function showCalibration(){
   var f=selected(),taskId=x.querySelector('[data-log-task]').value,task=(owner().tasks||[]).find(function(t){return String(t.id)===String(taskId);}),actual=Number(x.querySelector('[data-actual]').value);
   if(!Number.isFinite(actual)||actual<1||actual>1440)return status('实际时长请填 1–1440 分钟。');
   var rows=store('calibration')||[],record={id:'cal-'+Date.now(),taskId:task?String(task.id):'',taskName:task?(task.name||task.title||f.name):f.name||'手动记录',taskType:(task&&task.taskType)||f.type,stage:(task&&task.taskStage)||f.stage,level:(task&&task.skillLevel)||f.level,estimatedWorkMinutes:Number((task&&task.estimatedWorkMinutes)||f.estimate)||null,actualMinutes:actual,energyAfter:Number(x.querySelector('[data-energy-after]').value),blocker:x.querySelector('[data-blocker]').value.trim(),completedAt:Date.now()};
-  rows.push(record);save('calibration',rows.slice(-500));var s=x.querySelector('[data-status]');if(s)s.textContent='真实用时已记录。原任务状态未改变；历史校准记录已保存到当前账号浏览器。';recommend();
+  rows.push(record);history.push(record);save('calibration',rows.slice(-500));var s=x.querySelector('[data-status]');if(s)s.textContent='真实用时已记录。原任务状态未改变；历史校准记录已保存到当前账号浏览器。';recommend();
  };
  x.querySelector('[data-cal-stuck]').onclick=function(){
   var issue=prompt('你卡在什么地方？请用一句话描述。');if(!issue||!issue.trim())return;
