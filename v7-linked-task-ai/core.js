@@ -8511,7 +8511,7 @@
 
   // ---- 首页小贴士：如实反映现有排期逻辑的几条说明，按日期轮换，不是瞎编的鸡汤 ----
   var HOME_TIPS = [
-    '技术类任务容易低估，系统会自动按 <b>2.0倍</b> 留缓冲；不是第一次做的按 <b>1.3倍</b>，不用自己心算。',
+    '先用个人历史耗时估算；没有足够记录时才用保守初始缓冲。每完成一次，估时都可以继续校准。',
     '同一类别攒够 <b>3条</b> 真实用时记录后，新建任务会用这些数据帮你估时，不用瞎猜。',
     '一天排不下的任务会自动放进"待安排"，不会为了凑满一天硬塞时间冲突的任务。',
     '先做 5 分钟——大部分任务真正开始后，都比想象中容易。',
@@ -8554,12 +8554,23 @@
     taskStep1.hidden = false;
   });
 
-  function commitTask(multiplier, firstTime){
+  function commitTask(experienceLevel){
     var acct = getAcctData();
     var name = taskNameInput.value.trim();
     var category = taskCatSelect.value;
-    var estMinutes = parseFloat(taskMinInput.value);
-    var plannedMinutes = estMinutes * multiplier;
+    var typedMinutes = parseFloat(taskMinInput.value);
+    var level = ['unknown','new','learning','familiar','expert'].indexOf(experienceLevel) >= 0 ? experienceLevel : 'unknown';
+    var sameNameLogs = (acct.durationLog || []).filter(function(r){ return r && r.completed === true && Number(r.actualMinutes) > 0 && String(r.category || '') === String(category) && String(r.taskName || '').trim().toLowerCase() === name.trim().toLowerCase(); }).slice(-12);
+    var actuals = sameNameLogs.map(function(r){ return Number(r.actualMinutes); }).sort(function(a,b){ return a-b; });
+    var medianActual = actuals.length ? (actuals.length % 2 ? actuals[(actuals.length-1)/2] : (actuals[actuals.length/2-1] + actuals[actuals.length/2]) / 2) : 0;
+    var estMinutes = actuals.length >= 2 ? Math.max(5, Math.round(medianActual / 5) * 5) : typedMinutes;
+    var deviations = actuals.map(function(v){ return Math.abs(v - medianActual); }).sort(function(a,b){ return a-b; });
+    var mad = deviations.length ? (deviations.length % 2 ? deviations[(deviations.length-1)/2] : (deviations[deviations.length/2-1] + deviations[deviations.length/2]) / 2) : 0;
+    var fallbackRatio = ({ unknown: 0.30, new: 0.45, learning: 0.30, familiar: 0.15, expert: 0.10 })[level];
+    var bufferMinutes = actuals.length >= 3 ? Math.max(5, Math.ceil((1.4826 * mad) / 5) * 5) : Math.max(5, Math.ceil(estMinutes * fallbackRatio / 5) * 5);
+    var plannedMinutes = estMinutes + bufferMinutes;
+    var firstTime = level === 'new';
+    var multiplier = plannedMinutes / Math.max(1, estMinutes);
     var startMinutes = taskTimeInput ? parseClockToMinutes(taskTimeInput.value) : null;
     var dueDate = (taskDueInput && taskDueInput.value) ? taskDueInput.value : null; // 截止日期：选填，跟"date"(排到哪天做)是两个概念
     // 截止"几点"：只在填了截止日期时才有意义，光有钟点没有日期存了也没用
@@ -8569,7 +8580,7 @@
       var t = acct.tasks.find(function(x){ return x.id === editingTaskId; });
       if(t){
         t.name = name; t.category = category; t.estMinutes = estMinutes;
-        t.firstTime = firstTime; t.multiplier = multiplier; t.plannedMinutes = plannedMinutes;
+        t.experienceLevel = level; t.firstTime = firstTime; t.multiplier = multiplier; t.bufferMinutes = bufferMinutes; t.plannedMinutes = plannedMinutes;
         t.weight = pendingWeight;
         t.startMinutes = startMinutes;
         t.dueDate = dueDate;
@@ -8582,7 +8593,7 @@
       acct.tasks.forEach(function(x){ if(x.date === dayViewDate) maxOrder = Math.max(maxOrder, x.order); });
       acct.tasks.push({
         id: uid(), name: name, category: category,
-        estMinutes: estMinutes, firstTime: firstTime, multiplier: multiplier, plannedMinutes: plannedMinutes,
+        estMinutes: estMinutes, experienceLevel: level, firstTime: firstTime, multiplier: multiplier, bufferMinutes: bufferMinutes, plannedMinutes: plannedMinutes,
         weight: pendingWeight,
         startMinutes: startMinutes, dueDate: dueDate, dueTime: dueTime, materials: taskMaterialsDraft.slice(0, 6), date: dayViewDate, done: false, completedAt: null, order: maxOrder + 1, createdAt: Date.now()
       });
@@ -8591,10 +8602,7 @@
     closeTaskModal();
     refreshCurrentView();
   }
-  var firstTimeYes = document.getElementById('firstTimeYes');
-  var firstTimeNo = document.getElementById('firstTimeNo');
-  if(firstTimeYes) firstTimeYes.addEventListener('click', function(){ commitTask(1.3, true); });
-  if(firstTimeNo) firstTimeNo.addEventListener('click', function(){ commitTask(1.2, false); });
+  [['experienceUnknown','unknown'],['experienceNew','new'],['experienceLearning','learning'],['experienceFamiliar','familiar'],['experienceExpert','expert']].forEach(function(pair){ var btn=document.getElementById(pair[0]); if(btn) btn.addEventListener('click',function(){ commitTask(pair[1]); }); });
 
   // ===== 番茄钟：开始前选"倒计时"还是"正计时" =====
   var timerModeOverlay = document.getElementById('timerModeOverlay');
