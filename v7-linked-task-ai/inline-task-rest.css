@@ -28,3 +28,27 @@
 .itw-step-time{color:#a05273;font-weight:750;white-space:nowrap}
 #itw-energy{grid-template-columns:repeat(5,minmax(0,1fr))}
 @media(max-width:520px){#itw-energy{grid-template-columns:repeat(3,minmax(0,1fr))}.itw-step-plan{padding:10px}}
+
+/* Distributed six-workflow V8 original layout — preserve existing page navigation */
+.inline-life-panel{margin:16px 0 30px;background:#fffafb;border-color:#ecd9e1;box-shadow:0 7px 24px #54334a0a}
+.inline-life-panel .itw-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+.inline-life-panel .itw-grid>.itw-card:nth-child(2){order:0}
+.inline-life-panel .itw-head{margin-bottom:14px}
+.inline-life-panel .itw-title{color:#73465e;font-size:clamp(18px,2vw,23px)}
+.inline-life-panel .itw-desc{max-width:770px}
+.inline-life-panel .itw-daily-task,.inline-life-panel .itw-daily-energy{background:#fff;border-color:#ebdee4}
+.itw-distributed-card{border:1px solid #e9d8e1;background:#fffafb;border-radius:17px;padding:clamp(15px,2vw,23px);margin:16px 0 20px;box-shadow:0 6px 20px #4d234009;max-width:1080px;color:#583e4c}
+.itw-distributed-card h3{font-size:17px;color:#8f4a6b;margin:0 0 7px;font-weight:850}
+.itw-distributed-card>p{font-size:12px;line-height:1.7;color:#8c7582;margin:0 0 14px}
+.itw-distributed-card .itw-voice,.itw-distributed-card .itw-recovery{margin-top:6px}
+.itw-distributed-card .itw-row{align-items:end}
+.itw-distributed-card .itw-actions{display:flex;flex-wrap:wrap;gap:8px}
+.itw-distributed-card .itw-btn{min-height:40px;cursor:pointer}
+.itw-distributed-card .itw-btn:focus-visible{outline:3px solid #d1a0b9;outline-offset:2px}
+.itw-learning-row{border:1px solid #f0e1e8;background:#fff;border-radius:13px;padding:12px 15px;margin:10px 0;display:grid;gap:8px}
+.itw-learning-row strong{font-size:13px;color:#654556}
+.itw-learning-row small{font-size:12px;color:#896a7e}
+.itw-learning-bars{height:74px;display:flex;align-items:flex-end;gap:7px;border-bottom:1px dashed #eccbd9}
+.itw-learning-bars span{flex:1;max-width:35px;border-radius:6px 6px 0 0;background:linear-gradient(#ce89a7,#ab587a);min-height:8px}
+@media(max-width:920px){.inline-life-panel .itw-grid{grid-template-columns:1fr}}
+@media(max-width:620px){.itw-distributed-card{padding:13px}.itw-distributed-card .itw-actions button{flex:1 1 42%}}
