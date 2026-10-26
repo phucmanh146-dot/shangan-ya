@@ -6,3 +6,13 @@
 .inline-life-panel .itw-voice .itw-status{margin:7px 0 0}
 .inline-life-panel .itw-voice .itw-status.error{color:#a43f52}
 .inline-life-panel .itw-voice button:focus-visible{outline:3px solid #d5a0ba;outline-offset:2px}
+
+
+/* Evidence-informed recovery controls kept inside the existing daily-list panel */
+.inline-life-panel .itw-recovery{margin:14px 0;padding:14px;border:1px solid #f0cbd7;border-radius:14px;background:linear-gradient(145deg,#fff5f8,#fffaf9 72%);}
+.inline-life-panel .itw-recovery h4{margin:0 0 7px;color:#824d62;font-size:15px;font-weight:800;}
+.inline-life-panel .itw-recovery .itw-row{margin-top:10px;}
+.inline-life-panel .itw-recovery-advice{margin:10px 0;padding:10px 12px;border-radius:10px;background:#fff;color:#74495a;font-size:12px;line-height:1.65;}
+.inline-life-panel .itw-recovery .itw-actions{margin-top:8px;}
+.inline-life-panel .itw-recovery .itw-status{margin-top:8px;}
+@media(max-width:760px){.inline-life-panel .itw-recovery{padding:11px}.inline-life-panel .itw-recovery .itw-row{grid-template-columns:1fr}}
