@@ -80,7 +80,7 @@ async function refreshVaultState(){
  try{
   if(window.SY&&typeof SY.backendCall==='function'){
    var r=await SY.backendCall('/api/health',null,8000),v=r&&r.ok&&r.data&&r.data.vault;
-   if(v&&v.connected){n.textContent='本机已连接「'+(v.name||'Obsidian')+'」· '+(v.count==null?'可读取本机库':v.count+' 篇资料')+'；可继续搜索或导入原文。';return}
+   if(v&&v.connected){if((v.name||'')==='vault'&&Number(v.count||0)===0){n.textContent='后端只识别到空的「vault」，不是目标「韩奕知识复盘」。请检查 Windows 本机服务是否在线及其实际 Vault 配置；暂不标记为已读取。';return}n.textContent='本机已识别「'+(v.name||'Obsidian')+'」· '+(Number(v.count)>0?v.count+' 篇可检索资料':'笔记数未验证')+'；只有成功读取全文后才能关联任务。';return}
   }
  }catch(_){}
  try{var s=window.SYKnowledge&&SYKnowledge.getStatus?SYKnowledge.getStatus():null;n.textContent=s&&s.connected?'已连接「'+(s.vaultName||'Obsidian')+'」· '+s.count+' 篇已导入资料':'尚未连接本机 Obsidian；点击连接后选择「韩奕知识复盘」或已有库。'}
