@@ -30,7 +30,7 @@ function arrange(){
  if(buttons.inbox){label(buttons.inbox,'收集箱');moreNav.append(buttons.inbox)}
  if(buttons.profile){label(buttons.profile,'我的资料 / 设置');moreNav.append(buttons.profile)}
  others.forEach(function(b){if(b!==buttons.inbox&&b!==buttons.profile)moreNav.append(b)});
- nav.after(more);
+ nav.append(more);
  // Legacy energy widgets are never allowed inside the left rail.
  document.querySelectorAll('.app-sidebar #energy-left-planner,.app-sidebar [data-comfort-entry]').forEach(function(n){n.remove()});
 }
