@@ -12,12 +12,12 @@ var getActive=function(){var a=owner(),id=(a.activeTimer||{}).taskId||a.priority
 var prefs=function(){return Object.assign({energy:3,morning:4,afternoon:3,evening:2,start:'09:00',end:'21:00',buffer:25,leisure:45},store('prefs')||{});};
 function el(tag,cl,t){var x=document.createElement(tag);if(cl)x.className=cl;if(t!=null)x.textContent=t;return x;}
 function status(s){var x=dlg&&dlg.querySelector('[data-status]');if(x)x.textContent=s;}
-function open(tab){if(!window.SY){return;}if(dlg){dlg.close();dlg.remove();}dlg=el('dialog','sy-adaptive-dialog');dlg.innerHTML='<header><div><h2>上岸鸭 · 精力友好型学习规划</h2><p class="sy-subtitle">休息不被挤掉，困难随时能求助，突发情况可以重排</p></div><button class="sy-close" aria-label="关闭">×</button></header><nav class="sy-adaptive-tabs" role="tablist">'+[['plan','每日排程'],['project','项目 / 视频'],['review','间隔复习'],['knowledge','知识与救援']].map(function(t){return '<button type="button" data-tab="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</nav><main class="sy-adaptive-body"></main>';
+function open(tab){if(!window.SY){return;}if(dlg){dlg.close();dlg.remove();}dlg=el('dialog','sy-adaptive-dialog');dlg.innerHTML='<header><div><h2>上岸鸭 · 精力友好型学习规划</h2><p class="sy-subtitle">休息不被挤掉，困难随时能求助，突发情况可以重排</p></div><button class="sy-close" aria-label="关闭">×</button></header><nav class="sy-adaptive-tabs" role="tablist">'+[['plan','每日排程'],['calibration','熟练度估时'],['project','项目 / 视频'],['review','间隔复习'],['knowledge','知识与救援']].map(function(t){return '<button type="button" data-tab="'+t[0]+'">'+t[1]+'</button>';}).join('')+'</nav><main class="sy-adaptive-body"></main>';
 dlg.querySelector('.sy-close').onclick=close;dlg.querySelectorAll('[data-tab]').forEach(function(b){b.onclick=function(){tabTo(b.dataset.tab);};});
 dlg.addEventListener('cancel',function(e){e.preventDefault();close();});document.body.append(dlg);dlg.showModal();tabTo(tab||'plan');}
 function close(){if(dlg){dlg.close();dlg.remove();dlg=null;}if(timer){clearInterval(timer);timer=null;}}
 function panel(html){if(!dlg)return null;var p=dlg.querySelector('.sy-adaptive-body');p.innerHTML=html;return p;}
-function tabTo(tab){activeTab=tab;if(!dlg)return;dlg.querySelectorAll('[data-tab]').forEach(function(b){b.setAttribute('aria-selected',b.dataset.tab===tab?'true':'false');});if(tab==='plan')showPlan();else if(tab==='project')showProject();else if(tab==='review')showReview();else showKnowledge();}
+function tabTo(tab){activeTab=tab;if(!dlg)return;dlg.querySelectorAll('[data-tab]').forEach(function(b){b.setAttribute('aria-selected',b.dataset.tab===tab?'true':'false');});if(tab==='plan')showPlan();else if(tab==='calibration')showCalibration();else if(tab==='project')showProject();else if(tab==='review')showReview();else showKnowledge();}
 function minTime(x){var a=String(x).split(':');return (Number(a[0])||0)*60+(Number(a[1])||0);}
 function fmt(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');}
 function budget(p){return Math.max(0,Math.floor(Math.max(0,minTime(p.end)-minTime(p.start)-120)*Math.max(.42,Math.min(.8,(100-p.buffer)/100))*Math.min(1,(.55+p.energy*.09))));}
@@ -94,6 +94,70 @@ function showReview(){
 var data=store('reviews')||[];var due=data.filter(function(r){return r.due<=today();});
 var html='<section class="sy-adaptive-card"><h3>把知识点变成主动回忆</h3><div class="sy-adaptive-grid two"><label>知识点标题<input data-rt placeholder="例如：MCP 服务端与客户端的区别"></label><label>预计复习时间（分钟）<input data-rm type="number" min="5" max="60" value="10"></label></div><div class="sy-actions"><button class="sy-adaptive-primary" data-add-review>加入复习计划</button></div><p class="sy-muted">初始复习参考 1、3、7、14、30 天；这不是精确的“遗忘曲线公式”。复习时主动回忆并根据实际掌握情况调整下一次间隔。</p></section><section class="sy-adaptive-card"><h3>今天该回忆的知识点 · '+due.length+'</h3>'+(due.length?due.map(function(r){return '<div class="sy-plan-row"><span>'+esc(r.due)+'</span><span>'+esc(r.title)+'</span><span><button data-review="'+esc(r.id)+'">评分</button></span></div>';}).join(''):'<p class="sy-muted">今天没有到期的知识点，可以新建一个。</p>')+'</section><section class="sy-adaptive-card"><h3>后续复习</h3>'+(data.filter(function(r){return r.due>today();}).slice(0,20).map(function(r){return '<div class="sy-plan-row"><span>'+esc(r.due)+'</span><span>'+esc(r.title)+'</span><span class="sy-chip">待复习</span></div>';}).join('')||'<p class="sy-muted">暂无</p>')+'</section><p data-status class="sy-status"></p>';
 var x=panel(html);x.querySelector('[data-add-review]').onclick=function(){var name=x.querySelector('[data-rt]').value.trim(),m=Number(x.querySelector('[data-rm]').value);if(!name||!Number.isFinite(m)||m<5||m>60)return status('请输入知识点标题和 5–60 分钟的时间。');data.push({id:'r-'+Date.now(),title:name,minutes:m,step:0,due:today(),history:[]});save('reviews',data);draft=[];showReview();};x.querySelectorAll('[data-review]').forEach(function(btn){btn.onclick=function(){var r=data.find(function(z){return z.id===btn.dataset.review;});if(!r)return;var grade=prompt('回忆效果：0 = 没想起来；1 = 有点困难；2 = 基本正确；3 = 很熟练','2');if(!['0','1','2','3'].includes(String(grade)))return;var g=Number(grade);r.step=g===0?0:Math.min(4,r.step+(g>=2?1:0));var base=[1,3,7,14,30][r.step];var delta=g===0?1:g===1?Math.max(1,Math.round(base*.6)):g===3?Math.round(base*1.5):base;var date=new Date();date.setDate(date.getDate()+delta);r.due=[date.getFullYear(),String(date.getMonth()+1).padStart(2,'0'),String(date.getDate()).padStart(2,'0')].join('-');r.history.push({date:today(),grade:g});save('reviews',data);draft=[];showReview();};});}
+
+function showCalibration(){
+ var history=store('calibration')||[],allTasks=(owner().tasks||[]).slice();
+ var kinds=[['learning','学习理解'],['research','资料检索'],['writing','写作脚本'],['video','视频制作'],['coding','编程调试'],['admin','沟通杂务']];
+ var stages=['选题与目标','检索与核实','阅读与理解','方案与脚本','实操与编码','调试与返工','素材整理','剪辑与交付','沟通与杂务','复盘与总结'];
+ var levels=[['first','第一次做'],['novice','做过但不熟'],['familiar','比较熟悉'],['proficient','熟练完成']];
+ function med(vals){if(!vals.length)return null;var a=vals.map(Number).filter(function(n){return Number.isFinite(n)&&n>0;}).sort(function(x,y){return x-y;});if(!a.length)return null;var m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2;}
+ function matchRows(type,stage,level){return history.filter(function(r){return r.taskType===type&&r.stage===stage&&r.level===level&&Number(r.actualMinutes)>0;}).sort(function(a,b){return Number(a.completedAt||0)-Number(b.completedAt||0);});}
+ function selected(){var x=dlg.querySelector('[data-cal-form]');return {name:x.querySelector('[name="taskName"]').value.trim(),type:x.querySelector('[name="taskType"]').value,stage:x.querySelector('[name="stage"]').value,level:x.querySelector('[name="level"]').value,estimate:Number(x.querySelector('[name="estimate"]').value)};}
+ function recommend(){
+  var f=selected(),rows=matchRows(f.type,f.stage,f.level),vals=rows.map(function(r){return r.actualMinutes;}),m=vals.length>=3?med(vals):null;
+  var n=dlg.querySelector('[data-estimate-note]');if(n)n.textContent=m?'同类同熟练度已有 '+vals.length+' 条真实记录；建议以中位数 '+Math.round(m)+' 分钟为工作时长基线。':'同类同熟练度真实记录 '+vals.length+' 条；至少积累 3 条后才启用历史中位数，当前以你自己填写的时间为准。';
+  var e=dlg.querySelector('[name="estimate"]');if(e&&m&&!e.dataset.touched)e.value=Math.round(m);
+  var factor=f.level==='first'?1.3:1.2,base=(m&&!e.dataset.touched)?m:f.estimate;
+  var b=dlg.querySelector('[data-buffer-note]');if(b)b.textContent='计划占用约 '+Math.ceil(Math.max(1,base||1)*factor)+' 分钟（工作时长基线 '+Math.max(1,Math.round(base||1))+' × '+factor+' 缓冲）。缓冲不是效率指标，实际数据积累后再校准。';
+  var chart=dlg.querySelector('[data-cal-chart]');if(chart){var recent=rows.slice(-8),max=Math.max.apply(null,recent.map(function(r){return Number(r.actualMinutes)||0;}).concat([1]));chart.innerHTML=recent.length<2?'<p class="sy-muted">同类记录少于 2 次，暂不画趋势线；先记录真实完成时长。</p>':recent.map(function(r,i){var prev=i?Number(recent[i-1].actualMinutes):null,delta=prev?Math.round((prev-Number(r.actualMinutes))*100/prev):null;return '<div class="sycal-row"><span>'+esc(new Date(Number(r.completedAt)||Date.now()).toLocaleDateString())+'</span><span class="sycal-track"><i style="width:'+Math.max(4,Math.round(Number(r.actualMinutes)*100/max))+'%"></i></span><strong>'+Math.round(Number(r.actualMinutes))+'分</strong><em>'+(delta===null?'基线':delta>0?'较上次少 '+delta+'%':delta<0?'较上次多 '+Math.abs(delta)+'%':'与上次持平')+'</em></div>';}).join('');}
+ }
+ var html='<section class="sy-adaptive-card"><h3>先按你的真实水平估时</h3><p class="sy-muted">先问你是不是第一次做，再按任务环节和熟练度估时。没有足够历史数据时不伪造“新手/老手平均值”；真实记录达到 3 条后，才用同类任务的中位数校准。</p>'+
+ '<form data-cal-form class="sy-adaptive-grid"><label>任务名称<input name="taskName" placeholder="例如：剪一条 60 秒口播视频" required></label>'+
+ '<label>任务类型<select name="taskType">'+kinds.map(function(k){return '<option value="'+k[0]+'">'+k[1]+'</option>';}).join('')+'</select></label>'+
+ '<label>具体环节<select name="stage">'+stages.map(function(s){return '<option>'+s+'</option>';}).join('')+'</select></label>'+
+ '<label>你目前的熟练度<select name="level">'+levels.map(function(l){return '<option value="'+l[0]+'">'+l[1]+'</option>';}).join('')+'</select></label>'+
+ '<label>你初步估计的工作时长（分钟）<input name="estimate" type="number" min="5" max="1440" value="40" required></label>'+
+ '<label>任务负荷<select name="load"><option value="deep">需要集中思考</option><option value="medium">一般脑力</option><option value="light">低负荷杂务</option></select></label></form>'+
+ '<p class="sy-muted" data-estimate-note></p><p class="sycal-buffer" data-buffer-note></p>'+
+ '<div class="sy-actions"><button type="button" class="sy-adaptive-primary" data-cal-add>加入原任务清单</button><button type="button" data-cal-refresh>按真实历史重新估时</button></div>'+
+ '<p class="sy-muted">加入清单前会再次确认。只新增一条任务，不会覆盖原有任务、截止日期或四象限数据；初次任务采用 1.3× 排程缓冲，已有经验任务采用 1.2×。</p></section>'+
+ '<section class="sy-adaptive-card"><h3>完成后记录真实用时</h3><p class="sy-muted">这是校准数据的来源。只记录实际情况，不会自动把任务改成已完成。</p>'+
+ '<div class="sy-adaptive-grid"><label>关联任务（可选）<select data-log-task><option value="">不关联现有任务 / 手动记录</option>'+allTasks.map(function(t){return '<option value="'+esc(t.id)+'">'+esc(t.name||t.title||'未命名任务')+'</option>';}).join('')+'</select></label>'+
+ '<label>实际工作分钟数<input data-actual type="number" min="1" max="1440" value="35"></label>'+
+ '<label>完成后精力<select data-energy-after><option value="1">1 · 很疲惫</option><option value="2">2 · 偏低</option><option value="3" selected>3 · 一般</option><option value="4">4 · 不错</option><option value="5">5 · 精力充沛</option></select></label>'+
+ '<label>卡住/返工情况<input data-blocker placeholder="可选：查资料卡住 20 分钟"></label></div>'+
+ '<div class="sy-actions"><button type="button" class="sy-adaptive-primary" data-cal-log>保存真实用时</button><button type="button" data-cal-stuck>记录卡壳并找一件低负荷任务</button></div><p data-status class="sy-status"></p></section>'+
+ '<section class="sy-adaptive-card"><h3>同类任务的真实耗时变化</h3><p class="sy-muted">按当前表单中的类型、环节和熟练度分组；“较上次少/多”只比较相邻两次真实记录，不把它当成能力评价。</p><div data-cal-chart></div></section>'+
+ '<section class="sy-adaptive-card"><h3>精力状态自评</h3><p class="sy-muted">这是你主动报告的主观状态，不是摄像头监测或医学诊断。记录用于以后判断什么时段更适合你。</p><div class="sy-adaptive-grid two"><label>此刻精力（1–5）<select data-energy-now><option value="1">1 · 很疲惫</option><option value="2">2 · 偏低</option><option value="3" selected>3 · 一般</option><option value="4">4 · 不错</option><option value="5">5 · 精力充沛</option></select></label><label>状态备注（选填）<input data-energy-note placeholder="例如：开会后脑子很累 / 睡眠不足"></label></div><div class="sy-actions"><button type="button" data-energy-save>记录当前精力</button></div></section>';
+ var x=panel(html),form=x.querySelector('[data-cal-form]');
+ form.querySelector('[name="estimate"]').addEventListener('input',function(){this.dataset.touched='1';recommend();});
+ form.querySelectorAll('select').forEach(function(n){n.addEventListener('change',function(){if(n.name==='level'||n.name==='stage'||n.name==='taskType'){var e=form.querySelector('[name="estimate"]');delete e.dataset.touched;}recommend();});});
+ recommend();
+ x.querySelector('[data-cal-refresh]').onclick=function(){delete form.querySelector('[name="estimate"]').dataset.touched;recommend();};
+ x.querySelector('[data-cal-add]').onclick=function(){
+  var f=selected(),load=form.querySelector('[name="load"]').value;
+  if(!f.name)return status('请先填写任务名称。');if(!Number.isFinite(f.estimate)||f.estimate<5||f.estimate>1440)return status('工作时长请填 5–1440 分钟。');
+  var hist=matchRows(f.type,f.stage,f.level),m=hist.length>=3?med(hist.map(function(r){return r.actualMinutes;})):null,base=Math.round(m||f.estimate),factor=f.level==='first'?1.3:1.2,planned=Math.ceil(base*factor);
+  if(!confirm('确认新增任务：'+f.name+'？\\n工作时长基线：'+base+' 分钟\\n排程占用：约 '+planned+' 分钟（含 '+factor+'× 缓冲）。'))return;
+  var a=owner();a.tasks=a.tasks||[];var maxOrder=a.tasks.reduce(function(v,t){return Math.max(v,Number(t.order||0));},0),stamp=Date.now();
+  a.tasks.push({id:'sy-cal-'+stamp,name:f.name,category:f.type,taskType:f.type,taskStage:f.stage,skillLevel:f.level,firstTime:f.level==='first',estMinutes:base,plannedMinutes:planned,estimatedWorkMinutes:base,planningBufferMultiplier:factor,weight:load==='light'?'light':load==='deep'?'heavy':'medium',startMinutes:null,date:today(),done:false,completedAt:null,order:maxOrder+1,createdAt:stamp,estimateSource:m?'同类真实记录中位数':'本人初估',estimateSampleCount:hist.length});
+  SY.saveAcctData(a);draft=[];pending=[];status('已新增到原任务清单；估时来源：'+(m?'同类 '+hist.length+' 条真实记录':'你的初估')+'。');var s=x.querySelector('[data-status]');if(s)s.textContent='已新增到原任务清单；请回到每日排程查看。';
+ };
+ x.querySelector('[data-cal-log]').onclick=function(){
+  var f=selected(),taskId=x.querySelector('[data-log-task]').value,task=(owner().tasks||[]).find(function(t){return String(t.id)===String(taskId);}),actual=Number(x.querySelector('[data-actual]').value);
+  if(!Number.isFinite(actual)||actual<1||actual>1440)return status('实际时长请填 1–1440 分钟。');
+  var rows=store('calibration')||[],record={id:'cal-'+Date.now(),taskId:task?String(task.id):'',taskName:task?(task.name||task.title||f.name):f.name||'手动记录',taskType:(task&&task.taskType)||f.type,stage:(task&&task.taskStage)||f.stage,level:(task&&task.skillLevel)||f.level,estimatedWorkMinutes:Number((task&&task.estimatedWorkMinutes)||f.estimate)||null,actualMinutes:actual,energyAfter:Number(x.querySelector('[data-energy-after]').value),blocker:x.querySelector('[data-blocker]').value.trim(),completedAt:Date.now()};
+  rows.push(record);save('calibration',rows.slice(-500));var s=x.querySelector('[data-status]');if(s)s.textContent='真实用时已记录。原任务状态未改变；历史校准记录已保存到当前账号浏览器。';recommend();
+ };
+ x.querySelector('[data-cal-stuck]').onclick=function(){
+  var issue=prompt('你卡在什么地方？请用一句话描述。');if(!issue||!issue.trim())return;
+  var blockers=store('blockers')||[];blockers.push({id:'block-'+Date.now(),taskId:(getActive()||{}).id||'',taskName:(getActive()||{}).name||'',issue:issue.trim(),at:Date.now()});save('blockers',blockers.slice(-200));
+  var light=(owner().tasks||[]).filter(function(t){if(t.done||t.completedAt)return false;var text=String(t.category||'')+' '+String(t.name||t.title||'')+' '+String(t.weight||'');return t.weight==='light'||/整理|归档|回复|收集|核对|预约|杂务|清单/.test(text);}).slice(0,5);
+  alert('已记录卡点。先暂停当前高负荷任务，建议切换到一个低负荷、可在 5–15 分钟完成的小任务；之后再把卡点带回知识救援。\\n\\n'+(light.length?'可选任务：\\n'+light.map(function(t){return '• '+(t.name||t.title);}).join('\\n'):'当前没有明确标记为低负荷的任务。可去“快速收集”添加一个简单杂务。'));
+ };
+ x.querySelector('[data-energy-save]').onclick=function(){var rows=store('energyHistory')||[];rows.push({id:'energy-'+Date.now(),at:Date.now(),date:today(),score:Number(x.querySelector('[data-energy-now]').value),note:x.querySelector('[data-energy-note]').value.trim(),source:'用户主动自评',taskName:(getActive()||{}).name||''});save('energyHistory',rows.slice(-500));status('已记录当前精力；这是自评数据，不代表自动监测。');};
+}
+
 function rescue(q){var t=getActive();close();if(window.SYRescue&&SYRescue.open){SYRescue.open({task:t||{name:'当前学习任务'},question:q||'我正在做“'+(t?t.name:'学习任务')+'”，卡在某一步。请先查我授权的笔记并给出一个可验证的下一步。',useNotes:!!(window.SYKnowledge&&SYKnowledge.getStatus&&SYKnowledge.getStatus().count)});}else alert('救援模块尚未加载，请回到任务页面重试。');}
 function showKnowledge(){
 var t=getActive();var html='<section class="sy-adaptive-card"><h3>关联当前任务的个人知识库</h3><p class="sy-muted">当前任务：'+esc((t||{}).name||'尚未选中任务')+'。这里调用原项目已有的 Obsidian 检索与链接读取，不伪造连接状态。</p><label>想查的知识点<input data-knowledge-q placeholder="例如：MCP 配置 / 视频剪辑 / AI 产品经理能力"></label><div class="sy-actions"><button class="sy-adaptive-primary" data-ksearch>检索我授权的笔记</button><button data-kconnect>管理 Obsidian</button><button data-link>导入网页 / B站 / 飞书链接</button><button data-krescue>让 AI 带着当前任务帮我</button></div><div data-results></div></section><p data-status class="sy-status">检索结果来自真实知识库，不会把未连接状态显示为已连接。</p>';
