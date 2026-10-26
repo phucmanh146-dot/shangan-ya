@@ -16,3 +16,15 @@
 .inline-life-panel .itw-recovery .itw-actions{margin-top:8px;}
 .inline-life-panel .itw-recovery .itw-status{margin-top:8px;}
 @media(max-width:760px){.inline-life-panel .itw-recovery{padding:11px}.inline-life-panel .itw-recovery .itw-row{grid-template-columns:1fr}}
+
+/* In-flow task steps and honest personal time estimates */
+.itw-step-plan{margin:12px 0 16px;padding:12px 14px;border:1px solid #efd7e1;border-radius:13px;background:linear-gradient(145deg,#fff7fa,#fff)}
+.itw-step-head{display:flex;justify-content:space-between;align-items:center;gap:8px;color:#7c465d;font-size:12px}
+.itw-step-head span{font-size:11px;color:#a35b79;white-space:nowrap}
+.itw-step-row{display:grid;grid-template-columns:22px minmax(0,1fr) auto;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f2e6eb;font-size:12px}
+.itw-step-row:last-child{border-bottom:0}
+.itw-step-index{display:grid;place-items:center;width:20px;height:20px;border-radius:7px;background:#f8e6ee;color:#9c4e70;font-weight:800;font-size:10px}
+.itw-step-name{color:#6d4c5b;line-height:1.4}
+.itw-step-time{color:#a05273;font-weight:750;white-space:nowrap}
+#itw-energy{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media(max-width:520px){#itw-energy{grid-template-columns:repeat(3,minmax(0,1fr))}.itw-step-plan{padding:10px}}
