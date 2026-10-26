@@ -8593,8 +8593,8 @@
   }
   var firstTimeYes = document.getElementById('firstTimeYes');
   var firstTimeNo = document.getElementById('firstTimeNo');
-  if(firstTimeYes) firstTimeYes.addEventListener('click', function(){ commitTask(2.0, true); });
-  if(firstTimeNo) firstTimeNo.addEventListener('click', function(){ commitTask(1.3, false); });
+  if(firstTimeYes) firstTimeYes.addEventListener('click', function(){ commitTask(1.3, true); });
+  if(firstTimeNo) firstTimeNo.addEventListener('click', function(){ commitTask(1.2, false); });
 
   // ===== 番茄钟：开始前选"倒计时"还是"正计时" =====
   var timerModeOverlay = document.getElementById('timerModeOverlay');
