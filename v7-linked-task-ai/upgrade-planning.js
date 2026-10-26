@@ -83,10 +83,18 @@
     const movable = tasks.filter(t => selected.has(t.id) && !t.done && !(typeof t.startMinutes === 'number' && !t.aiScheduled))
       .sort((a, b) => compareTasks(a, b, date, startOfDay, options.order));
     const placements = [], waiting = [];
+    const deferredTasks = options.deferredTasks || {};
+    const localDateKey = ts => { const d = new Date(ts); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
     movable.forEach(task => {
       const minutes = duration(task);
       if (used + minutes > budget + 0.01) { waiting.push({ id: task.id, reason: '超过当天可投入时长' }); return; }
       let cursor = startOfDay;
+      const deferredUntil = Number(deferredTasks[String(task.id)] || 0);
+      if (deferredUntil > 0) {
+        const resumeDate = localDateKey(deferredUntil);
+        if (resumeDate > date) { waiting.push({ id: task.id, reason: '已移入弹性缓冲，计划于 ' + resumeDate + ' 恢复' }); return; }
+        if (resumeDate === date) cursor = Math.max(cursor, new Date(deferredUntil).getHours() * 60 + new Date(deferredUntil).getMinutes());
+      }
       occupied.sort((a, b) => a.start - b.start);
       for (const block of occupied) {
         if (block.end + gap <= cursor) continue;
@@ -256,7 +264,7 @@
         if (!ai || !Array.isArray(ai.order) || ai.order.length !== pickedIds.length || new Set(ai.order).size !== pickedIds.length || ai.order.some(id => !pickedIds.includes(id))) throw new Error('AI 返回的任务顺序不完整，本次没有修改任务');
       }
       if (owner !== S.currentAccountKey || JSON.stringify(S.getAcctData().tasks) !== fingerprint) throw new Error('任务在生成期间发生了变化，请重新勾选后生成');
-      const result = placeTasks({ tasks: acct.tasks, selectedIds: pickedIds, date, dailyHours: hours, gapMinutes: acct.taskGapMinutes, startMinute, order: miniGet(ai, 'order') });
+      const result = placeTasks({ tasks: acct.tasks, selectedIds: pickedIds, date, dailyHours: hours, gapMinutes: acct.taskGapMinutes, startMinute, order: miniGet(ai, 'order'), deferredTasks: miniGet(miniGet(acct, 'plannerSettings'), 'deferredTasks') || {} });
       const lines = [];
       result.placements.forEach(p => { const task = picked.find(t => t.id === p.id); lines.push(clock(p.startMinutes) + ' ' + task.name + (p.late ? ' · 注意：预计晚于截止时间' : '') + (miniGet(miniGet(ai, 'reasons'), p.id) ? ' — ' + String(ai.reasons[p.id]).slice(0, 220) : '')); });
       result.waiting.forEach(p => lines.push(picked.find(t => t.id === p.id).name + '：' + p.reason + '，保留在待安排')); 
