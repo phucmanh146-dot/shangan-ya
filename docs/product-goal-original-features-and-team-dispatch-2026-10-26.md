@@ -9,10 +9,13 @@
 - [三人总调度与省一对照验收表](team-total-dispatch-and-provincial-first-prize-acceptance-2026-10-25.md)
 - [工程总调度测试方案](engineering-total-dispatch-test-plan-2026-10-25.md)
 - [省一目标下的个性化首步与真实作品闭环总调度](personalized-first-step-provincial-prize-dispatch-2026-10-26.md)
+- [三人分工优化版总调度：简历 Agent 能力借鉴与论文阅读工程验证（2026-10-26）](team-dispatch-optimized-by-roles-and-provincial-prize-gates-2026-10-26.md)
 - [三人分工优化版总调度：按真实作品、依赖与省一质量门推进](team-dispatch-optimized-by-roles-and-provincial-prize-gates-2026-10-26.md)
 - 用户提供的《上岸鸭竞品拆解与过程干预方案（含大模型技术分析）》
 
 > 本文把最终产品目的、原有功能、当前 Agent 技术和团队排期连在一起。它是落地总调度，不代表所有能力已经实现。未在目标 commit 上真实运行的能力必须标为 not_run、unknown 或 blocked，不得用设计文档代替运行证据。
+
+> 本轮参考两份简历项目（ScholarMind 论文阅读 Agent、AI 智能学习助手后端系统）只用于理解产品能力与技术质量要求；不照搬其工程实现、性能数字或测试结论。论文阅读能力必须嵌入上岸鸭的真实材料诊断—个性化首步—真人执行—V2 独立复核闭环。三人执行顺序、依赖、验收矩阵见上方新增调度文档。
 
 ## 1. 最终目的：不是再做一个 ToDo 或问答 Agent
 
