@@ -138,7 +138,7 @@ function showCalibration(){
   var f=selected(),load=form.querySelector('[name="load"]').value;
   if(!f.name)return status('请先填写任务名称。');if(!Number.isFinite(f.estimate)||f.estimate<5||f.estimate>1440)return status('工作时长请填 5–1440 分钟。');
   var hist=matchRows(f.type,f.stage,f.level),m=hist.length>=3?med(hist.map(function(r){return r.actualMinutes;})):null,base=Math.round(m||f.estimate),factor=f.level==='first'?1.3:1.2,planned=Math.ceil(base*factor);
-  if(!confirm('确认新增任务：'+f.name+'？\\n工作时长基线：'+base+' 分钟\\n排程占用：约 '+planned+' 分钟（含 '+factor+'× 缓冲）。'))return;
+  if(!confirm('确认新增任务：'+f.name+'？\n工作时长基线：'+base+' 分钟\n排程占用：约 '+planned+' 分钟（含 '+factor+'× 缓冲）。'))return;
   var a=owner();a.tasks=a.tasks||[];var maxOrder=a.tasks.reduce(function(v,t){return Math.max(v,Number(t.order||0));},0),stamp=Date.now();
   a.tasks.push({id:'sy-cal-'+stamp,name:f.name,category:f.type,taskType:f.type,taskStage:f.stage,skillLevel:f.level,firstTime:f.level==='first',estMinutes:base,plannedMinutes:planned,estimatedWorkMinutes:base,planningBufferMultiplier:factor,weight:load==='light'?'light':load==='deep'?'heavy':'medium',startMinutes:null,date:today(),done:false,completedAt:null,order:maxOrder+1,createdAt:stamp,estimateSource:m?'同类真实记录中位数':'本人初估',estimateSampleCount:hist.length});
   SY.saveAcctData(a);draft=[];pending=[];status('已新增到原任务清单；估时来源：'+(m?'同类 '+hist.length+' 条真实记录':'你的初估')+'。');var s=x.querySelector('[data-status]');if(s)s.textContent='已新增到原任务清单；请回到每日排程查看。';
@@ -153,7 +153,7 @@ function showCalibration(){
   var issue=prompt('你卡在什么地方？请用一句话描述。');if(!issue||!issue.trim())return;
   var blockers=store('blockers')||[];blockers.push({id:'block-'+Date.now(),taskId:(getActive()||{}).id||'',taskName:(getActive()||{}).name||'',issue:issue.trim(),at:Date.now()});save('blockers',blockers.slice(-200));
   var light=(owner().tasks||[]).filter(function(t){if(t.done||t.completedAt)return false;var text=String(t.category||'')+' '+String(t.name||t.title||'')+' '+String(t.weight||'');return t.weight==='light'||/整理|归档|回复|收集|核对|预约|杂务|清单/.test(text);}).slice(0,5);
-  alert('已记录卡点。先暂停当前高负荷任务，建议切换到一个低负荷、可在 5–15 分钟完成的小任务；之后再把卡点带回知识救援。\\n\\n'+(light.length?'可选任务：\\n'+light.map(function(t){return '• '+(t.name||t.title);}).join('\\n'):'当前没有明确标记为低负荷的任务。可去“快速收集”添加一个简单杂务。'));
+  alert('已记录卡点。先暂停当前高负荷任务，建议切换到一个低负荷、可在 5–15 分钟完成的小任务；之后再把卡点带回知识救援。\n\n'+(light.length?'可选任务：\n'+light.map(function(t){return '• '+(t.name||t.title);}).join('\n'):'当前没有明确标记为低负荷的任务。可去“快速收集”添加一个简单杂务。'));
  };
  x.querySelector('[data-energy-save]').onclick=function(){var rows=store('energyHistory')||[];rows.push({id:'energy-'+Date.now(),at:Date.now(),date:today(),score:Number(x.querySelector('[data-energy-now]').value),note:x.querySelector('[data-energy-note]').value.trim(),source:'用户主动自评',taskName:(getActive()||{}).name||''});save('energyHistory',rows.slice(-500));status('已记录当前精力；这是自评数据，不代表自动监测。');};
 }
