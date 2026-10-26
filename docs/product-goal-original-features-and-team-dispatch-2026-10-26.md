@@ -9,8 +9,7 @@
 - [三人总调度与省一对照验收表](team-total-dispatch-and-provincial-first-prize-acceptance-2026-10-25.md)
 - [工程总调度测试方案](engineering-total-dispatch-test-plan-2026-10-25.md)
 - [省一目标下的个性化首步与真实作品闭环总调度](personalized-first-step-provincial-prize-dispatch-2026-10-26.md)
-- [三人分工优化版总调度：简历 Agent 能力借鉴与论文阅读工程验证（2026-10-26）](team-dispatch-optimized-by-roles-and-provincial-prize-gates-2026-10-26.md)
-- [三人分工优化版总调度：按真实作品、依赖与省一质量门推进](team-dispatch-optimized-by-roles-and-provincial-prize-gates-2026-10-26.md)
+- [三人分工优化版总调度：智能科研工程借鉴、任务排期与省一验收门（2026-10-26 至 2026-11-10）](team-dispatch-optimized-by-roles-and-provincial-prize-gates-2026-10-26.md)
 - 用户提供的《上岸鸭竞品拆解与过程干预方案（含大模型技术分析）》
 
 > 本文把最终产品目的、原有功能、当前 Agent 技术和团队排期连在一起。它是落地总调度，不代表所有能力已经实现。未在目标 commit 上真实运行的能力必须标为 not_run、unknown 或 blocked，不得用设计文档代替运行证据。
@@ -278,3 +277,6 @@ B 仅重排的剩余项：
 ~~~
 
 **执行原则：先跑通一条真实作品闭环，再扩到三类和其余作品；先证明原有核心功能真正有效，再扩展个人版体验。每次迭代都必须有“失败输入 → 错误类别 → 相关函数 → 修复补丁 → 原例复验 → 邻近负例回归 → 状态更新”的证据链。**
+
+
+> **最新排期修订（10 月 26 日）：** 工程参考科研论文智能体的资料解析、RAG 检索、结构化证据、版本化任务状态、有限重试与评测日志；这些能力必须支撑上岸鸭原有的“证据诊断—5 分钟首步—真人执行—独立复核—中断接续”闭环。PPT、答辩视频和 Skill 包装是交付物，不替代核心闭环验收。详细三人职责、日期、验收门与 PR 分支说明见《三人分工优化版总调度》。
