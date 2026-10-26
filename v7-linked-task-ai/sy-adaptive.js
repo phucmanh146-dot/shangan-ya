@@ -21,13 +21,25 @@ function tabTo(tab){activeTab=tab;if(!dlg)return;dlg.querySelectorAll('[data-tab
 function minTime(x){var a=String(x).split(':');return (Number(a[0])||0)*60+(Number(a[1])||0);}
 function fmt(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');}
 function budget(p){return Math.max(0,Math.floor(Math.max(0,minTime(p.end)-minTime(p.start)-120)*Math.max(.42,Math.min(.8,(100-p.buffer)/100))*Math.min(1,(.55+p.energy*.09))));}
+function personalEnergyLevel(part,p){
+ var rows=store('energyHistory')||[],cutoff=Date.now()-14*86400000;
+ var vals=rows.filter(function(r){
+  var at=Number(r.at||r.timestamp||0),score=Number(r.score||r.energy);
+  if(!at||at<cutoff||!Number.isFinite(score)||score<1||score>5)return false;
+  var h=new Date(at).getHours();
+  return part==='morning'?(h>=5&&h<12):part==='afternoon'?(h>=12&&h<18):(h>=18&&h<24);
+ }).slice(-20).map(function(r){return Number(r.score||r.energy);}).sort(function(a,b){return a-b;});
+ if(vals.length<3)return Number(p[part]||3);
+ var mid=Math.floor(vals.length/2),m=vals.length%2?vals[mid]:(vals[mid-1]+vals[mid])/2;
+ return Math.max(1,Math.min(5,Math.round((m*.7+Number(p[part]||3)*.3)*10)/10));
+}
 function createSchedule(){
  var p=prefs(),allowed=budget(p),remaining=allowed,from=minTime(p.start),end=minTime(p.end),slots=[],rows=[],paused=0;
  var fixedItems=(store('fixed')||[]).filter(function(x){return x.day===today()}).map(function(x){return {from:minTime(x.start),to:minTime(x.end),title:x.title,kind:x.kind||'fixed'};}).filter(function(x){return x.to>x.from&&x.from<end&&x.to>from;}).sort(function(a,b){return a.from-b.from;});
  var leisure=Math.max(0,Math.min(180,Number(p.leisure||0))),leisureStart=Math.max(from,Math.min(end-leisure,Math.round((from+end)/2)));
  if(leisure>=10&&leisureStart>=from){var candidates=[leisureStart,Math.max(from,end-leisure),from];var spot=candidates.find(function(s){return s>=from&&s+leisure<=end&&!fixedItems.some(function(x){return s<x.to&&s+leisure>x.from;});});if(spot!==undefined)fixedItems.push({from:spot,to:spot+leisure,title:'自由躺平 · 玩手机 / 发呆 / 看剧（可调整）',kind:'leisure'});else fixedItems.push({from:leisureStart,to:Math.min(end,leisureStart+leisure),title:'弹性休息（固定活动优先）',kind:'leisure'});}
  fixedItems.sort(function(a,b){return a.from-b.from;});
- var items=tasks().map(function(t){return {id:String(t.id),title:t.name||'未命名任务',left:Math.max(10,Math.min(900,Number(t.plannedMinutes||t.estMinutes||40))),energy:t.weight==='heavy'?4:2,priority: t.weight==='heavy'?2:1,due:t.date||today()};});
+ var items=tasks().map(function(t){return {id:String(t.id),title:t.name||'未命名任务',left:Math.max(10,Math.min(900,Number(t.plannedMinutes||t.estMinutes||40))),energy:t.weight==='heavy'?4:t.weight==='medium'?3:2,priority: t.weight==='heavy'?2:1,due:t.date||today()};});
  var rev=(store('reviews')||[]).filter(function(r){return r.due<=today();}).map(function(r){return {id:'review:'+r.id,title:'复习 · '+r.title,left:Math.max(5,r.minutes||10),energy:2,priority:3,due:r.due};});
  items=items.concat(rev);
  var active=getActive();items.sort(function(a,b){if(active&&a.id===String(active.id))return -1;if(active&&b.id===String(active.id))return 1;return b.priority-a.priority||a.due.localeCompare(b.due);});
@@ -38,7 +50,7 @@ function createSchedule(){
    var fixed=t>=720&&t<780?780:t>=1080&&t<1140?1140:t;
    if(fixed!==t){rows.push({from:t,to:Math.min(fixed,end),kind:'rest',title:t<780?'午餐与休息':'晚餐与恢复'});t=fixed;paused=0;continue;}
    var nextBoundary=Math.min(nextFixed,t<720?720:t<1080?1080:end);
-   var part=t<720?'morning':t<1080?'afternoon':'evening',level=Number(p[part]||3),len=Math.min(level<=2?25:45,remaining,nextBoundary-t);
+   var part=t<720?'morning':t<1080?'afternoon':'evening',level=personalEnergyLevel(part,p),len=Math.min(level<=2?25:45,remaining,nextBoundary-t);
    if(len<10){t=Math.max(t+1,nextBoundary);continue;}
    var eligible=items.filter(function(x){return x.left>0;});
    if(!eligible.length)break;
@@ -65,7 +77,7 @@ var all=tasks(),total=all.reduce(function(a,t){return a+Number(t.plannedMinutes|
 var html='<section class="sy-adaptive-card"><h3>今天精力怎么样？先告诉上岸鸭</h3><form data-prefs class="sy-adaptive-grid">'+
  [['energy','整体精力','1|很疲惫,2|偏低,3|一般,4|不错,5|精力充沛'],['morning','上午状态','1|低,2|较低,3|一般,4|高,5|非常高'],['afternoon','下午状态','1|低,2|较低,3|一般,4|高,5|非常高'],['evening','晚上状态','1|低,2|较低,3|一般,4|高,5|非常高'],['start','开始时间',''],['end','结束时间',''],['buffer','突发缓冲比例','20|20%,25|25%,30|30%,35|35%,40|40%'],['leisure','自由躺平时间','15|15分钟,30|30分钟,45|45分钟,60|60分钟,90|90分钟,120|120分钟']].map(function(f){var v=p[f[0]];return '<label>'+f[1]+(f[2]?'<select name="'+f[0]+'">'+f[2].split(',').map(function(o){var z=o.split('|');return '<option value="'+z[0]+'" '+(String(v)===z[0]?'selected':'')+'>'+z[1]+'</option>';}).join('')+'</select>':'<input name="'+f[0]+'" type="time" value="'+esc(v)+'">')+'</label>';}).join('')+'</form>'+
  '<section class="sy-adaptive-card"><h3>先留出不能占用的时间</h3><p class="sy-muted">班会、上课、出行、朋友聚会等优先锁定；娱乐与发呆可在重排时弹性移动，但不会被任务吞掉。</p><div class="sy-adaptive-grid"><label>事件名称<input data-fixed-name placeholder="例如：班级会议 / 上课"></label><label>开始<input type="time" data-fixed-start value="14:00"></label><label>结束<input type="time" data-fixed-end value="15:00"></label></div><div class="sy-actions"><button type="button" data-addfixed>锁定这段时间</button></div><div data-fixed-list></div></section>'+
- '<div class="sy-actions"><button class="sy-adaptive-primary" data-generate>根据今天精力重新排程</button><button data-saveplan>保存当前计划</button><button data-newtask>突发任务来了 · 插入并重排</button></div><div class="sy-muted">原则：午餐和晚餐时段不安排学习；任务之间有休息；永远留出缓冲。计划草案不改动原始任务顺序与截止日期。</div></section>'+
+ '<div class="sy-actions"><button class="sy-adaptive-primary" data-generate>根据今天精力重新排程</button><button data-saveplan>保存当前计划</button><button data-newtask>突发任务来了 · 插入并重排</button></div><div class="sy-muted">原则：午餐和晚餐时段不安排学习；任务之间有休息；永远留出缓冲。最近 14 天每个时段至少 3 条精力自评后，系统会以个人历史中位数（70%）+你设置的时段偏好（30%）调整匹配；样本不足时沿用手动设置。计划草案不改动原始任务顺序与截止日期。</div></section>'+
  '<div class="sy-adaptive-grid two"><section class="sy-adaptive-card"><h3>今天的容量</h3><strong>'+s.allowed+' 分钟</strong><p class="sy-muted">待做任务估算 '+total+' 分钟 · 当前需要安排 '+all.length+' 项任务</p><div class="sy-bar"><span style="width:'+Math.min(100,Math.round(100*total/Math.max(1,s.allowed)))+'%"></span></div><p class="sy-muted">'+(total>s.allowed?'已超出舒适容量，系统会把做不完的任务列在下方。':'有余地，今天不必排满。')+'</p></section><section class="sy-adaptive-card"><h3>当前学习断点</h3><p>'+esc((getActive()||{}).name||'先在今日任务中选中一个任务')+'</p><div class="sy-actions"><button data-rescue>遇到困难 · 从知识库找办法</button><button data-notes>连接 Obsidian</button></div></section></div>'+
  '<section class="sy-adaptive-card"><h3>时间安排草案</h3>'+draft.map(function(r){var type=r.kind==='work'?'专注':r.kind==='rest'?'休息':'机动';return '<div class="sy-plan-row"><span>'+fmt(r.from)+'–'+fmt(r.to)+'</span><span>'+esc(r.title)+'</span><span class="sy-chip '+(r.kind==='work'?'':r.kind)+'">'+type+'</span></div>';}).join('')+'</section>'+
  '<section class="sy-adaptive-card"><h3>今天排不下的任务</h3><p class="sy-muted">'+(pending.length?pending.map(esc).join('、'):'目前没有需要顺延的任务。')+'</p><p class="sy-muted">只给出顺延建议，不自动改动截止日期，也不把未完成任务标记为完成。</p></section><p data-status class="sy-status">'+esc(msg||'排程为建议稿，保存后仍可重新生成。')+'</p>';
