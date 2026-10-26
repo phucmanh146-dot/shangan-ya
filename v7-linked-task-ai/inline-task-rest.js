@@ -18,6 +18,8 @@ function distributeWorkbenchControls(){
  original.dataset.distributed='true';
  var taskCard=original.querySelector('.itw-grid > .itw-card:first-child'),energyCard=original.querySelector('.itw-grid > .itw-card:nth-child(2)');
  if(!taskCard||!energyCard)return;
+ var allActions=taskCard.querySelector('.itw-actions');
+ if(allActions){var doneControls=Array.from(allActions.querySelectorAll('#itw-timer-start,#itw-timer-finish'));doneControls.forEach(function(btn){btn.setAttribute('title','在专注执行时记录实际耗时')})}
  var voice=taskCard.querySelector('.itw-voice');
  var sourceInputs=taskCard.querySelector('#itw-url')&&taskCard.querySelector('#itw-url').closest('.itw-row');
  var gradeRow=taskCard.querySelector('#itw-grade')&&taskCard.querySelector('#itw-grade').closest('.itw-row');
