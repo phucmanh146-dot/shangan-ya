@@ -22,7 +22,10 @@ function arrange(){
  var done=document.createElement('button');done.type='button';done.className='app-nav-item sy-original-done';done.innerHTML='<span class="app-nav-icon" aria-hidden="true">📦</span><span>已完成</span>';
  done.onclick=function(){openView('inbox');setTimeout(function(){var e=document.querySelector('#view-inbox [id*="archive"],#view-inbox [class*="archive"],#view-inbox [id*="done"]');if(e)e.scrollIntoView({block:'start',behavior:'smooth'})},100)};
  nav.append(done);add('task-intake','收集任务');
- group('专注');add('pomodoro','专注陪伴');add('habits','习惯养成');
+ var energy=document.createElement('button');energy.type='button';energy.className='app-nav-item sy-original-energy';energy.setAttribute('aria-label','精力与弹性排期');energy.innerHTML='<span class="app-nav-icon" aria-hidden="true">🧠</span><span>精力与弹性排期</span>';
+  energy.onclick=function(){if(window.SYComfortFlow&&typeof SYComfortFlow.open==='function'){SYComfortFlow.open(0);return;}if(window.SY&&typeof SY.switchAppView==='function'){SY.switchAppView('comfort');return;}var page=document.getElementById('view-comfort');if(page){page.hidden=false;page.scrollIntoView({behavior:'smooth',block:'start'});}};
+  nav.append(energy);
+  group('专注');add('pomodoro','专注陪伴');add('habits','习惯养成');
   group('AI 助手');add('ai-p2','AI 解卡');
  group('复盘');add('stats','进度复盘');add('knowledge','知识与路线');add('sources','资料中心');
  var more=document.createElement('details');more.className='sy-original-more';
