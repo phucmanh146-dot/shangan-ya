@@ -8,7 +8,7 @@ function name(t){return String(t&&(t.name||t.title||t.text)||'未命名任务')}
 function minText(n){n=Number(n);if(!Number.isFinite(n)||n<=0)return '暂无记录';return n>=60?Math.floor(n/60)+'小时'+(Math.round(n%60)?Math.round(n%60)+'分钟':''):Math.round(n)+'分钟'}
 function durationRows(a,t){return (Array.isArray(a.durationLog)?a.durationLog:[]).filter(function(r){return String(r.taskId)===String(t.id)&&Number(r.actualMinutes)>0})}
 function materialList(t){return Array.isArray(t.materials)?t.materials:[]}
-function isFulltext(m){return !!(m&&(typeof m.content==='string'&&m.content.trim().length>0||m.readStatus==='fulltext'||m.contentRead===true))}
+function isFulltext(m){if(!m)return false;var body=String(m.fullText||m.content||m.text||'').trim();if(m.partial||m.truncated)return false;if(typeof m.fullText==='string'&&body.length>=100)return true;return body.length>=1000&&(!Number(m.contentChars)||Number(m.contentChars)<=body.length)}
 function due(t){return t.dueDate?String(t.dueDate)+(t.dueTime?' '+t.dueTime:''):'未设置截止日期'}
 function defaultTask(){var a=acct()||{},ts=allTasks(),active=String((a.activeTimer||{}).taskId||a.priorityFocusTaskId||'');return ts.find(function(t){return String(t.id)===active})||ts.find(function(t){return !t.done&&!t.completedAt})||ts[0]||null}
 function set(id,v){var e=Q('#'+id);if(e)e.textContent=v}
@@ -35,8 +35,9 @@ if(!force&&ctx.value.trim()&&(ctx.dataset.twAuto!=='1'||ctx.dataset.twTaskId===S
 var taskIdNow=String(t.id),a=acct()||{},rows=durationRows(a,t),mats=materialList(t),cp=(Array.isArray(a.taskCheckpoints)?a.taskCheckpoints:[]).filter(function(x){return String(x.taskId)===taskIdNow}).slice(-1)[0];
 var sourceRows=[],sourceWarnings=[],toRead=mats.slice(0,6);
 for(var i=0;i<toRead.length;i++){
- var m=toRead[i],title=String(m.title||m.name||'未命名资料'),url=String(m.url||''),content=typeof m.content==='string'?m.content:'';
- if(content.trim().length>100){sourceRows.push({title:title,url:url,text:content,readStatus:'fulltext'});continue;}
+ var m=toRead[i],title=String(m.title||m.name||'未命名资料'),url=String(m.url||''),content=typeof m.fullText==='string'?m.fullText:(typeof m.content==='string'?m.content:'');
+ var bodyIsComplete=typeof m.fullText==='string'&&content.trim().length>=100||content.trim().length>=1000&&!m.partial&&!m.truncated&&(!Number(m.contentChars)||Number(m.contentChars)<=content.length);
+ if(bodyIsComplete){sourceRows.push({title:title,url:url,text:content,readStatus:'fulltext'});continue;}
  try{
   var data=null;
   if((m.path||m.sourcePath)&&(/obsidian|vault|note/i.test(String(m.sourceType||m.kind||m.sourceRef||''))||!url)){
