@@ -18,17 +18,20 @@ var isLight=function(t){return /整理|归档|回复|确认|预约|上传|提交
 var priority=function(t){var s=String(t.priority||t.urgency||t.weight||t.level||'').toLowerCase(),n=Number(t.priorityScore||t.priorityValue||0);if(n)return n;if(/urgent|high|高|紧急|重要|heavy|主要/.test(s))return 3;if(/low|低|轻量|minor/.test(s))return 1;return 2};
 function startMs(o){if(!o)return 0;var v=o.startedAt||o.runningSince||o.startAt||o.startedAtMs||o.startTime||o.started_at||0;if(typeof v==='string'&&!/^\d{10,13}$/.test(v)){var p=Date.parse(v);return Number.isFinite(p)?p:0}var n=Number(v);if(n>0&&n<1e11)n*=1000;return n>0&&n<=Date.now()?n:0}
 function brain(){
- var a=account()||{},p=a.plannerSettings||{},ci=p.lastCognitiveCheckin||{},now=Date.now(),age=now-Number(ci.at||0),active=p.activeSession||a.activeTimer||a.smartPlanner&&a.smartPlanner.active||{},elapsed=startMs(active)?Math.floor((now-startMs(active))/60000):0,st=p.stuckState||a.stuckState||null,stuck=st?Math.max(0,Math.floor((now-Number(st.startedAt||st.at||now))/60000)):0,logs=(a.fatigueLog||[]).filter(function(x){return now-Number(x.at||0)<2*3600000}),score=Number(ci.score||p.currentEnergyScore||0),why='',confidence='低';
- if(age>=0&&age<150*60000&&score>=1&&score<=5){confidence='中';why='最近一次状态反馈';if(elapsed>=90)score=Math.max(1,score-2);else if(elapsed>=60)score=Math.max(1,score-1);return pack(score,why,confidence,elapsed,stuck)}
- if(logs.length){var last=logs[logs.length-1];score=Number(last.score)||2;why='近两小时疲惫反馈';confidence='中';return pack(Math.min(score,2),why,confidence,elapsed,stuck)}
- if(stuck>=12)return pack(2,'连续卡壳约 '+stuck+' 分钟','中',elapsed,stuck);
- if(elapsed>=90)return pack(2,'连续用脑约 '+elapsed+' 分钟，建议恢复','中',elapsed,stuck);
- if(elapsed>=60)return pack(3,'连续用脑约 '+elapsed+' 分钟，建议短休或换任务','中',elapsed,stuck);
- var hist=(a.energyHistory||[]).filter(function(x){return Number(x.score)>=1&&Number(x.score)<=5&&now-Number(x.at||0)<3*3600000}).slice(-1)[0];
- if(hist)return pack(Number(hist.score),'参考最近精力记录，当前状态可能已变化','低',elapsed,stuck);
- return pack(3,'缺少近期反馈或连续用脑记录，暂按保守负荷估算','低',elapsed,stuck);
-}
-function pack(score,why,confidence,elapsed,stuck){score=Math.max(1,Math.min(5,Math.round(score||3)));return{score:score,label:score<=1?'可能已明显透支':score===2?'认知负荷偏高':score===3?'中等负荷，先短段推进':score===4?'适合安排深度任务':'当前反馈较清醒',why:why,confidence:confidence,elapsed:elapsed||0,stuck:stuck||0}}
+ var a=account()||{},p=a.plannerSettings||{},ci=p.lastCognitiveCheckin||{},now=Date.now(),age=now-Number(ci.at||0),active=p.activeSession||a.activeTimer||a.smartPlanner&&a.smartPlanner.active||{},started=startMs(active),elapsed=started?Math.floor((now-started)/60000):0,st=p.stuckState||a.stuckState||null,stuck=st?Math.max(0,Math.floor((now-Number(st.startedAt||st.at||now))/60000)):0;
+ var recent=(Array.isArray(a.energyHistory)?a.energyHistory:[]).filter(function(x){return Number(x.at)>0&&now-Number(x.at)<4*3600000&&Number(x.score)>=1&&Number(x.score)<=5}).slice(-12);
+ var fatigue=(Array.isArray(a.fatigueLog)?a.fatigueLog:[]).filter(function(x){return Number(x.at)>0&&now-Number(x.at)<4*3600000}).length;
+ var score=Number(ci.score||p.currentEnergyScore||0),why='',confidence='低',signals=[];
+ if(age>=0&&age<150*60000&&score>=1&&score<=5){confidence='中';why='最近一次主观状态反馈';signals.push('最近反馈 '+score+'/5')}
+ else if(recent.length){score=Number(recent[recent.length-1].score);why='最近精力记录（需结合当前感觉确认）';confidence='低';signals.push('最近精力记录 '+score+'/5')}
+ else{score=3;why='缺少近期状态记录，暂按中等负荷保守估算'}
+ if(elapsed>=90){score=Math.min(score,2);signals.push('当前计时连续 '+elapsed+' 分钟')}
+ else if(elapsed>=55){score=Math.min(score,3);signals.push('当前计时 '+elapsed+' 分钟，建议中断检查')}
+ if(stuck>=12){score=Math.min(score,2);signals.push('连续卡壳约 '+stuck+' 分钟')}
+ if(fatigue){score=Math.min(score,2);signals.push('近 4 小时疲惫反馈 '+fatigue+' 次')}
+ if(recent.length>=3){var lows=recent.slice(-4).filter(function(x){return Number(x.score)<=2}).length;if(lows>=2){score=Math.min(score,2);signals.push('近期多次低精力反馈')}}
+ return pack(score,signals.length?signals.join('；'):why,confidence,elapsed,stuck);
+}function pack(score,why,confidence,elapsed,stuck){score=Math.max(1,Math.min(5,Math.round(score||3)));return{score:score,label:score<=1?'可能已明显透支':score===2?'认知负荷偏高':score===3?'中等负荷，先短段推进':score===4?'适合安排深度任务':'当前反馈较清醒',why:why,confidence:confidence,elapsed:elapsed||0,stuck:stuck||0}}
 function recordFeedback(score){
  var a=account();if(!a)return false;var now=Date.now(),id=String((a.activeTimer||{}).taskId||a.priorityFocusTaskId||'');
  a.plannerSettings=a.plannerSettings||{};a.plannerSettings.lastCognitiveCheckin={score:score,at:now,source:'舒适排期快速反馈',taskId:id};
@@ -40,8 +43,7 @@ function recordFeedback(score){
 function localTime(n){n=Math.max(0,Math.min(1439,n));return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0')}
 function parseTime(s){var p=String(s||'').split(':');return Math.max(0,Math.min(1439,(Number(p[0])||0)*60+(Number(p[1])||0)))}
 function nowRounded(){var d=new Date();return Math.ceil((d.getHours()*60+d.getMinutes())/5)*5}
-function reserveDefaults(b){return{buffer:b.score<=2?40:30,leisure:25,recovery:b.score<=1?20:b.score===2?15:10,fixed:0}}
-function recentHistory(t){
+function reserveDefaults(b){return{buffer:b.score<=2?45:30,leisure:b.score<=2?90:60,recovery:b.score<=1?25:b.score===2?20:10,fixed:0}}function recentHistory(t){
  var a=account()||{},id=taskId(t),arr=[];
  ['taskHistory','completedTaskHistory','taskRecords','completionHistory'].forEach(function(k){(Array.isArray(a[k])?a[k]:[]).forEach(function(x){if(String(x.taskId||x.id||x.name||'')===id){var n=Number(x.actualMinutes||x.durationMinutes||x.elapsedMinutes||x.actualDuration||0);if(n>0&&n<600)arr.push(n)}})});
  return arr;
@@ -50,8 +52,7 @@ function estimate(t,b){
  var hist=recentHistory(t),base=hist.length?hist.reduce(function(x,y){return x+y},0)/hist.length:minutes(t),complex=isDeep(t),factor=complex?(b.score<=2?1.35:1.2):1;
  return {minutes:Math.round(Math.max(5,Math.min(180,base*factor))),basis:hist.length?'按 '+hist.length+' 条历史完成记录校准':(t.plannedMinutes||t.estMinutes||t.estimatedMinutes?'参考任务原估时，再按复杂度调整':'缺少历史耗时，使用保守初始估时'),complex:complex,samples:hist.length};
 }
-function getPrefs(){var a=account()||{},p=a.plannerSettings||{},w=a.wellbeingPlan||{},start=nowRounded(),end=21*60;if(start>=20*60)end=23*60+30;if(end-start<60)end=Math.min(1439,start+180);var d=reserveDefaults(brain());return{start:localTime(start),end:localTime(end),buffer:d.buffer,leisure:d.leisure,recovery:d.recovery,fixed:Math.max(0,Number(w.meet||p.fixedMinutes||0)),breakEvery:45}}
-function selectedTasks(){var all=pending();return all.filter(function(t){return chosen.indexOf(taskId(t))>=0})}
+function getPrefs(){var a=account()||{},p=a.plannerSettings||{},w=a.wellbeingPlan||{},start=nowRounded(),end=21*60;if(start>=20*60)end=23*60+30;if(end-start<60)end=Math.min(1439,start+180);var d=reserveDefaults(brain());return{start:localTime(start),end:localTime(end),buffer:d.buffer,leisure:Math.max(d.leisure,Number(p.dailyLeisureMinutes||0)),recovery:d.recovery,fixed:Math.max(0,Number(w.meet||p.fixedMinutes||0)),breakEvery:brain().score<=2?25:35}}function selectedTasks(){var all=pending();return all.filter(function(t){return chosen.indexOf(taskId(t))>=0})}
 function chooseDefaults(){var all=pending().slice().sort(function(a,b){return priority(b)-priority(a)}),active=String(((account()||{}).activeTimer||{}).taskId||'');chosen=all.filter(function(t){return taskId(t)===active}).map(taskId);if(!chosen.length)chosen=all.slice(0,Math.min(3,all.length)).map(taskId)}
 function mountLauncher(){
  var details=$('#sy-energy-daily-details');if(!details||details.dataset.comfortMounted==='1')return;
@@ -98,31 +99,34 @@ function render(n){
  footer('');
 }
 function buildPreview(b){
- var start=parseTime($('#cpStart',dialog)?.value||getPrefs().start),end=parseTime($('#cpEnd',dialog)?.value||getPrefs().end),fixed=Math.max(0,Number($('#cpFixed',dialog)?.value||0)),buffer=Math.max(15,Number($('#cpBuffer',dialog)?.value||30)),leisure=Math.max(0,Number($('#cpLeisure',dialog)?.value||25)),breakEvery=Number($('#cpBreak',dialog)?.value||45);
+ var start=parseTime($('#cpStart',dialog)?.value||getPrefs().start),end=parseTime($('#cpEnd',dialog)?.value||getPrefs().end),fixed=Math.max(0,Number($('#cpFixed',dialog)?.value||0)),buffer=Math.max(15,Number($('#cpBuffer',dialog)?.value||45)),leisure=Math.max(0,Number($('#cpLeisure',dialog)?.value||60)),breakEvery=Number($('#cpBreak',dialog)?.value||35);
  if(end<=start)end+=24*60;
- var available=end-start,rest=b.score<=1?20:b.score===2?15:8,chosenList=selectedTasks(),remaining=Math.max(0,available-fixed-buffer-leisure),cursor=start,blocks=[],deepLimit=b.score<=1?0:b.score===2?10:b.score===3?25:breakEvery;
- function add(title,duration,kind,reason){duration=Math.max(0,Math.round(duration));if(!duration)return;if(cursor+duration>end)return;blocks.push({start:cursor,end:cursor+duration,title:title,minutes:duration,kind:kind,reason:reason||''});cursor+=duration}
- if(b.score<=2){add('恢复时间：离开屏幕、喝水、走动或安静休息',Math.min(rest,remaining),'rest','先恢复，不强迫继续输入新信息');remaining-=blocks.length?blocks[blocks.length-1].minutes:0}
- var ranked=chosenList.slice().sort(function(a,c){return priority(c)-priority(a)}),deferred=[];
- ranked.forEach(function(t){
+ var available=end-start,rest=b.score<=1?25:b.score===2?20:10,chosenList=selectedTasks(),remaining=Math.max(0,available-fixed-buffer-leisure),cursor=start,blocks=[],deferred=[],focusCount=0,deepCount=0;
+ function add(title,duration,kind,reason){duration=Math.max(0,Math.round(duration));if(!duration||cursor+duration>end)return false;blocks.push({start:cursor,end:cursor+duration,title:title,minutes:duration,kind:kind,reason:reason||''});cursor+=duration;return true}
+ function reserveLeisure(label,duration,kind,reason){if(duration<=0||remaining<=0)return;var d=Math.min(duration,remaining,Math.max(0,end-cursor-buffer));if(d>=5&&add(label,d,kind,reason))remaining-=d}
+ if(b.score<=2){reserveLeisure('恢复窗口：离开屏幕、喝水、走动或安静休息',Math.min(rest,20),'rest','疲惫时先恢复，不要求立刻回到深度工作');}
+ var ranked=chosenList.slice().sort(function(a,c){return priority(c)-priority(a)}),daydream=Math.max(15,Math.round(leisure*.3)),entertain=Math.max(0,leisure-daydream),daydreamAdded=false;
+ ranked.forEach(function(t,index){
   var est=estimate(t,b),deep=est.complex;
-  if(b.score<=1&&deep){deferred.push({task:t,reason:'当前反馈为明显透支，暂不安排深度任务'});return}
-  if(b.score===2&&deep){deferred.push({task:t,reason:'当前认知负荷偏高，先恢复后再决定是否继续'});return}
-  var dur=est.minutes;
-  if(remaining<=0){deferred.push({task:t,reason:'可用时间已留给固定事项、休息与缓冲'});return}
-  if(deep)dur=Math.min(dur,deepLimit,remaining);else dur=Math.min(dur,b.score<=2?20:35,remaining);
-  if(dur<5){deferred.push({task:t,reason:'剩余时间不足以推进有效步骤'});return}
-  add(taskName(t),dur,deep?'focus':'light',est.basis);remaining-=dur;
-  if(remaining>=5&&cursor+5<=end&&ranked.indexOf(t)!==ranked.length-1){add('短休：离开当前任务、喝水或走动',Math.min(b.score<=2?10:5,remaining),'break','降低连续用脑与任务切换成本');remaining-=blocks[blocks.length-1].minutes}
-  if(est.minutes>dur)deferred.push({task:t,reason:'本轮先推进 '+dur+' 分钟；剩余 '+(est.minutes-dur)+' 分钟留待下轮或重排'});
+  if(b.score<=1&&deep){deferred.push({task:t,reason:'当前反馈为明显透支：本轮不安排高认知负荷任务，先恢复后重新评估'});return}
+  if(b.score===2&&deep){deferred.push({task:t,reason:'当前负荷偏高：先恢复或换轻任务；休息后重新签到再决定是否继续'});return}
+  if(remaining<5){deferred.push({task:t,reason:'扣除固定事项、休息、娱乐与缓冲后，可用时间不足'});return}
+  var cap=deep?(b.score>=4?Math.min(40,breakEvery):Math.min(25,breakEvery)):Math.min(25,breakEvery);
+  var dur=Math.min(est.minutes,cap,remaining);
+  if(dur<5){deferred.push({task:t,reason:'剩余时间不足以推进一个有效工作段'});return}
+  if(!add(taskName(t),dur,deep?'focus':'light',est.basis)){deferred.push({task:t,reason:'剩余时间窗口不足'});return}
+  remaining-=dur;focusCount++;if(deep)deepCount++;
+  if(remaining>=5&&index<ranked.length-1){var breakMin=deep?8:5;if(add('短休：离开当前任务、喝水或活动一下',Math.min(breakMin,remaining),'break','短休用于缓解疲劳，不保证立即恢复全部表现'))remaining-=blocks[blocks.length-1].minutes}
+  if(!daydreamAdded&&focusCount>=Math.min(2,Math.max(1,ranked.length))&&daydream>0){reserveLeisure('发呆 / 自由放空（不设产出目标）',daydream,'rest','每天受保护的无任务时间；可发呆、散步或安静坐一会儿');daydreamAdded=true}
+  if(est.minutes>dur)deferred.push({task:t,reason:'本轮先推进 '+dur+' 分钟；剩余约 '+(est.minutes-dur)+' 分钟，完成当前段后再评估精力'})
  });
- if(leisure>0&&cursor+leisure<=end){add('放空 / 娱乐 / 看剧（受保护时间）',leisure,'leisure','不自动挤占这段时间')}
- var endBuffer=Math.min(buffer,Math.max(0,end-cursor));if(endBuffer>0){add('弹性缓冲（卡壳、临时事务、超时）',endBuffer,'buffer','未发生突发情况时也不强制塞入任务')}
- var unused=Math.max(0,end-cursor),scheduled=blocks.reduce(function(n,x){return n+x.minutes},0);
- window.__SYComfortDraft={date:today(),createdAt:Date.now(),state:b,tasks:chosenList.map(function(t){return{id:taskId(t),title:taskName(t)}}),window:{start:localTime(start%1440),end:localTime(end%1440)},fixedMinutes:fixed,bufferMinutes:buffer,leisureMinutes:leisure,blocks:blocks,deferred:deferred,unusedMinutes:unused,scheduledMinutes:scheduled,confidence:b.confidence};
- return '<section class="cp-panel"><span class="cp-eyebrow">STEP 04 · ADAPTIVE TIMELINE</span><h3>今日排期预览</h3><p class="cp-lead">按 '+esc(b.label)+'、真实待办与可用时间生成。深度任务 '+(b.score<=2?'已暂停或延后':'优先放入短工作段')+'；未安排的任务会列出原因。</p><div class="cp-plan-summary"><div><strong>'+scheduled+'</strong><span>已排分钟</span></div><div><strong>'+buffer+'</strong><span>缓冲分钟</span></div><div><strong>'+deferred.length+'</strong><span>延后/待续任务</span></div></div><div class="cp-timeline">'+(blocks.length?blocks.map(function(x){return '<article class="cp-time-row kind-'+x.kind+'"><time>'+localTime(x.start%1440)+'–'+localTime(x.end%1440)+'</time><div><strong>'+esc(x.title)+'</strong><p>'+x.minutes+' 分钟'+(x.reason?' · '+esc(x.reason):'')+'</p></div><span>'+({focus:'专注',light:'轻任务',rest:'恢复',break:'短休',leisure:'放空',buffer:'缓冲'}[x.kind]||'安排')+'</span></article>'}).join(''):'<div class="cp-empty">当前时间窗口不足，或没有选择任务。请返回调整。</div>')+'</div>'+(deferred.length?'<div class="cp-deferred"><h4>暂缓安排，不代表放弃</h4>'+deferred.map(function(x){return '<p><strong>'+esc(taskName(x.task))+'</strong>：'+esc(x.reason)+'</p>'}).join('')+'</div>':'')+'<p class="cp-note">固定事项总量预留 '+fixed+' 分钟；未提供固定事项的具体起止时，时间轴是任务顺序估算，请避开原日历中的会议/约定。缓冲与放空不会被任务自动占用。排期是建议草案，需你确认后保存，不会自动把任务标记完成。</p></section>';
-}
-function saveDraft(){
+ if(!daydreamAdded&&daydream>0)reserveLeisure('发呆 / 自由放空（不设产出目标）',daydream,'rest','每天受保护的无任务时间；可发呆、散步或安静坐一会儿');
+ if(entertain>0)reserveLeisure('娱乐 / 看剧 / 轻松刷视频（受保护时间）',entertain,'leisure','娱乐是计划内恢复，不作为未完成任务扣分');
+ var endBuffer=Math.min(buffer,Math.max(0,end-cursor));if(endBuffer>0)add('弹性缓冲：卡壳、临时事务或任务超时',endBuffer,'buffer','没有突发情况时也不强制塞入新任务');
+ var scheduled=blocks.reduce(function(n,x){return n+x.minutes},0),unused=Math.max(0,end-cursor),focusMinutes=blocks.filter(function(x){return x.kind==='focus'||x.kind==='light'}).reduce(function(n,x){return n+x.minutes},0);
+ window.__SYComfortDraft={date:today(),createdAt:Date.now(),state:b,tasks:chosenList.map(function(t){return{id:taskId(t),title:taskName(t)}}),window:{start:localTime(start%1440),end:localTime(end%1440)},fixedMinutes:fixed,bufferMinutes:buffer,leisureMinutes:leisure,blocks:blocks,deferred:deferred,unusedMinutes:unused,scheduledMinutes:scheduled,focusMinutes:focusMinutes,confidence:b.confidence,algorithm:'adaptive-load-v2'};
+ return '<section class="cp-panel"><span class="cp-eyebrow">STEP 04 · ADAPTIVE TIMELINE</span><h3>今日排期预览</h3><p class="cp-lead">系统根据当前状态、真实待办与可用时间安排工作段，并把发呆、娱乐和缓冲作为保护时间。'+(b.score<=2?'当前负荷偏高：优先恢复和低负荷事项，不强迫深度任务。':'每段深度任务后安排短休，长任务拆成多个工作段。')+'</p><div class="cp-plan-summary"><div><strong>'+focusMinutes+'</strong><span>工作分钟</span></div><div><strong>'+leisure+'</strong><span>放空与娱乐分钟</span></div><div><strong>'+deferred.length+'</strong><span>延后/待续任务</span></div></div><div class="cp-timeline">'+(blocks.length?blocks.map(function(x){return '<article class="cp-time-row kind-'+x.kind+'"><time>'+localTime(x.start%1440)+'–'+localTime(x.end%1440)+'</time><div><strong>'+esc(x.title)+'</strong><p>'+x.minutes+' 分钟'+(x.reason?' · '+esc(x.reason):'')+'</p></div><span>'+({focus:'专注',light:'轻任务',rest:'放空/恢复',break:'短休',leisure:'娱乐',buffer:'缓冲'}[x.kind]||'安排')+'</span></article>'}).join(''):'<div class="cp-empty">当前时间窗口不足，或没有选择任务。请返回调整。</div>')+'</div>'+(deferred.length?'<div class="cp-deferred"><h4>暂缓安排，不代表放弃</h4>'+deferred.map(function(x){return '<p><strong>'+esc(taskName(x.task))+'</strong>：'+esc(x.reason)+'</p>'}).join('')+'</div>':'')+'<div class="cp-note-box">研究边界：微休息对活力和疲劳的平均改善较小但有统计意义，整体表现提升并不稳定；高消耗任务可能需要更长恢复。系统不会把“90 分钟周期”当作所有人的固定生理规律。请用每次反馈和真实耗时持续校准。</div><p class="cp-note">固定事项按总分钟预留；未录入具体起止时间时，这是一份时间顺序草案，不替代日历。保存后不会自动把任务标记完成。</p></section>';
+}function saveDraft(){
  var d=window.__SYComfortDraft;if(!d){render(3);footer('请先生成预览。');return}
  var a=account();if(!a){footer('无法读取当前账号数据，请先登录。');return}
  a.plannerSettings=a.plannerSettings||{};a.plannerSettings.comfortSchedule=d;a.plannerSettings.comfortScheduleSavedAt=Date.now();
@@ -131,7 +135,7 @@ function saveDraft(){
 function buildPatterns(a){
  var hist=Array.isArray(a.energyHistory)?a.energyHistory:[],bins=[['凌晨',0,5],['上午',6,11],['下午',12,17],['晚上',18,23]],groups=bins.map(function(g){var arr=hist.filter(function(x){var h=Number(x.hour);return h>=g[1]&&h<=g[2]&&Number(x.score)>=1&&Number(x.score)<=5});return{name:g[0],n:arr.length,avg:arr.length?arr.reduce(function(n,x){return n+Number(x.score)},0)/arr.length:0}});
  var taskHist=[];['taskHistory','completedTaskHistory','taskRecords','completionHistory'].forEach(function(k){if(Array.isArray(a[k]))taskHist=taskHist.concat(a[k])});
- return '<section class="cp-panel"><span class="cp-eyebrow">PERSONAL PATTERNS · EVIDENCE FIRST</span><h3>你的个人规律</h3><p class="cp-lead">这三个分析只用已保存的记录。样本不足时不画趋势，不把某个时段武断称为黄金时段。</p><div class="cp-pattern-card"><h4>1. 我的精力时段 · 按签到统计</h4>'+(hist.length>=2?groups.map(function(g){return '<div class="cp-bar-row"><span>'+g.name+'</span><div class="cp-bar"><i style="width:'+(g.n?g.avg/5*100:0)+'%"></i></div><b>'+(g.n?g.avg.toFixed(1)+'/5':'暂无')+'</b><small>'+g.n+' 次</small></div>'}).join(''):'<p class="cp-muted">目前有 '+hist.length+' 次精力记录。至少记录 2 次后显示个人变化；按时间段积累更多记录后再比较。</p>')+'</div><div class="cp-pattern-card"><h4>2. 任务学习曲线 · 同类任务真实耗时</h4><p>'+(taskHist.length>=2?'找到 '+taskHist.length+' 条任务记录；后续可按同类任务的真实完成耗时校准。':'目前只有 '+taskHist.length+' 条可识别任务历史。至少需要 2 条有效的真实耗时记录，才展示学习曲线；当前不编造耗时。')+'</p></div><div class="cp-pattern-card"><h4>3. 认知负荷与恢复</h4><p>精力反馈 '+hist.length+' 次 · 疲惫记录 '+(a.fatigueLog||[]).length+' 条 · 当前估算置信度 '+esc(brain().confidence)+'。这是排程辅助信号，不是生理检测。</p></div><div class="cp-research"><h4>研究依据</h4><p><a href="https://pubmed.ncbi.nlm.nih.gov/39422518/" target="_blank" rel="noopener noreferrer">2024 认知疲劳客观测量系统综述</a>：现实环境中可靠测量仍有局限。</p><p><a href="https://pubmed.ncbi.nlm.nih.gov/40293205/" target="_blank" rel="noopener noreferrer">2025 昼夜节律与认知表现系统综述</a>：时段效应并非人人一致，需要结合个体与任务。</p><p><a href="https://pubmed.ncbi.nlm.nih.gov/34273814/" target="_blank" rel="noopener noreferrer">中断对任务表现影响的系统综述与荟萃分析</a>：减少中断带来的恢复成本值得纳入排程设计。</p></div></section>';
+ return '<section class="cp-panel"><span class="cp-eyebrow">PERSONAL PATTERNS · EVIDENCE FIRST</span><h3>你的个人规律</h3><p class="cp-lead">这三个分析只用已保存的记录。样本不足时不画趋势，不把某个时段武断称为黄金时段。</p><div class="cp-pattern-card"><h4>1. 我的精力时段 · 按签到统计</h4>'+(hist.length>=2?groups.map(function(g){return '<div class="cp-bar-row"><span>'+g.name+'</span><div class="cp-bar"><i style="width:'+(g.n?g.avg/5*100:0)+'%"></i></div><b>'+(g.n?g.avg.toFixed(1)+'/5':'暂无')+'</b><small>'+g.n+' 次</small></div>'}).join(''):'<p class="cp-muted">目前有 '+hist.length+' 次精力记录。至少记录 2 次后显示个人变化；按时间段积累更多记录后再比较。</p>')+'</div><div class="cp-pattern-card"><h4>2. 任务学习曲线 · 同类任务真实耗时</h4><p>'+(taskHist.length>=2?'找到 '+taskHist.length+' 条任务记录；后续可按同类任务的真实完成耗时校准。':'目前只有 '+taskHist.length+' 条可识别任务历史。至少需要 2 条有效的真实耗时记录，才展示学习曲线；当前不编造耗时。')+'</p></div><div class="cp-pattern-card"><h4>3. 认知负荷与恢复</h4><p>精力反馈 '+hist.length+' 次 · 疲惫记录 '+(a.fatigueLog||[]).length+' 条 · 当前估算置信度 '+esc(brain().confidence)+'。这是排程辅助信号，不是生理检测。</p></div><div class="cp-research"><h4>研究依据 · 用于设计，不等于个人诊断</h4><p><a href="https://pubmed.ncbi.nlm.nih.gov/39422518/" target="_blank" rel="noopener noreferrer">Dickens 等，2024：认知疲劳客观测量系统综述</a>：疲劳是复杂状态，单一信号难以可靠实时判定，因此保留主观反馈并标注置信度。</p><p><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC9432722/" target="_blank" rel="noopener noreferrer">Albulescu 等，2022：微休息系统综述与荟萃分析（22 个样本，N=2,335）</a>：对活力与疲劳有小幅改善；总体表现提升不显著，高消耗任务可能需要超过 10 分钟的恢复。</p><p><a href="https://www.annualreviews.org/content/journals/10.1146/annurev-psych-022824-043825" target="_blank" rel="noopener noreferrer">Cajochen & Schmidt，2025：昼夜节律与认知综述</a>：昼夜节律会影响认知，但睡眠债、个体差异和任务类型都会改变结果。</p><p><a href="https://pubmed.ncbi.nlm.nih.gov/7669837/" target="_blank" rel="noopener noreferrer">Neubauer & Freudenthaler，1995：90 分钟认知周期检验</a>：未发现稳定的 90 分钟认知表现周期，所以不能把“专注 90 分钟”当成普遍规律。</p><p><a href="https://www.biologicalpsychiatryjournal.com/article/S0006-3223%2824%2900065-9/fulltext" target="_blank" rel="noopener noreferrer">Wolpe 等，2024：什么是心理努力？</a>：实际认知工作与主观费力感有关联但并非同一件事，故需要同时记录任务负荷和个人感受。</p></div></section>';
 }
 function quickSearchPanel(){
  var ai=$('#view-ai-p2');if(!ai||$('#cp-ai-knowledge'))return;
