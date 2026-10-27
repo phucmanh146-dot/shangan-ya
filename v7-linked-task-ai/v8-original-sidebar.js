@@ -12,7 +12,7 @@ function arrange(){
  var others=[];
  ['daily','task-workspace','quadrant','deadlines','task-intake','pomodoro','habits','stats','knowledge','sources','ai-p2'].forEach(function(k){if(buttons[k])buttons[k].remove()});
  nav.querySelectorAll(':scope > .app-nav-group-label').forEach(function(n){n.remove()});
- Object.keys(buttons).forEach(function(k){if(['daily','quadrant','deadlines','task-intake','pomodoro','habits','stats','knowledge','sources','ai-p2'].indexOf(k)<0){var b=buttons[k];if(!b.hidden&&b.style.display!=='none')others.push(b);b.remove()}});
+ Object.keys(buttons).forEach(function(k){if(['daily','task-workspace','quadrant','deadlines','task-intake','pomodoro','habits','stats','knowledge','sources','ai-p2'].indexOf(k)<0){var b=buttons[k];if(!b.hidden&&b.style.display!=='none')others.push(b);b.remove()}});
  var group=function(title){var p=document.createElement('p');p.className='app-nav-group-label';p.textContent=title;nav.append(p)};
  var add=function(key,name){var b=buttons[key];if(!b)return;b.hidden=false;b.style.removeProperty('display');b.setAttribute('aria-hidden','false');b.tabIndex=0;label(b,name);nav.append(b)};
  var home=document.createElement('button');home.type='button';home.className='app-nav-item sy-original-home';home.setAttribute('aria-label','工作台首页');home.innerHTML='<span class="app-nav-icon" aria-hidden="true">🏠</span><span>工作台首页</span>';
