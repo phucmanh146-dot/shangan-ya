@@ -56,16 +56,12 @@ function estimate(t,b){
 function getPrefs(){var a=account()||{},p=a.plannerSettings||{},w=a.wellbeingPlan||{},start=nowRounded(),end=21*60;if(start>=20*60)end=23*60+30;if(end-start<60)end=Math.min(1439,start+180);var d=reserveDefaults(brain());return{start:localTime(start),end:localTime(end),buffer:d.buffer,leisure:Math.max(d.leisure,Number(p.dailyLeisureMinutes||0)),recovery:d.recovery,fixed:Math.max(0,Number(w.meet||p.fixedMinutes||0)),breakEvery:brain().score<=2?25:35}}function selectedTasks(){var all=pending();return all.filter(function(t){return chosen.indexOf(taskId(t))>=0})}
 function chooseDefaults(){var all=pending().slice().sort(function(a,b){return priority(b)-priority(a)}),active=String(((account()||{}).activeTimer||{}).taskId||'');chosen=all.filter(function(t){return taskId(t)===active}).map(taskId);if(!chosen.length)chosen=all.slice(0,Math.min(3,all.length)).map(taskId)}
 function mountLauncher(){
- var details=$('#sy-energy-daily-details');if(!details||details.dataset.comfortMounted==='1')return;
- details.dataset.comfortMounted='1';details.open=false;details.style.display='none';
- var old=$('[data-comfort-entry]');if(old)return;
- var card=document.createElement('section');card.className='cp-home-entry';card.dataset.comfortEntry='1';
- card.innerHTML='<div class="cp-entry-icon" aria-hidden="true">◷</div><div class="cp-entry-copy"><span class="cp-kicker">COGNITIVE LOAD · ADAPTIVE PLAN</span><h2>舒适排期</h2><p>系统先评估任务负荷与已有记录，再生成带休息和缓冲的今日安排。</p><div class="cp-entry-status" data-cp-home-status></div></div><button type="button" class="cp-primary" data-cp-open>开始规划 <span aria-hidden="true">→</span></button>';
- details.parentNode.insertBefore(card,details);
- card.querySelector('[data-cp-open]').addEventListener('click',function(){open(0)});
+ var details=$('#sy-energy-daily-details');if(details){details.open=false;details.style.display='none';}
+ var legacy=$('[data-comfort-entry]');if(legacy)legacy.remove();
+ var page=$('#view-comfort');if(page&&!page.dataset.comfortBound){page.dataset.comfortBound='1';page.addEventListener('click',function(e){var route=e.target.closest&&e.target.closest('[data-cp-route]');if(route){e.preventDefault();var key=route.getAttribute('data-cp-route');if(window.SY&&SY.switchAppView)SY.switchAppView(key);return;}var start=e.target.closest&&e.target.closest('[data-cp-open-link]');if(start){e.preventDefault();open(0);}});}
  updateLauncher();
 }
-function updateLauncher(){var host=$('[data-cp-home-status]');if(!host)return;var b=brain(),a=account()||{},n=pending().length;host.textContent='系统估计：'+b.label+' · 待处理任务 '+n+' 项 · '+(a.energyHistory||[]).length+' 条精力记录';}
+function updateLauncher(){var host=$('[data-cp-page-status]');if(!host)return;var b=brain(),a=account()||{},n=pending().length;host.textContent='系统估计：'+b.label+' · 待处理任务 '+n+' 项 · '+(a.energyHistory||[]).length+' 条精力记录';}
 function open(initial){
  if(dialog){dialog.remove();dialog=null}
  step=typeof initial==='number'?initial:0;if(!chosen.length)chooseDefaults();
