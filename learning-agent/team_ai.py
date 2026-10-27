@@ -193,6 +193,14 @@ def reviewer(p, request):
     submitted = task['submission']
     ref = (submitted['artifact_id'], submitted['artifact_version'])
     task_only = task.get('kind') not in ('production','check')
+    # A model receipt is assigned to an eligible reviewer, not attested by them.
+    # The separate human confirmation event is still mandatory.
+    executors = submitted.get('executor_ids', task.get('owner_ids', []))
+    candidates = [m['member_id'] for m in p['diagnosis']['member_profiles']
+                  if task_only or m['member_id'] not in executors]
+    if not candidates:
+        raise ValueError('没有非执行者可复核，请先加入另一位项目成员')
+    reviewer_id = candidates[0]
     new_doc = artifact_store.read(p, *ref)
     d = p['diagnosis']
     relevant = [g for g in d['gaps'] if g['gap_id'] in task['gap_ids']]
@@ -271,7 +279,8 @@ def reviewer(p, request):
                 team.validate_micro_steps({'micro_steps':steps}, check_d)
                 if any((s['input_version']['artifact_id'], s['input_version']['artifact_version']) != ref for s in steps):
                     raise ValueError('剩余动作必须基于当前提交的新版')
-        return {'review_id':uuid.uuid4().hex,'task_id':task['task_id'],'reviewer_id':task['owner_ids'][0],
+        return {'review_id':uuid.uuid4().hex,'task_id':task['task_id'],'reviewer_id':reviewer_id,
+                'reviewer_identity_source':'assigned_model_receipt_not_human_attestation',
                 'plan_version':p['plan']['plan_version'],'diagnosis_version':d['diagnosis_version'],
                 'artifact_id':ref[0],'artifact_version':ref[1],'method':'model','note':team.required(value,'note'),
                 'criterion_results':rows,'gap_results':gaps,'content_read_verified':True,

@@ -26,7 +26,7 @@ class CaptainReviewGateTests(unittest.TestCase):
     packet = fixtures.GeneralLoopTests.packet
 
     def approve(self):
-        self.event('approve', reviewer_id='member-a', criterion_results=[{
+        self.event('approve', reviewer_id='member-reviewer', criterion_results=[{
             'criterion': '写明有效分母和缺失人数', 'passed': True,
             'evidence': '人工确认实际新版line:1的分母与缺失人数'}])
 
@@ -108,7 +108,7 @@ class CaptainReviewGateTests(unittest.TestCase):
         def approval():
             return {**self.ctx(), 'expected_plan_version': self.p['plan']['plan_version'],
                     'task_id': 'G1:deliver', 'action': 'approve', 'note': '人工确认受控新版',
-                    'reviewer_id': 'member-a', 'criterion_results': self.packet()['criterion_results']}
+                    'reviewer_id': 'member-reviewer', 'criterion_results': self.packet()['criterion_results']}
 
         try:
             version = self.p['version']

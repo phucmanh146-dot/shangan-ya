@@ -62,6 +62,9 @@ class GeneralLoopTests(unittest.TestCase):
         self.p = inputs.save_member({**self.ctx(),'member':{'member_id':'member-a','name':'成员甲',
             'owned_task':'核对人数口径','understanding':'缺失不是0，分母要能回查','tools':'文本编辑器',
             'self_reported_capabilities':['数据清洗']}})
+        self.p = inputs.save_member({**self.ctx(),'member':{'member_id':'member-reviewer','name':'独立复核角色',
+            'owned_task':'复核他人成果','understanding':'仅工程夹具，不代表真人复核',
+            'tools':'文本编辑器','self_reported_capabilities':[]}})
         self.upload()
     def model_context(self, value):
         return patch.multiple(ai.rescue, public_config=lambda:{'configured':True},
@@ -86,7 +89,7 @@ class GeneralLoopTests(unittest.TestCase):
         steps = copy.deepcopy(self.p['diagnosis']['gaps'][0]['micro_steps'])
         steps[0]['input_version'] = {'artifact_id':'report','artifact_version':2}
         steps[0]['action'] = '在新版有效分母旁解释剩余口径'
-        return {'review_id':'controlled-review','task_id':'G1:deliver','reviewer_id':'member-a',
+        return {'review_id':'controlled-review','task_id':'G1:deliver','reviewer_id':'member-reviewer',
             'plan_version':self.p['plan']['plan_version'],'diagnosis_version':self.p['diagnosis']['diagnosis_version'],
             'artifact_id':'report','artifact_version':2,'method':'manual','note':'人工控制复核',
             'criterion_results':[{'criterion':'写明有效分母和缺失人数','passed':True,'evidence':'两项已写明','evidence_refs':[ref]}],
@@ -94,7 +97,7 @@ class GeneralLoopTests(unittest.TestCase):
     def confirmed(self, status='closed'):
         self.submitted()
         self.p = handoff.receive_review({**self.ctx(),'review':self.packet(status)})
-        self.event('approve',reviewer_id='member-a',criterion_results=[{'criterion':'写明有效分母和缺失人数',
+        self.event('approve',reviewer_id='member-reviewer',criterion_results=[{'criterion':'写明有效分母和缺失人数',
             'passed':True,'evidence':'人工检查新版line:1有效分母2、缺失1'}])
     def capability(self, passed=True):
         self.p = inputs.record_capability({**self.ctx(),'member_id':'member-a','capability':{'name':'数据清洗',
@@ -211,7 +214,7 @@ class GeneralLoopTests(unittest.TestCase):
         trial=self.p['plan']['tasks'][0]['task_id'];self.event('start',trial)
         with self.assertRaises(ValueError):self.event('submit',trial,artifact_id='fake',artifact_version=1,actual_minutes=3,evidence='口头说明')
         self.event('submit',trial,artifact_id='report',artifact_version=1,actual_minutes=3,evidence='实际记录')
-        t=self.p['plan']['tasks'][0];self.event('approve',trial,reviewer_id='member-a',criterion_results=[{'criterion':t['acceptance_criteria'][0],'passed':True,'evidence':'试做记录已提交'}])
+        t=self.p['plan']['tasks'][0];self.event('approve',trial,reviewer_id='member-reviewer',criterion_results=[{'criterion':t['acceptance_criteria'][0],'passed':True,'evidence':'试做记录已提交'}])
         with self.assertRaisesRegex(ValueError,'能力'):self.event('start')
     def test_confirmed_closure_preserves_history_and_only_remaining(self):
         self.confirmed();old=copy.deepcopy(self.p['plan']['tasks'][0]);old_version=self.p['version']
@@ -299,7 +302,7 @@ class GeneralLoopTests(unittest.TestCase):
         self.setup_inputs();self.capability(False);self.diagnose(['数据清洗']);self.plan()
         for t in copy.deepcopy(self.p['plan']['tasks'][:3]):
             self.event('start',t['task_id']);self.event('submit',t['task_id'],artifact_id='report',artifact_version=1,actual_minutes=3,evidence='人工试做记录')
-            self.event('approve',t['task_id'],reviewer_id='member-a',criterion_results=[{'criterion':t['acceptance_criteria'][0],'passed':True,'evidence':'记录已提交，不代表能力通过'}])
+            self.event('approve',t['task_id'],reviewer_id='member-reviewer',criterion_results=[{'criterion':t['acceptance_criteria'][0],'passed':True,'evidence':'记录已提交，不代表能力通过'}])
         old=copy.deepcopy(self.p['plan']['tasks'][:3]);self.capability(False);self.diagnose(['数据清洗']);self.p=handoff.generate(self.ctx())
         tasks=self.p['proposal']['plan']['tasks'];self.assertEqual(tasks[:3],old)
         self.assertEqual([t['kind'] for t in tasks[3:]],['learn','practice','retest','production'])
