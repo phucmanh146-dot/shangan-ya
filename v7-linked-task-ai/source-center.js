@@ -162,17 +162,40 @@ function associate(){
  if(!window.SY||!SY.saveAcctData)return noteStatus('任务保存接口尚未加载，资料没有写入任务。',true);
  SY.saveAcctData(a);if(SY.refreshCurrentView)SY.refreshCurrentView();noteStatus('已将 '+added+' 份资料关联到《'+task.name+'》。原始链接和读取状态已保留；未读取成功的资料没有关联。')
 }
-function analyze(){
+function showAIAnswer(reply,model,taskName,sourceCount){
+ var host=$('#scResults');if(!host)return;
+ var card=el('article','sc-result sc-ai-answer');
+ card.append(el('div','sc-result-title','本机 AI · 任务解卡结果'));
+ card.append(el('div','sc-result-meta','模型：'+String(model||'本机 AI')+' · 参考 '+sourceCount+' 篇已读取原文'+(taskName?' · 任务：'+taskName:'')));
+ var body=el('pre','sc-result-excerpt',String(reply||''));body.style.whiteSpace='pre-wrap';body.style.overflowWrap='anywhere';body.style.maxHeight='none';card.append(body);
+ if(window.P2VideoPresenter&&typeof window.P2VideoPresenter.createButton==='function'){
+  var video=window.P2VideoPresenter.createButton(String(reply||''));video.classList.add('sc-btn');card.append(video);
+ }else{
+  var fallback=el('p','sc-mini-status','视频讲解模块尚未加载；刷新页面后可生成字幕分镜视频。');card.append(fallback)
+ }
+ host.prepend(card);card.scrollIntoView({behavior:'smooth',block:'start'});
+}
+async function analyze(){
  var selected=selectedItems().filter(function(x){return x.readStatus==='fulltext'});
  if(!selected.length)return noteStatus('请先勾选已读取正文的资料，再交给 AI 分析。',true);
  selected.forEach(addToPool);
  var taskId=$('#scTask')&&$('#scTask').value,a=currentAccount(),task=(a.tasks||[]).find(function(t){return String(t.id)===String(taskId)});
- var taskContext=task?'当前任务：'+String(task.name||'未命名任务')+'。任务描述：'+String(task.description||task.desc||'暂无')+'。请围绕这个任务分析。':'当前尚未选择关联任务。请从资料中识别可关联的已有任务，不要擅自创建或宣称已关联。';
- var titles=selected.map(function(x){return x.title}).join('；');
- var question=document.getElementById('pma-question'),ask=document.getElementById('pma-ask');
- if(window.SY&&SY.switchAppView)SY.switchAppView('knowledge');
- if(question&&ask){question.value=taskContext+'\n\n请基于资料中心刚刚读取成功的真实原文完成分析，资料标题：'+titles+'。逐份说明来源与读取范围，先解释当前任务的下一步，再提取依赖、交付物、验收标准、估时与不确定性、卡点和可执行解法；区分原文事实与推断，不要编造。若需要视频讲解，请把回答整理成可分镜的短句，保留可核验的步骤。';question.dispatchEvent(new Event('input',{bubbles:true}));ask.click();noteStatus('已将 '+selected.length+' 份真实原文及'+(task?'当前任务「'+task.name+'」':'任务未选择的状态')+'带入 AI 工作助手；以 AI 实际返回结果为准。')}
- else noteStatus('资料已进入 AI 资料池，但 AI 输入区未出现。请在知识库进入「遇到困难」模块继续；未收到模型回答前不视为分析完成。',true)
+ var taskName=task?String(task.name||'未命名任务'):'未选择任务';
+ var taskContext=task?'当前任务：'+taskName+'。任务描述：'+String(task.description||task.desc||'暂无')+'。':'当前尚未选择关联任务。请只提出可关联的已有任务建议，不要擅自创建或宣称已关联。';
+ var context=selected.map(function(x){return '资料标题：'+x.title+'\n来源：'+String(x.sourceRef||x.url||'本机 Obsidian')+'\n原文：\n'+String(x.content||'').slice(0,4200)}).join('\n\n---\n\n').slice(0,15000);
+ var question=taskContext+'请使用简体中文，面向 AI 产品经理初学者，严格依据下方已读取的真实资料回答。先用通俗语言解释关键点，再给出下一步操作、依赖、交付物、验收标准、估时与不确定性、可能卡点及解法。引用资料时标注标题；区分原文事实和推断，不要编造。若适合视频讲解，请把回答组织成短句和清晰分镜。';
+ noteStatus('正在调用本机 AI，已带入 '+selected.length+' 份真实全文…');
+ try{
+  var result=await localVaultRequest('/ask',{question:question,task:task?task.name:'',context:context,search:false,mode:'source'});
+  if(!result||!String(result.reply||'').trim())throw Error('模型未返回有效回答');
+  showAIAnswer(result.reply,result.model,task?task.name:'',selected.length);
+  noteStatus('本机 AI 已真实返回回答（'+String(result.model||'模型')+'）；可在结果卡片中生成字幕分镜视频。');
+ }catch(e){
+  var q=document.getElementById('pma-question'),ask=document.getElementById('pma-ask');
+  if(window.SY&&SY.switchAppView)SY.switchAppView('knowledge');
+  if(q&&ask){q.value=taskContext+'\n\n请基于资料中心已读取的原文（'+selected.map(function(x){return x.title}).join('；')+'）完成分析。'+question+'\n\n原文上下文：\n'+context;q.dispatchEvent(new Event('input',{bubbles:true}));ask.click()}
+  noteStatus('本机 AI 调用未完成：'+e.message+'。已尝试把任务与原文带入备用 AI 工作助手；以实际返回结果为准。',true)
+ }
 }
 function routeSelected(){
  var selected=selectedItems().filter(function(x){return x.readStatus==='fulltext'});
