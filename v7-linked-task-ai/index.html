@@ -125,7 +125,8 @@
 @media(max-width:650px){#energy-left-planner{padding:14px!important}#energy-left-planner .elp-brain-actions{grid-template-columns:1fr}#energy-left-planner .elp-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}#energy-left-planner .elp-brain-question{font-size:18px}}
 
 </style>
-<link rel="stylesheet" href="./comfort-planner-flow.css?v=20261027-unified-v3">
+<link rel="stylesheet" href="./comfort-planner-flow.css?v=20261027-task-monitor-v4">
+<link rel="stylesheet" href="./task-workspace.css?v=20261027-monitor-v1">
 </head>
 <body>
 
@@ -441,10 +442,8 @@
           <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><path d="M4 6l1 1 2-2"/><path d="M4 12l1 1 2-2"/><path d="M4 18l1 1 2-2"/></svg></span>
           <span>每日清单</span>
         </button>
-        <button class="app-nav-item" data-view="comfort" type="button" aria-label="舒适排期">
-          <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/><path d="M8 2.8 6.5 4.5M16 2.8l1.5 1.7"/></svg></span>
-          <span>舒适排期</span>
-        </button>
+<button class="app-nav-item" data-view="task-workspace" data-workspace-home type="button"><span class="app-nav-icon">✦</span><span>任务工作区</span></button>
+
         <button class="app-nav-item" data-view="quadrant" type="button">
           <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="13" width="7.5" height="7.5" rx="1.5"/></svg></span>
           <span>四象限</span>
@@ -472,18 +471,7 @@
           <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10"/><path d="M12 20V4"/><path d="M20 20v-7"/><path d="M2 20h20"/></svg></span>
           <span>数据档案</span>
         </button>
-                <button class="app-nav-item" data-view="ai-p2" type="button" id="aiP2Nav" aria-hidden="false" tabindex="0">
-          <span class="app-nav-icon" aria-hidden="true">✦</span><span>AI 解卡</span>
-        </button>
-        <button class="app-nav-item" data-view="knowledge" type="button">
-          <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5v-17Z"/><path d="M4 19a2.5 2.5 0 0 1 2.5-2.5H20"/></svg></span>
-          <span>知识库</span>
-        </button>
-        <button class="app-nav-item" data-view="sources" type="button">
-          <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a1.5 1.5 0 0 1 1.5-1.5H10l2 2h7.5A1.5 1.5 0 0 1 21 9v8.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5Z"/><path d="M3 9.5h18"/></svg></span>
-          <span>资料中心</span>
-        </button>
-        <p class="app-nav-group-label">账号</p>
+                <p class="app-nav-group-label">账号</p>
         <button class="app-nav-item" data-view="profile" type="button">
           <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg></span>
           <span>我的</span>
@@ -665,14 +653,24 @@
       <section class="app-view" data-view="quadrant" id="view-quadrant" hidden>
         <div id="quadrantBody"></div>
       </section>
-      <section class="app-view app-ai-chat-view" data-view="ai-p2" id="view-ai-p2" hidden>
+      <section class="app-view task-workspace-view" data-view="task-workspace" id="view-task-workspace" hidden><div class="tw-shell">
+<header class="tw-head"><div><p class="tw-eyebrow">ONE TASK · REAL EVIDENCE · ADAPTIVE PLAN</p><h1>任务工作区</h1><p>监测任务是否卡住，读取真实资料，按证据拆解下一步，再根据实际耗时与精力安排执行。</p></div><span class="tw-state-pill"><i></i><span id="twMonitorStatus">核对任务状态中</span></span></header>
+<div class="tw-context-bar"><label class="tw-task-picker" for="twTaskSelect"><span>当前任务</span><select id="twTaskSelect"><option value="">正在读取原有任务…</option></select></label><div class="tw-task-metrics" id="twTaskMetrics"></div></div>
+<nav class="tw-tabs" aria-label="任务工作区步骤" role="tablist"><button type="button" role="tab" aria-selected="true" class="is-active" data-tw-tab="overview">任务监测</button><button type="button" role="tab" aria-selected="false" data-tw-tab="materials">资料与证据</button><button type="button" role="tab" aria-selected="false" data-tw-tab="ai">AI 解卡与拆解</button><button type="button" role="tab" aria-selected="false" data-tw-tab="schedule">精力与排期</button><button type="button" role="tab" aria-selected="false" data-tw-tab="knowledge">知识库</button></nav>
+<div data-tw-panel="overview"><section class="tw-overview-hero"><div><span class="tw-kicker">CURRENT TASK</span><h2 id="twSelectedTaskTitle">先选择一个真实任务</h2><p id="twSelectedTaskDesc">不虚构进度；根据真实任务、资料、计时和状态反馈判断下一步。</p></div><div class="tw-hero-actions"><button type="button" class="tw-btn tw-btn-primary" data-tw-go="materials">核对资料 →</button><button type="button" class="tw-btn" data-tw-go="ai">按资料拆解</button><button type="button" class="tw-btn" data-tw-go="schedule">重新排期</button></div></section>
+<div class="tw-overview-grid"><article class="tw-card"><div class="tw-card-head"><span class="tw-card-icon">▤</span><div><h3>资料读取状态</h3><p>区分已保存链接与真正读取的正文</p></div></div><div id="twMaterialsSummary" class="tw-card-body"></div><button class="tw-inline-link" type="button" data-tw-go="materials">打开资料中心核对正文 ↗</button></article>
+<article class="tw-card"><div class="tw-card-head"><span class="tw-card-icon">◷</span><div><h3>实际耗时与精力反馈</h3><p>优先看真实记录，不套统一分钟数</p></div></div><div id="twHistorySummary" class="tw-card-body"></div><div class="tw-energy-checkin"><span>此刻脑袋转得动吗？</span><div><button type="button" data-tw-energy="4">清醒</button><button type="button" data-tw-energy="3">一般</button><button type="button" data-tw-energy="2">读不进去</button><button type="button" data-tw-energy="1">被抽干</button></div><p id="twEnergySaved" role="status">仅记录你的主动反馈，不通过摄像头推断。</p></div></article></div>
+<section class="tw-dependency-card"><div class="tw-section-head"><div><span class="tw-kicker">BLOCKER CHAIN</span><h3>当前项目阻塞链</h3><p>依据你描述的困难整理为依赖草图；未经确认不会写入原任务清单。</p></div><button class="tw-inline-link" type="button" data-tw-go="ai">结合真实资料细化 ↗</button></div>
+<div class="tw-dependency-flow"><div class="tw-dependency-node"><b>01</b><span>上岸鸭项目收尾</span><small>确认可演示版本、功能与未解决问题</small></div><span class="tw-dependency-arrow">↓</span><div class="tw-dependency-node"><b>02</b><span>项目证据卡</span><small>本人行动、真实产出、截图/代码/演示与反思</small></div><div class="tw-branch-row"><span>↙</span><span>↘</span></div><div class="tw-dependency-split"><div class="tw-dependency-node"><b>03A</b><span>更新自我介绍</span><small>基于证据写经历，不虚构成果</small></div><div class="tw-dependency-node"><b>03B</b><span>整理项目 PPT</span><small>复用同一份证据，按展示逻辑组织</small></div></div><span class="tw-dependency-arrow">↓</span><div class="tw-dependency-node"><b>04</b><span>口播脚本与视频</span><small>介绍稿确认后再录制、剪辑和验收</small></div><span class="tw-dependency-arrow">↓</span><div class="tw-dependency-node tw-dependency-final"><b>05</b><span>北辰青年项目投递</span><small>核对真实要求、材料与截止日期</small></div></div><p class="tw-dependency-note"><strong>处理原则：</strong>项目证据是上游；自我介绍与 PPT 可共享证据并行准备；口播依赖确认稿件；投递前核对官方要求。实际状态以原始任务为准。</p></section>
+<section class="tw-next-step"><div><span class="tw-kicker">NEXT ACTION</span><h3 id="twNextTitle">先核对当前任务资料</h3><p id="twNextCopy">资料不足时先补齐证据，不生成通用学习路线。</p></div><button type="button" class="tw-btn tw-btn-primary" data-tw-go="materials">继续下一步 →</button></section></div>
+<section class="app-view app-ai-chat-view" data-view="ai-p2" data-tw-embedded="ai" id="view-ai-p2" hidden>
         <div class="embedded-p2-head"><div><strong>进阶 AI 工具</strong><span>按需使用 · 视频解析 · 思维导图 · 通俗讲解 · 多模型设置</span></div><span class="embedded-p2-ready" id="embeddedP2Status">请按页面提示核验真实连接状态</span></div>
         <iframe id="embeddedP2Frame" title="上岸鸭原工作台进阶 AI 工具" src="./ai-p2.html?embedded=1&linkedTaskAi=20261025-task-centered-v1" allow="clipboard-write; microphone" loading="lazy"></iframe>
       </section>
-      <section class="app-view" data-view="knowledge" id="view-knowledge" hidden>
+      <section class="app-view" data-view="knowledge" data-tw-embedded="knowledge" id="view-knowledge" hidden>
         <div id="knowledgeBody"></div>
       </section>
-      <section class="app-view cp-page-view" data-view="comfort" id="view-comfort" hidden>
+      <section class="app-view cp-page-view" data-view="comfort" data-tw-embedded="schedule" id="view-comfort" hidden>
         <div class="cp-page">
           <header class="cp-page-top">
             <div><p class="app-greeting-eyebrow">COGNITIVE LOAD · ADAPTIVE PLANNING</p><h1>舒适排期</h1><p>先接住你的状态，再安排真实任务。工作、休息、放空和缓冲一起进入日程。</p></div>
@@ -693,10 +691,10 @@
           <section class="cp-page-footnote"><strong>使用原则</strong><span>系统建议不替代你的感受。若你反馈“脑袋被抽干”，先恢复再重新评估；计划可以顺延，不以牺牲休息来补齐。</span><a href="#view-stats" data-cp-route="stats">查看历史与复盘 ↗</a></section>
         </div>
       </section>
-      <section class="app-view" data-view="sources" id="view-sources" hidden>
+      <section class="app-view" data-view="sources" data-tw-embedded="materials" id="view-sources" hidden>
         <div id="sourceCenterRoot"></div>
       </section>
-      <section class="app-view" data-view="deadlines" id="view-deadlines" hidden>
+      </div></section><section class="app-view" data-view="deadlines" id="view-deadlines" hidden>
         <div id="deadlinesBody"></div>
       </section>
       <section class="app-view" data-view="shop" id="view-shop" hidden>
@@ -1275,7 +1273,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 var bootObs=new MutationObserver(function(){if(document.getElementById('view-daily')&&!document.getElementById('energy-left-planner'))mount()});bootObs.observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
-<script src="./comfort-planner-flow.js?v=20261027-unified-v3"></script>
+<script src="./comfort-planner-flow.js?v=20261027-task-monitor-v4"></script>
+<script src="./task-workspace.js?v=20261027-monitor-v1"></script>
 </body>
 </html>
 
