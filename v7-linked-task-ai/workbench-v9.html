@@ -80,7 +80,7 @@
 @media(max-width:760px){#energy-left-planner .elp-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 </style>
-<link rel="stylesheet" href="./comfort-planner-flow.css?v=20261027-flow-v1">
+<link rel="stylesheet" href="./comfort-planner-flow.css?v=20261027-unified-v3">
 </head>
 <body>
 
@@ -396,6 +396,10 @@
           <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11"/><path d="M9 12h11"/><path d="M9 18h11"/><path d="M4 6l1 1 2-2"/><path d="M4 12l1 1 2-2"/><path d="M4 18l1 1 2-2"/></svg></span>
           <span>每日清单</span>
         </button>
+        <button class="app-nav-item" data-view="comfort" type="button" aria-label="舒适排期">
+          <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/><path d="M8 2.8 6.5 4.5M16 2.8l1.5 1.7"/></svg></span>
+          <span>舒适排期</span>
+        </button>
         <button class="app-nav-item" data-view="quadrant" type="button">
           <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="13" width="7.5" height="7.5" rx="1.5"/></svg></span>
           <span>四象限</span>
@@ -622,6 +626,27 @@
       </section>
       <section class="app-view" data-view="knowledge" id="view-knowledge" hidden>
         <div id="knowledgeBody"></div>
+      </section>
+      <section class="app-view cp-page-view" data-view="comfort" id="view-comfort" hidden>
+        <div class="cp-page">
+          <header class="cp-page-top">
+            <div><p class="app-greeting-eyebrow">COGNITIVE LOAD · ADAPTIVE PLANNING</p><h1>舒适排期</h1><p>先接住你的状态，再安排真实任务。工作、休息、放空和缓冲一起进入日程。</p></div>
+            <span class="cp-page-pill"><span class="cp-page-live-dot"></span>任务中心已关联</span>
+          </header>
+          <section class="cp-page-hero">
+            <div class="cp-page-hero-copy"><span class="cp-page-kicker">TODAY · ONE STEP AT A TIME</span><h2>今天不需要把自己排满。</h2><p>系统参考当前计时、卡壳记录、近期反馈和任务历史，保守估算认知负荷。你只需在状态变化时点一下，不必预测全天精力。</p>
+              <div class="cp-page-actions"><button type="button" class="cp-primary" data-cp-open>开始舒适排期 <span aria-hidden="true">→</span></button><a href="#view-daily" data-cp-route="daily" class="cp-text-link">查看每日清单 ↗</a></div>
+            </div>
+            <div class="cp-page-hero-visual" aria-hidden="true"><div class="cp-orbit cp-orbit-one"></div><div class="cp-orbit cp-orbit-two"></div><div class="cp-orbit-core"><span>休</span></div><span class="cp-orbit-label cp-orbit-label-a">专注</span><span class="cp-orbit-label cp-orbit-label-b">恢复</span><span class="cp-orbit-label cp-orbit-label-c">留白</span></div>
+          </section>
+          <div class="cp-page-grid">
+            <article class="cp-page-card"><span class="cp-page-card-icon">◷</span><div><h3>认知负荷估算</h3><p>结合连续用脑、卡壳与状态反馈；信息不足时明确标记置信度，不假装读取脑电。</p><a href="#view-comfort" data-cp-open-link>进入状态评估 ↗</a></div></article>
+            <article class="cp-page-card"><span class="cp-page-card-icon">▤</span><div><h3>真实任务排期</h3><p>只从原有待办选择任务，参考历史耗时与复杂度；延后不等于放弃，也不会自动完成。</p><a href="#view-daily" data-cp-route="daily">回到任务清单 ↗</a></div></article>
+            <article class="cp-page-card"><span class="cp-page-card-icon">☁</span><div><h3>休息与弹性缓冲</h3><p>预留发呆、娱乐、短休与卡壳缓冲，不把每一分钟塞满，也不把娱乐当作欠账。</p><a href="#view-comfort" data-cp-open-link>设置恢复时间 ↗</a></div></article>
+            <article class="cp-page-card"><span class="cp-page-card-icon">⌕</span><div><h3>资料与 AI 解卡</h3><p>先从资料中心核对真实来源，再将当前任务带入 AI 解卡；未读取的笔记不会显示成已读取。</p><a href="#view-sources" data-cp-route="sources">打开资料中心 ↗</a><a href="#view-ai-p2" data-cp-route="ai-p2">打开 AI 工作区 ↗</a></div></article>
+          </div>
+          <section class="cp-page-footnote"><strong>使用原则</strong><span>系统建议不替代你的感受。若你反馈“脑袋被抽干”，先恢复再重新评估；计划可以顺延，不以牺牲休息来补齐。</span><a href="#view-stats" data-cp-route="stats">查看历史与复盘 ↗</a></section>
+        </div>
       </section>
       <section class="app-view" data-view="sources" id="view-sources" hidden>
         <div id="sourceCenterRoot"></div>
@@ -1204,7 +1229,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 var bootObs=new MutationObserver(function(){if(document.getElementById('view-daily')&&!document.getElementById('energy-left-planner'))mount()});bootObs.observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
-<script src="./comfort-planner-flow.js?v=20261027-flow-v2"></script>
+<script src="./comfort-planner-flow.js?v=20261027-unified-v3"></script>
 </body>
 </html>
 
