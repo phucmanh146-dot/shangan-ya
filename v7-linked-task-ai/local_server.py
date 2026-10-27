@@ -38,7 +38,7 @@ class Handler(SimpleHTTPRequestHandler):
         trusted_origins = ('https://shanganya-full-public-20261017-production.up.railway.app',
                            'https://shanganya-v8-workbench-production.up.railway.app')
         public_bridge_origin = origin in trusted_origins and (
-            path == '/api/feishu/desktop-read' or path.startswith('/api/wechat-private/'))
+            path == '/api/feishu/desktop-read' or path.startswith('/api/wechat-private/') or path.startswith('/api/obsidian-bridge/'))
         return self.headers.get('Host', '') in hosts and (local_origin or public_bridge_origin)
     def end_headers(self):
         origin = self.headers.get('Origin')
@@ -84,6 +84,30 @@ class Handler(SimpleHTTPRequestHandler):
         finally:
             try:win32gui.SetForegroundWindow(foreground)
             except Exception:pass
+    def obsidian_bridge(self, method, data=None):
+        """Authenticated, read-only bridge from the hosted workbench to this user's local Obsidian vault."""
+        origin = self.headers.get('Origin')
+        trusted = ('https://shanganya-v8-workbench-production.up.railway.app',
+                   'https://shanganya-full-public-20261017-production.up.railway.app')
+        if origin not in trusted or not self.allowed():
+            return self.send_json({'error':'来源不允许访问本机知识库'},403)
+        route = urlparse(self.path).path[len('/api/obsidian-bridge'):]
+        if route == '/pairing' and method == 'GET':
+            return self.send_json({'ok':True,'token':WECHAT_BRIDGE_TOKEN,'expires':'本机服务进程结束后失效'})
+        if self.headers.get('X-Focus-Client','') != WECHAT_BRIDGE_TOKEN:
+            return self.send_json({'error':'本机知识库桥接授权已失效，请重新连接'},403)
+        try:
+            if method == 'GET' and route == '/status': return self.send_json(vault_info())
+            if method == 'GET' and route == '/list': return self.send_json(vault_list(800, False))
+            if method == 'POST' and route == '/search': return self.send_json(vault_search((data or {}).get('query',''), (data or {}).get('limit',35)))
+            if method == 'POST' and route == '/read': return self.send_json(vault_read((data or {}).get('path',''), (data or {}).get('limit',60000)))
+            if method == 'POST' and route == '/open': return self.send_json(vman.open_vault())
+            if method == 'POST' and route == '/ask': return self.send_json(ask_ai(data or {}))
+            return self.send_json({'error':'本机知识库接口不存在'},404)
+        except RescueError as ex: return self.send_json({'error':str(ex),'code':ex.code,**ex.extra},ex.status)
+        except (ValueError, TypeError) as ex: return self.send_json({'error':str(ex)[:300] or '请求参数无效'},422)
+        except Exception: return self.send_json({'error':'本机知识库请求失败；请检查 Vault 路径与服务日志。','code':'OBSIDIAN_BRIDGE_ERROR'},502)
+
     def do_OPTIONS(self):
         if not self.allowed(): return self.send_json({'error':'来源不允许'},403)
         self.send_response(204); self.end_headers()
@@ -92,6 +116,8 @@ class Handler(SimpleHTTPRequestHandler):
         path = urlparse(self.path).path
         if path.startswith('/api/wechat-private/'):
             return self.wechat_private('GET')
+        if path.startswith('/api/obsidian-bridge/'):
+            return self.obsidian_bridge('GET')
         if path == '/api/health':
             cfg = public_config()
             try:
@@ -153,6 +179,8 @@ class Handler(SimpleHTTPRequestHandler):
             if not isinstance(data,dict): raise ValueError()
         except (ValueError,UnicodeError): return self.send_json({'error':'请求格式不正确'},400)
         try:
+            if urlparse(self.path).path.startswith('/api/obsidian-bridge/'):
+                return self.obsidian_bridge('POST',data)
             if self.path.startswith('/api/wechat-private/'):
                 return self.wechat_private('POST',data)
             if self.path=='/api/pm/obsidian-event':
