@@ -9,3 +9,5 @@ Open the printed run directory's index.html. Expand steps to inspect 14 events/c
 Full audit: docs/captain-audit-2026-10-27.md. One-page pack: docs/captain-one-page-evidence-2026-10-27.md.
 
 Runtime mode=live enables existing actual-byte gates; top-level trace/page is SIMULATED and live_verified=false. Run without Python optimization (-O), since assertions are acceptance checks. Dependencies are the existing learning-agent environment; this demo adds no dependency.
+
+Update 2026-10-27: controlled fixtures now register a separate reviewer role; the new production gate rejects executor IDs at receipt and confirmation. Both roles remain scripted, so this is still not a real independent human review. See docs/captain-progress-and-member-acceptance-2026-10-27.md.

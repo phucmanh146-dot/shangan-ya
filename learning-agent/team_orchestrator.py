@@ -365,6 +365,19 @@ def validate_task_start(p, t):
     if active:
         raise ValueError('请先保存当前进行中任务的现场，再切换任务：'+active['title'])
 
+def assert_independent_reviewer(p, task, reviewer_id):
+    """Recorded project identities, not authentication or semantic verification."""
+    if not p.get('artifact_storage_required') or task.get('kind') in ('trial','learn','practice','retest'):
+        return
+    submission = task.get('submission') or {}
+    # Legacy submissions predate executor snapshots: conservatively use all owners.
+    executors = submission.get('executor_ids', task.get('owner_ids', []))
+    if not executors:
+        raise ValueError('执行者未确认，不能完成独立复核；请补充执行记录后重新提交')
+    if reviewer_id in executors:
+        raise ValueError('独立复核不能由本次成果执行者完成，请选择另一位项目成员')
+
+
 def feedback(data):
     p = current(data)
     if not p['plan'] or p['plan_stale']:
@@ -394,6 +407,14 @@ def feedback(data):
             artifact_store.read(p, record['artifact_id'], record['artifact_version'])
         record['actual_minutes']=integer(data,'actual_minutes')
         record['evidence']=required(data,'evidence')
+        executors = data.get('executor_ids', t['owner_ids'])
+        if (not isinstance(executors, list) or not executors or
+                any(not isinstance(x, str) or not x.strip() for x in executors) or
+                len(set(executors)) != len(executors) or
+                not set(executors) <= {m['member_id'] for m in p['diagnosis']['member_profiles']}):
+            raise ValueError('executor_ids 需要不重复的实际执行成员编号，且必须属于本项目')
+        record['executor_ids'] = list(executors)
+        record['executor_record_source'] = 'declared' if 'executor_ids' in data else 'task_owner_snapshot'
         t['submission']=copy.deepcopy(record)
         t.pop('external_review', None)
         t['status']='pending_review'
@@ -408,6 +429,7 @@ def feedback(data):
             artifact_store.read(p, record['artifact_id'], record['artifact_version'])
         if record['reviewer_id'] not in {m['member_id'] for m in p['diagnosis']['member_profiles']}:
             raise ValueError('验收成员不在项目中')
+        assert_independent_reviewer(p, t, record['reviewer_id'])
         record['evidence']=t['submission']['evidence']
         packet = (t.get('external_review') or {}).get('packet')
         if action == 'approve' and p.get('artifact_storage_required') and t.get('kind') not in ('trial','learn','practice','retest'):

@@ -165,6 +165,7 @@ def receive_review(data, content_read=False):
         raise team.Conflict('A 复核的成果版本与当前提交不一致')
     if review['reviewer_id'] not in {m['member_id'] for m in p['diagnosis']['member_profiles']}:
         raise ValueError('复核成员不在项目中')
+    team.assert_independent_reviewer(p, task, review['reviewer_id'])
     if review.get('method') not in ('manual', 'model', 'rules'):
         raise ValueError('复核需声明 method：manual、model 或 rules')
     rows = team.required(review, 'criterion_results', list)
