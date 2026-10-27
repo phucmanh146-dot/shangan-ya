@@ -54,7 +54,7 @@ function estimate(t,b){
  return {minutes:Math.round(Math.max(5,Math.min(180,base*factor))),basis:hist.length?'按 '+hist.length+' 条历史完成记录校准':(t.plannedMinutes||t.estMinutes||t.estimatedMinutes?'参考任务原估时，再按复杂度调整':'缺少历史耗时，使用保守初始估时'),complex:complex,samples:hist.length};
 }
 function getPrefs(){var a=account()||{},p=a.plannerSettings||{},w=a.wellbeingPlan||{},start=nowRounded(),end=21*60;if(start>=20*60)end=23*60+30;if(end-start<60)end=Math.min(1439,start+180);var d=reserveDefaults(brain());return{start:localTime(start),end:localTime(end),buffer:d.buffer,leisure:Math.max(d.leisure,Number(p.dailyLeisureMinutes||0)),recovery:d.recovery,fixed:Math.max(0,Number(w.meet||p.fixedMinutes||0)),breakEvery:brain().score<=2?25:35}}function selectedTasks(){var all=pending();return all.filter(function(t){return chosen.indexOf(taskId(t))>=0})}
-function chooseDefaults(){var all=pending().slice().sort(function(a,b){return priority(b)-priority(a)}),active=String(((account()||{}).activeTimer||{}).taskId||'');chosen=all.filter(function(t){return taskId(t)===active}).map(taskId);if(!chosen.length)chosen=all.slice(0,Math.min(3,all.length)).map(taskId)}
+function chooseDefaults(){var all=pending().slice().sort(function(a,b){return priority(b)-priority(a)}),acct=account()||{},active=String(window.__SYTaskWorkspaceSelectedTaskId||((acct.activeTimer||{}).taskId)||acct.priorityFocusTaskId||'');chosen=all.filter(function(t){return taskId(t)===active}).map(taskId);if(!chosen.length)chosen=all.slice(0,Math.min(3,all.length)).map(taskId)}
 function mountLauncher(){
  var details=$('#sy-energy-daily-details');if(details){details.open=false;details.style.display='none';}
  var legacy=$('[data-comfort-entry]');if(legacy)legacy.remove();
