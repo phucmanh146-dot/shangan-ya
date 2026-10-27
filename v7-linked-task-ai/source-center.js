@@ -9,6 +9,15 @@ function uid(){return 'source-'+Date.now().toString(36)+'-'+Math.random().toStri
 function account(){return String(window.SY&&SY.currentAccountKey||'guest')}
 function currentAccount(){return window.SY&&SY.getAcctData?SY.getAcctData():{tasks:[]}}
 function noteStatus(text,bad){var n=$('#scStatus');if(n){n.textContent=text||'';n.style.color=bad?'#a43f52':''}}
+var localVaultToken='';
+async function localVaultRequest(route,data){
+ var base='http://127.0.0.1:8877/api/obsidian-bridge';
+ if(!localVaultToken){var pair=await fetch(base+'/pairing',{method:'GET',mode:'cors',credentials:'omit',cache:'no-store'});var paired=await pair.json().catch(function(){return {}});if(!pair.ok||!paired.token)throw Error('本机知识库桥接未启动（127.0.0.1:8877），或浏览器未允许访问本机网络。');localVaultToken=paired.token}
+ var opts={method:data?'POST':'GET',mode:'cors',credentials:'omit',cache:'no-store',headers:{'X-Focus-Client':localVaultToken}};
+ if(data){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(data)}
+ var response=await fetch(base+route,opts),payload=await response.json().catch(function(){return {}});
+ if(response.status===403)localVaultToken='';if(!response.ok||payload.error)throw Error(payload.error||('本机知识库接口返回 '+response.status));return payload
+}
 function sourceType(url){var s=String(url||'').toLowerCase();if(s.indexOf('obsidian://')===0)return 'Obsidian';if(/feishu\.cn|larksuite\.com/.test(s))return '飞书';if(/bilibili\.com|b23\.tv|youtube\.com|youtu\.be|douyin\.com/.test(s))return '视频链接';return '网页链接'}
 function titleFor(doc,url,name){return String(doc&&doc.title||name||url||'未命名资料').slice(0,180)}
 function contentFor(doc){try{return window.SYSourceIO.toMarkdown(doc)}catch(_){return String(doc&&(doc.text||doc.content)||'')}}
@@ -77,46 +86,36 @@ async function refreshHealth(){
 }
 async function refreshVaultState(){
  var n=$('#scVaultState');if(!n)return;
- try{
-  if(window.SY&&typeof SY.backendCall==='function'){
-   var r=await SY.backendCall('/api/health',null,8000),v=r&&r.ok&&r.data&&r.data.vault;
-   if(v&&v.connected){if((v.name||'')==='vault'&&Number(v.count||0)===0){n.textContent='后端只识别到空的「vault」，不是目标「韩奕知识复盘」。请检查 Windows 本机服务是否在线及其实际 Vault 配置；暂不标记为已读取。';return}n.textContent='本机已识别「'+(v.name||'Obsidian')+'」· '+(Number(v.count)>0?v.count+' 篇可检索资料':'笔记数未验证')+'；只有成功读取全文后才能关联任务。';return}
-  }
- }catch(_){}
- try{var s=window.SYKnowledge&&SYKnowledge.getStatus?SYKnowledge.getStatus():null;n.textContent=s&&s.connected?'已连接「'+(s.vaultName||'Obsidian')+'」· '+s.count+' 篇已导入资料':'尚未连接本机 Obsidian；点击连接后选择「韩奕知识复盘」或已有库。'}
- catch(_){n.textContent='尚未读取到 Obsidian 连接状态。'}
+ try{var v=await localVaultRequest('/status');if(v&&v.connected){n.textContent='已直连本机「'+(v.name||'Obsidian')+'」· '+Number(v.count||0)+' 篇真实资料 · 只读访问；读取全文后才可关联任务。';n.dataset.ok='true';return}throw Error(v&&v.note||'本机 Vault 不可用')}
+ catch(localError){n.textContent='本机知识库尚未接通：'+localError.message+'。云端访客库不能代替本机 D 盘资料。点击「选择 / 连接知识库」重试。';n.dataset.ok='false'}
 }
 async function searchObsidian(){
  var input=$('#scObsidianQuery'),host=$('#scObsidianResults'),query=String(input&&input.value||'').trim();
  if(!query){input.focus();return noteStatus('先输入 Obsidian 搜索词。',true)}
- if(!host)return;host.replaceChildren();host.append(el('div','sc-empty','正在搜索本机 Obsidian 标题和正文…'));
+ if(!host)return;host.replaceChildren(el('div','sc-empty','正在连接本机「韩奕知识复盘」并搜索真实笔记…'));
  try{
-  var r=await SY.backendCall('/api/pm/tutorials?q='+encodeURIComponent(query),undefined,45000);
-  if(!r||!r.ok)throw Error(r&&r.error||'本机知识库搜索未成功');
-  var data=r.data||{},notes=Array.isArray(data.notes)?data.notes:[];
-  host.replaceChildren();
-  if(!notes.length)host.append(el('div','sc-empty','没有找到匹配笔记。试试更短的关键词。'));
+  var data=await localVaultRequest('/search',{query:query,limit:35});
+  if(!data.connected)throw Error(data.note||'本机知识库尚未连接');
+  var notes=Array.isArray(data.results)?data.results:[];host.replaceChildren();
+  if(!notes.length)host.append(el('div','sc-empty','本机知识库已连接，但没有找到匹配笔记。请尝试更短关键词。'));
   notes.slice(0,35).forEach(function(note){
-   var card=el('article','sc-result');card.append(el('div','sc-result-title',note.title||note.path||'Obsidian 笔记'),el('div','sc-result-meta',note.path||'本机笔记'));
-   (note.snippets||[]).slice(0,2).forEach(function(s){card.append(el('p','sc-mini-status',s))});
-   var row=el('div','sc-actions'),read=el('button','sc-btn primary','读取全文并加入资料中心');read.type='button';
-   read.onclick=function(){readObsidianNote(note.path,read)};row.append(read);card.append(row);host.append(card)
+   var card=el('article','sc-result');card.append(el('div','sc-result-title',note.title||note.path||'Obsidian 笔记'),el('div','sc-result-meta','本机 · '+(note.path||'')));
+   if(note.snippet)card.append(el('p','sc-mini-status',note.snippet));
+   var row=el('div','sc-actions'),read=el('button','sc-btn primary','读取全文并加入资料中心');read.type='button';read.onclick=function(){readObsidianNote(note.path,read)};row.append(read);card.append(row);host.append(card)
   });
-  noteStatus('本机搜索完成：匹配 '+(data.matched==null?notes.length:data.matched)+' 篇，显示 '+Math.min(notes.length,35)+' 篇。选择「读取全文」后才能关联任务。');
- }catch(e){host.replaceChildren(el('div','sc-empty','搜索失败：'+e.message));noteStatus('Obsidian 搜索未成功：'+e.message,true)}
+  noteStatus('本机检索成功：「'+data.name+'」匹配 '+notes.length+' 篇；仅将读取全文的资料交给 AI。');
+ }catch(e){host.replaceChildren(el('div','sc-empty','本机检索未成功：'+e.message));noteStatus('Obsidian 未接通：'+e.message,true)}
 }
 async function readObsidianNote(path,button){
  if(!path)return noteStatus('笔记路径为空，无法读取。',true);
- if(button){button.disabled=true;button.textContent='正在读取真实全文…'}
+ if(button){button.disabled=true;button.textContent='正在读取本机真实全文…'}
  try{
-  var r=await SY.backendCall('/api/pm/tutorial-links',{path:path},60000);
-  if(!r||!r.ok)throw Error(r&&r.error||'本机笔记读取未成功');
-  var note=r.data||{},content=String(note.content||'');
-  if(!content.trim())throw Error('接口没有返回笔记正文');
-  importMaterial({id:'obsidian:'+note.path,source:'obsidian',title:note.title||path,content:content,sourceRef:note.path||path,url:note.url||'',links:note.links||[],selected:true,importedAt:new Date().toISOString()});
+  var note=await localVaultRequest('/read',{path:path,limit:60000}),content=String(note.text||note.content||'');
+  if(!content.trim())throw Error('本机接口没有返回笔记正文');
+  importMaterial({id:'obsidian:'+note.path,source:'obsidian',title:note.title||path,content:content,sourceRef:note.path||path,url:'obsidian://open?vault='+encodeURIComponent('韩奕知识复盘')+'&file='+encodeURIComponent(note.path||path),selected:true,importedAt:new Date().toISOString()});
   if(button){button.textContent='已读取全文 ✓';button.disabled=false}
-  noteStatus('已读取《'+String(note.title||path)+'》全文，共 '+(note.chars||content.length)+' 字；已加入 AI 资料池和本次结果。');
- }catch(e){if(button){button.disabled=false;button.textContent='重试读取全文'}noteStatus('读取 Obsidian 全文失败：'+e.message,true)}
+  noteStatus('本机已读取《'+String(note.title||path)+'》全文，共 '+(note.chars||content.length)+' 字；已加入 AI 资料池。');
+ }catch(e){if(button){button.disabled=false;button.textContent='重试读取全文'}noteStatus('读取真实全文失败：'+e.message,true)}
 }
 async function readLinks(kind){
  kind=kind||'web';
@@ -163,13 +162,17 @@ function associate(){
  if(!window.SY||!SY.saveAcctData)return noteStatus('任务保存接口尚未加载，资料没有写入任务。',true);
  SY.saveAcctData(a);if(SY.refreshCurrentView)SY.refreshCurrentView();noteStatus('已将 '+added+' 份资料关联到《'+task.name+'》。原始链接和读取状态已保留；未读取成功的资料没有关联。')
 }
-function analyze(){ var selected=selectedItems().filter(function(x){return x.readStatus==='fulltext'});
+function analyze(){
+ var selected=selectedItems().filter(function(x){return x.readStatus==='fulltext'});
  if(!selected.length)return noteStatus('请先勾选已读取正文的资料，再交给 AI 分析。',true);
  selected.forEach(addToPool);
+ var taskId=$('#scTask')&&$('#scTask').value,a=currentAccount(),task=(a.tasks||[]).find(function(t){return String(t.id)===String(taskId)});
+ var taskContext=task?'当前任务：'+String(task.name||'未命名任务')+'。任务描述：'+String(task.description||task.desc||'暂无')+'。请围绕这个任务分析。':'当前尚未选择关联任务。请从资料中识别可关联的已有任务，不要擅自创建或宣称已关联。';
+ var titles=selected.map(function(x){return x.title}).join('；');
  var question=document.getElementById('pma-question'),ask=document.getElementById('pma-ask');
  if(window.SY&&SY.switchAppView)SY.switchAppView('knowledge');
- if(question&&ask){question.value='请基于我刚刚在资料中心勾选的真实原文完成分析。逐份说明来源与读取范围，先总结重点，再提取行动项、截止时间、风险和可以关联的现有任务；区分原文事实与推断，不要编造。';question.dispatchEvent(new Event('input',{bubbles:true}));ask.click();noteStatus('已将 '+selected.length+' 份已读取资料提交给 AI 分析。请在知识库的回答区核对来源和结论。')}
- else noteStatus('已将 '+selected.length+' 份资料加入 AI 资料池。已打开知识库；若 AI 输入区未出现，请在该页进入「遇到困难」模块继续分析。')
+ if(question&&ask){question.value=taskContext+'\n\n请基于资料中心刚刚读取成功的真实原文完成分析，资料标题：'+titles+'。逐份说明来源与读取范围，先解释当前任务的下一步，再提取依赖、交付物、验收标准、估时与不确定性、卡点和可执行解法；区分原文事实与推断，不要编造。若需要视频讲解，请把回答整理成可分镜的短句，保留可核验的步骤。';question.dispatchEvent(new Event('input',{bubbles:true}));ask.click();noteStatus('已将 '+selected.length+' 份真实原文及'+(task?'当前任务「'+task.name+'」':'任务未选择的状态')+'带入 AI 工作助手；以 AI 实际返回结果为准。')}
+ else noteStatus('资料已进入 AI 资料池，但 AI 输入区未出现。请在知识库进入「遇到困难」模块继续；未收到模型回答前不视为分析完成。',true)
 }
 function routeSelected(){
  var selected=selectedItems().filter(function(x){return x.readStatus==='fulltext'});
@@ -204,8 +207,8 @@ function bind(){
  if(root)root.querySelectorAll('[data-sc-tab]').forEach(function(btn){btn.onclick=function(){activateSourceTab(btn.getAttribute('data-sc-tab'))}});
  $('#scSearchObsidian').onclick=searchObsidian;
  $('#scObsidianQuery').onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();searchObsidian()}};
- $('#scConnectVault').onclick=function(){if(window.SYKnowledge)SYKnowledge.open();else noteStatus('Obsidian 读取组件尚未加载。',true);setTimeout(refreshVaultState,500)};
- $('#scOpenVault').onclick=async function(){try{var r=await SY.backendCall('/api/pm/vault-open',{},10000);if(!r||!r.ok)throw Error(r&&r.error||'本机服务没有打开 Obsidian');noteStatus('已请求打开本机 Obsidian。')}catch(e){noteStatus('打开失败：'+e.message,true)}};
+ $('#scConnectVault').onclick=async function(){try{var v=await localVaultRequest('/status');if(!v.connected)throw Error(v.note||'本机 Vault 不可用');noteStatus('已直连「'+v.name+'」· '+v.count+' 篇真实笔记。');await refreshVaultState()}catch(e){noteStatus('本机桥接未接通：'+e.message+'。请启动本机服务；也可选择浏览器目录授权作为临时只读方式。',true);if(window.SYKnowledge)SYKnowledge.open()}};
+ $('#scOpenVault').onclick=async function(){try{await localVaultRequest('/open',{});noteStatus('已请求在本机打开 Obsidian。')}catch(e){noteStatus('打开失败：'+e.message,true)}};
  $('#scReadLinks').onclick=function(){readLinks('web')};
  $('#scReadFeishu').onclick=function(){readLinks('feishu')};
  $('#scReadVideo').onclick=function(){readLinks('video')};
