@@ -31,7 +31,7 @@ function renderTab(tab){tab=tab||window.__syTaskWorkspaceTab||'overview';if(!rou
 async function fillAIContext(force){
 var frame=Q('#embeddedP2Frame'),doc;try{doc=frame&&frame.contentDocument}catch(e){return false}if(!doc)return false;
 var t=task(selectedId);if(!t)return false;var ctx=doc.getElementById('p2-task-context'),prompt=doc.getElementById('p2-text');if(!ctx)return false;
-if(!force&&ctx.value.trim()&&ctx.dataset.twAuto!=='1')return true;
+if(!force&&ctx.value.trim()&&(ctx.dataset.twAuto!=='1'||ctx.dataset.twTaskId===String(t.id)))return true;
 var taskIdNow=String(t.id),a=acct()||{},rows=durationRows(a,t),mats=materialList(t),cp=(Array.isArray(a.taskCheckpoints)?a.taskCheckpoints:[]).filter(function(x){return String(x.taskId)===taskIdNow}).slice(-1)[0];
 var sourceRows=[],sourceWarnings=[],toRead=mats.slice(0,6);
 for(var i=0;i<toRead.length;i++){
@@ -58,7 +58,7 @@ if(sourceRows.some(function(x){return x.readStatus==='fulltext'})){if(window.SY&
 var fullText=sourceRows.map(function(m,i){return '[资料 S'+String(i+1).padStart(2,'0')+'] '+m.title+'\n原链接/路径：'+(m.url||'未返回')+'\n读取状态：'+m.readStatus+(m.error?'\n读取说明：'+m.error:'')+(m.text?'\n正文：'+m.text.slice(0,2600):'\n没有读取到正文；不要引用为已读资料。')}).join('\n\n').slice(0,14500);
 var status=a.taskStatusById&&a.taskStatusById[taskIdNow]|| (t.done?'DONE':'ACTIVE');
 ctx.value=['当前任务：'+name(t),'任务ID：'+taskIdNow,'任务状态：'+status,'截止：'+due(t),'计划时长：'+minText(t.plannedMinutes||t.estMinutes||t.estimatedMinutes),'该任务历史计时条数：'+rows.length,'关联资料数：'+mats.length,'资料全文与来源：\n'+(fullText||'暂无关联资料。请先在资料中心关联资料。'),'资料读取提醒：'+(sourceWarnings.length?sourceWarnings.join('；'):'所有已尝试读取的资料均已返回可用正文或没有需要读取的资料。'),'最近断点：'+(cp?JSON.stringify({progress:cp.progress,blocker:cp.blocker,nextStep:cp.nextStep,at:cp.at}):'暂无断点'),'请先基于已读取的原文拆解当前任务。每项注明来源编号、硬依赖、软依赖、可并行步骤、交付物、验收标准、估时区间、认知负荷和不确定项。区分真实技术依赖与心理锁定。禁止虚构我已完成的工作。'].join('\n');
-ctx.dataset.twAuto='1';ctx.dispatchEvent(new Event('input',{bubbles:true}));
+ctx.dataset.twAuto='1';ctx.dataset.twTaskId=taskIdNow;ctx.dispatchEvent(new Event('input',{bubbles:true}));
 if(force&&prompt){var instr='请结合当前任务与上方真实读取资料，先说明证据与资料缺口，再拆成最小可交付任务；给出依赖关系、产出、验收标准、估时依据、认知负荷风险和建议缓冲。自我介绍、口播/PPT/投递等材料只使用有证据支持的本人经历。资料未读到时不要假装读过。';if(prompt.value.indexOf('请结合当前任务与上方真实读取资料')<0)prompt.value=(prompt.value.trim()?prompt.value.trim()+'\n\n':'')+instr;prompt.dispatchEvent(new Event('input',{bubbles:true}));}
 return true;
 }
