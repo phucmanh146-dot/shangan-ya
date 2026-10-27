@@ -1,0 +1,38 @@
+name: V9 source and syntax checks
+on:
+  push:
+    branches:
+      - fix/v9-ai-memo-cognitive-closure-20261027
+  pull_request:
+    branches:
+      - feature/source-task-center-20261025
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Python syntax
+        run: python -m py_compile v7-linked-task-ai/public_worker.py v7-linked-task-ai/local_server.py v7-linked-task-ai/rescue_service.py
+      - name: JavaScript syntax
+        run: |
+          node --check v7-linked-task-ai/task-intake-upgrade.js
+          node --check v7-linked-task-ai/task-workspace.js
+          node --check v7-linked-task-ai/comfort-planner-flow.js
+      - name: Confirm API routes and task states exist
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          root = Path("v7-linked-task-ai")
+          assert "parse_memo" in (root / "local_server.py").read_text(encoding="utf-8")
+          assert "/api/memo/parse" in (root / "local_server.py").read_text(encoding="utf-8")
+          assert "WAITING_AI" in (root / "task-workspace.js").read_text(encoding="utf-8")
+          assert "RECOVERY" in (root / "task-workspace.js").read_text(encoding="utf-8")
+          assert "psychologicalLocks" in (root / "task-intake-upgrade.js").read_text(encoding="utf-8")
+          print("V9 route and task-state checks passed")
+          PY

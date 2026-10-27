@@ -20,13 +20,54 @@
   function remember(){var box=document.getElementById('tiText');if(box)inputText=box.value;}
   function shell(){epoch++;var account=String(SY.currentAccountKey);if(owner!==account){inputText='';drafts=[];lastSource=null;previewFiles=[];statusText='';owner=account;}loading=false;var old=document.getElementById('tiOverlay');if(old)old.remove();document.body.insertAdjacentHTML('beforeend','<section class="ti-overlay" id="tiOverlay"><div class="ti-card" role="dialog" aria-modal="true" aria-label="快速收集"><header class="ti-head"><div><p>QUICK HARBOR · 今日任务入口</p><h2>先收进来，再专心做一件</h2><span class="ti-head-note">把外部资料带进来，原链接仍然保留，打开时回到对应客户端或浏览器。</span></div><button class="ti-close" data-ti="close" aria-label="关闭">×</button></header><nav class="ti-mode"><button data-ti-mode="voice">🎙 语音收集</button><button data-ti-mode="wechat">💬 微信复制导入</button><button data-ti-mode="text">✎ 手动粘贴</button></nav><div class="ti-integrations ti-integrations-compact"><p>微信消息请进入左侧「收集任务」；Obsidian、飞书、网页、课程和视频链接统一放在「资料中心」独立页面。</p><button type="button" data-ti="open-materials">前往资料与链接解析 ↗</button></div><div id="tiBody"></div></div></section>');render();}
   function panel(){return '<div class="ti-panel">'+(mode==='voice'?'<div class="ti-mic"><div><button data-ti="mic" aria-label="'+(listening?'停止识别':'开始语音识别')+'">'+(listening?'■':'●')+'</button><p>'+(listening?'正在听，请说出任务和截止时间':'点一下，说出今天要做的事')+'</p></div></div>':'')+'<textarea id="tiText" rows="5" placeholder="例如：非常重要，今天晚上八点交作业；复习第三章二十分钟。一行一项也可以。">'+e(inputText)+'</textarea>'+(mode==='wechat'?'<p class="ti-note">点击“打开微信客户端”后，在微信里复制群公告、聊天文字或公众号内容，再回到这里粘贴。网页不能绕过微信权限自动读取私聊或群聊。</p>':'')+'<div class="ti-drop" data-ti-drop tabindex="0" role="button" aria-label="拖入或选择文档和图片">拖入微信文件、Word、PDF、图片或字幕，也可点击从磁盘选择<input id="tiDocs" type="file" multiple accept=".txt,.md,.csv,.json,.srt,.vtt,.html,.pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.gif,.bmp" hidden></div><p class="ti-note">会识别你明确说出的重要程度和日期。没说清楚的截止时间留给你补充。</p></div>';}
-  function preview(x,i){return '<article class="ti-draft" data-ti-row="'+i+'"><label class="ti-pick"><input type="checkbox" data-ti-field="selected" data-i="'+i+'" '+(x.selected?'checked':'')+'>收集这项</label><label class="ti-edit-title">任务<input data-ti-field="name" data-i="'+i+'" maxlength="180" value="'+e(x.name)+'"></label><div class="ti-edit-grid"><label>截止日期 · 可留空<input type="date" data-ti-field="dueDate" data-i="'+i+'" value="'+e(x.dueDate||'')+'"></label><label>截止时间<input type="time" data-ti-field="dueTime" data-i="'+i+'" value="'+e(x.dueTime||'')+'"></label><label>预计分钟<input type="number" min="5" max="240" data-ti-field="minutes" data-i="'+i+'" value="'+x.minutes+'"></label><label>分类 · 可以自己改<input data-ti-field="category" data-i="'+i+'" maxlength="30" value="'+e(x.category)+'"></label></div><div class="ti-flags"><label><input type="checkbox" data-ti-field="important" data-i="'+i+'" '+(x.important?'checked':'')+'>重要</label><label><input type="checkbox" data-ti-field="urgent" data-i="'+i+'" '+(x.urgent?'checked':'')+'>紧急</label><span>'+(!x.dueDate?'截止日期待补充':!x.dueTime?'当天结束前':'已明确截止时间')+'</span></div></article>';}
+  function preview(x,i){
+    var meta=[];
+    if(x.deliverable)meta.push('<p><b>交付物：</b>'+e(x.deliverable)+'</p>');
+    if(x.acceptance)meta.push('<p><b>验收：</b>'+e(x.acceptance)+'</p>');
+    if(x.hardDependencies&&x.hardDependencies.length)meta.push('<p><b>硬依赖：</b>'+e(x.hardDependencies.join('；'))+'</p>');
+    if(x.softDependencies&&x.softDependencies.length)meta.push('<p><b>软依赖（可先做初稿）：</b>'+e(x.softDependencies.join('；'))+'</p>');
+    if(x.psychologicalLocks&&x.psychologicalLocks.length)meta.push('<p><b>可能的心理锁定：</b>'+e(x.psychologicalLocks.join('；'))+'</p>');
+    if(x.waitingExternal&&x.waitingExternal.length)meta.push('<p><b>外部等待：</b>'+e(x.waitingExternal.join('；'))+'</p>');
+    if(x.evidence)meta.push('<p><b>原文依据：</b>'+e(x.evidence)+'</p>');
+    if(x.uncertainty)meta.push('<p><b>待核对：</b>'+e(x.uncertainty)+'</p>');
+    var range=x.estimatedMin&&x.estimatedMax?x.estimatedMin+'–'+x.estimatedMax+' 分钟':'估时待校准';
+    return '<article class="ti-draft" data-ti-row="'+i+'"><label class="ti-pick"><input type="checkbox" data-ti-field="selected" data-i="'+i+'" '+(x.selected?'checked':'')+'>收集这项</label><label class="ti-edit-title">任务<input data-ti-field="name" data-i="'+i+'" maxlength="180" value="'+e(x.name)+'"></label><div class="ti-edit-grid"><label>截止日期 · 可留空<input type="date" data-ti-field="dueDate" data-i="'+i+'" value="'+e(x.dueDate||'')+'"></label><label>截止时间<input type="time" data-ti-field="dueTime" data-i="'+i+'" value="'+e(x.dueTime||'')+'"></label><label>预计分钟<input type="number" min="5" max="480" data-ti-field="minutes" data-i="'+i+'" value="'+x.minutes+'"></label><label>分类 · 可以自己改<input data-ti-field="category" data-i="'+i+'" maxlength="30" value="'+e(x.category)+'"></label></div><div class="ti-flags"><label><input type="checkbox" data-ti-field="important" data-i="'+i+'" '+(x.important?'checked':'')+'>重要</label><label><input type="checkbox" data-ti-field="urgent" data-i="'+i+'" '+(x.urgent?'checked':'')+'>紧急</label><span>'+(!x.dueDate?'截止日期待补充':!x.dueTime?'当天结束前':'已明确截止时间')+'</span></div>'+(meta.length?'<div class="ti-semantic-meta"><strong>资料理解 · '+(x.cognitiveLoad==='high'?'高认知负荷':x.cognitiveLoad==='low'?'低认知负荷':'中等认知负荷')+' · 置信度 '+e(x.confidence||'low')+' · '+e(range)+'</strong>'+meta.join('')+'</div>':'')+'</article>';
+  }
   function render(){var body=document.getElementById('tiBody');if(!body)return;document.querySelectorAll('[data-ti-mode]').forEach(function(b){b.classList.toggle('is-on',b.dataset.tiMode===mode);});body.innerHTML=panel()+'<div class="ti-actions"><button data-ti="source-route">按资料目录闯关</button><button data-ti="manual-capture">手动摘取文章</button><button data-ti="extract">识别任务</button><button class="primary" data-ti="schedule">确认收集并排程</button></div><div class="ti-status" id="tiStatus" role="status">'+e(statusText)+'</div><div class="ti-preview">'+drafts.map(preview).join('')+'</div>';var tray=document.createElement('div');tray.className='sy-import-previews';previewFiles.forEach(function(file){var img=document.createElement('img');img.src=URL.createObjectURL(file);img.alt=file.name;img.onload=function(){URL.revokeObjectURL(img.src);};tray.append(img);});body.querySelector('.ti-drop').after(tray);}
   function parse(text){
     var parts=String(text||'').replace(/\r\n?/g,'\n').replace(/[。；;]/g,'\n').split('\n').map(function(s){return s.replace(/^\s*(?:[-*•]|\d+[.、)])\s*/,'').trim();}).filter(function(s){return s.length>2;}),seen={},a=SY.getAcctData(),cat=(a.categories||[]).find(function(c){return /学习|作业/.test(c.name);});
     return parts.filter(function(s){if(seen[s])return false;seen[s]=true;return true;}).slice(0,20).map(function(s){var m=s.match(/([一二两三四五六七八九十\d]+)\s*分钟/),dl=deadline(s);return {name:s.slice(0,180),minutes:m?Math.max(5,Math.min(240,number(m[1]))):25,dueDate:dl.date,dueTime:dl.time,important:/(重要|优先|必须|务必)/.test(s)&&!/(不重要|不太重要|非重要)/.test(s),urgent:/(紧急|尽快|马上)/.test(s)&&!/(不紧急|不急)/.test(s),selected:true,category:cat?cat.name:'学习'};});
   }
-  function extract(){remember();drafts=parse(inputText);statusText=drafts.length?'识别到 '+drafts.length+' 项。先核对截止时间和重要程度，取消不需要的项目。':'还没识别出任务，试试一行写一项。';render();}
+  async function extract(){
+    remember();
+    if(!inputText.trim()){drafts=parse(inputText);statusText='先粘贴备忘录、语音转写或读取后的资料正文。';render();return;}
+    var oldEpoch=epoch,account=String(SY.currentAccountKey),a=SY.getAcctData()||{};
+    loading=true;setStatus('正在调用服务端 AI 理解备忘录：识别项目、依赖、可并行任务与估时…');
+    try{
+      var existing=(Array.isArray(a.tasks)?a.tasks:[]).filter(function(t){return !t.deleted}).slice(0,100).map(function(t){return {id:String(t.id||''),title:String(t.name||t.title||t.text||'').slice(0,160),done:!!(t.done||t.completedAt),project:String(t.category||t.project||'').slice(0,80)};});
+      var res=await fetch('/api/memo/parse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:inputText,existingTasks:existing,context:'上岸鸭工作台。重点识别硬依赖、软依赖、心理锁定和外部等待。任务只有在用户确认后才创建。'})});
+      var data=await res.json();
+      if(oldEpoch!==epoch||account!==String(SY.currentAccountKey))return;
+      if(!res.ok||!data.ok)throw new Error(data.error||'AI 语义解析未成功');
+      drafts=data.tasks.map(function(x){
+        var dl=deadline(String(x.deadline||'')),lo=Number(x.estimatedMin)||25,hi=Number(x.estimatedMax)||45;
+        var dateMatch=String(x.deadline||'').match(/(20\d{2}-\d{2}-\d{2})/),timeMatch=String(x.deadline||'').match(/([01]\d|2[0-3]):[0-5]\d/);
+        return {name:x.title,minutes:Math.max(5,Math.min(480,Math.round((lo+hi)/2))),estimatedMin:lo,estimatedMax:hi,
+          dueDate:dateMatch?dateMatch[1]:dl.date,dueTime:timeMatch?timeMatch[0]:dl.time,
+          important:/高/.test(String(x.priority||'')),urgent:!!x.deadline,selected:true,category:x.project||data.project||'待归类',
+          project:x.project||data.project||'',deliverable:x.deliverable||'',acceptance:x.acceptance||'',
+          hardDependencies:x.hardDependencies||[],softDependencies:x.softDependencies||[],psychologicalLocks:x.psychologicalLocks||[],
+          waitingExternal:x.waitingExternal||[],cognitiveLoad:x.cognitiveLoad||'medium',confidence:x.confidence||'low',
+          evidence:x.evidence||'原文未明确',uncertainty:x.uncertainty||'',memoParseSource:'ai'};
+      });
+      statusText='AI 已解析 '+drafts.length+' 项任务草稿；'+(data.summary||'请核对依赖与产出。')+' 目前没有写入任务，请检查后一次确认。';
+    }catch(err){
+      drafts=parse(inputText);
+      statusText='AI 语义识别未成功：'+String(err.message||err)+'。以下仅为规则拆分草稿，不代表已理解依赖；请手动核对。';
+    }finally{
+      if(oldEpoch===epoch&&account===String(SY.currentAccountKey)){loading=false;render();setStatus(statusText);}
+    }
+  }
   function setStatus(s){statusText=s;var n=document.getElementById('tiStatus');if(n)n.textContent=s;}
   function schedule(){
     if(!drafts.length){extract();return;}var picks=drafts.filter(function(x){return x.selected;});
@@ -42,9 +83,10 @@
       if(x.dueDate&&x.dueDate<date)limit=0;else if(x.dueDate===date&&x.dueTime){var p=x.dueTime.split(':').map(Number);limit=p[0]*60+p[1];}
       if(start+dur>limit){start=null;unscheduled++;}else cursor=start+dur+10;
       var category=x.category.trim();if(!a.categories.some(function(c){return c.name===category;}))a.categories.push({id:S.uid(),name:category,color:'#83b9a2'});
-      var task={id:S.uid(),name:x.name.trim(),category:category,date:date,startMinutes:start,estMinutes:dur,plannedMinutes:dur,firstTime:false,multiplier:1,done:false,createdAt:Date.now(),order:a.tasks.length+1,important:x.important,urgent:x.urgent,dueDate:x.dueDate||null,dueTime:x.dueTime||null,taskType:/作业|提交|考试/.test(x.name)?'assignment':'learning',scheduleSource:'quick-intake',scheduleStatus:start===null?'needs-arrangement':'scheduled',priorityScore:(x.urgent?100:0)+(x.important?25:0)};
+      var task={id:S.uid(),name:x.name.trim(),category:category,date:date,startMinutes:start,estMinutes:dur,plannedMinutes:dur,firstTime:false,multiplier:1,done:false,createdAt:Date.now(),order:a.tasks.length+1,important:x.important,urgent:x.urgent,dueDate:x.dueDate||null,dueTime:x.dueTime||null,taskType:/作业|提交|考试/.test(x.name)?'assignment':'learning',scheduleSource:'quick-intake',scheduleStatus:start===null?'needs-arrangement':'scheduled',priorityScore:(x.urgent?100:0)+(x.important?25:0),memoProject:x.project||'',deliverable:x.deliverable||'',acceptanceCriteria:x.acceptance||'',hardDependencies:x.hardDependencies||[],softDependencies:x.softDependencies||[],psychologicalLocks:x.psychologicalLocks||[],waitingExternal:x.waitingExternal||[],cognitiveLoad:x.cognitiveLoad||'medium',estimateConfidence:x.confidence||'low',estimateRange:{min:Number(x.estimatedMin)||dur,max:Number(x.estimatedMax)||dur},sourceEvidence:x.evidence||'',uncertainty:x.uncertainty||'',memoParseSource:x.memoParseSource||'rules'};
       a.tasks.push(task);added.push(task);
     });
+    added.forEach(function(t){function resolve(names){return (names||[]).map(function(n){var q=String(n||'').toLowerCase().trim();if(!q)return null;var hit=a.tasks.find(function(z){var zn=String(z.name||z.title||'').toLowerCase().trim();return z.id!==t.id&&zn.length>=4&&q.length>=4&&(zn===q||zn.indexOf(q)>=0||q.indexOf(zn)>=0);});return hit?String(hit.id):null;}).filter(Boolean);}t.hardDependencyIds=resolve(t.hardDependencies);t.softDependencyIds=resolve(t.softDependencies);});
     if(!a.priorityFocusTaskId||!a.tasks.some(function(t){return t.id===a.priorityFocusTaskId&&!t.done;}))a.priorityFocusTaskId=added[0].id;
     S.saveAcctData(a);if(S.renderSidebarCategoryList)S.renderSidebarCategoryList();if(S.refreshCurrentView)S.refreshCurrentView();
     drafts=[];inputText='';statusText='已收集 '+added.length+' 项。'+(unscheduled?unscheduled+' 项在今天或截止前排不下，已保存在待办中，尚未安排时间。':'已避开现有日程排好。')+' 当前主线保留，每次专心做一件。';render();

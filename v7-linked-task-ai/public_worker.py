@@ -12,7 +12,9 @@ try:
 except (OSError,ValueError,TypeError):pass
 os.environ['FOCUS_VAULT_PATH']=str(vault)
 for key in list(os.environ):
- if key.startswith(('FEISHU_','OPENAI_','ANTHROPIC_','DEEPSEEK_','GLM_','FOCUS_AI_','SHANGANYA_API_','HEYGEN_')):os.environ.pop(key,None)
+ # Keep deployment-level AI secrets server-side so every isolated worker can use the configured gateway.
+ # Per-user Feishu credentials remain isolated to the active worker.
+ if key.startswith(('FEISHU_',)):os.environ.pop(key,None)
 import local_server
 import multi_sources
 import heygen_video
