@@ -40,3 +40,10 @@
 .ti-integrations-compact button{flex:0 0 auto;border:1px solid #8db4a2;border-radius:11px;padding:10px 13px;background:#173b30;color:#eafff1;font-size:12px;font-weight:750;cursor:pointer}
 .ti-integrations-compact button:hover{background:#245844}
 @media(max-width:650px){.ti-integrations-compact{align-items:stretch;flex-direction:column}}
+
+
+/* AI memo interpretation stays inside each draft, not a separate stacked dashboard. */
+.ti-semantic-meta{margin-top:12px;padding:12px 14px;border:1px solid var(--line,#d7e3dc);border-radius:12px;background:rgba(75,125,100,.07);font-size:.9rem;line-height:1.6;color:var(--text,#26352d)}
+.ti-semantic-meta>strong{display:block;margin-bottom:6px;color:var(--accent,#28634b)}
+.ti-semantic-meta p{margin:5px 0;overflow-wrap:anywhere}
+.ti-semantic-meta p b{font-weight:650}
