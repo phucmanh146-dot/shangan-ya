@@ -20,16 +20,17 @@ function startMs(o){if(!o)return 0;var v=o.startedAt||o.runningSince||o.startAt|
 function brain(){
  var a=account()||{},p=a.plannerSettings||{},ci=p.lastCognitiveCheckin||{},now=Date.now(),age=now-Number(ci.at||0),active=p.activeSession||a.activeTimer||a.smartPlanner&&a.smartPlanner.active||{},started=startMs(active),elapsed=started?Math.floor((now-started)/60000):0,st=p.stuckState||a.stuckState||null,stuck=st?Math.max(0,Math.floor((now-Number(st.startedAt||st.at||now))/60000)):0;
  var recent=(Array.isArray(a.energyHistory)?a.energyHistory:[]).filter(function(x){return Number(x.at)>0&&now-Number(x.at)<4*3600000&&Number(x.score)>=1&&Number(x.score)<=5}).slice(-12);
- var fatigue=(Array.isArray(a.fatigueLog)?a.fatigueLog:[]).filter(function(x){return Number(x.at)>0&&now-Number(x.at)<4*3600000}).length;
- var score=Number(ci.score||p.currentEnergyScore||0),why='',confidence='低',signals=[];
+ var fatigueLogs=(Array.isArray(a.fatigueLog)?a.fatigueLog:[]).filter(function(x){return Number(x.at)>0&&now-Number(x.at)<4*3600000}),latestFatigue=fatigueLogs.length?Math.max.apply(null,fatigueLogs.map(function(x){return Number(x.at)})):0;
+ var score=Number(ci.score||p.currentEnergyScore||0),why='',confidence='低',signals=[],freshFatigue=fatigueLogs.filter(function(x){return Number(x.at)>Number(ci.at||0)&&now-Number(x.at)<120*60000}).length;
  if(age>=0&&age<150*60000&&score>=1&&score<=5){confidence='中';why='最近一次主观状态反馈';signals.push('最近反馈 '+score+'/5')}
  else if(recent.length){score=Number(recent[recent.length-1].score);why='最近精力记录（需结合当前感觉确认）';confidence='低';signals.push('最近精力记录 '+score+'/5')}
  else{score=3;why='缺少近期状态记录，暂按中等负荷保守估算'}
  if(elapsed>=90){score=Math.min(score,2);signals.push('当前计时连续 '+elapsed+' 分钟')}
  else if(elapsed>=55){score=Math.min(score,3);signals.push('当前计时 '+elapsed+' 分钟，建议中断检查')}
  if(stuck>=12){score=Math.min(score,2);signals.push('连续卡壳约 '+stuck+' 分钟')}
- if(fatigue){score=Math.min(score,2);signals.push('近 4 小时疲惫反馈 '+fatigue+' 次')}
- if(recent.length>=3){var lows=recent.slice(-4).filter(function(x){return Number(x.score)<=2}).length;if(lows>=2){score=Math.min(score,2);signals.push('近期多次低精力反馈')}}
+ if(freshFatigue){score=Math.min(score,2);signals.push('最近疲惫反馈 '+freshFatigue+' 次，尚未出现更新的状态确认')}
+ if(recent.length>=3){var tail=recent.slice(-4),lastSignalAt=Number(ci.at||0),lows=tail.filter(function(x){return Number(x.score)<=2&&Number(x.at)>lastSignalAt}).length;if(lows>=2){score=Math.min(score,2);signals.push('状态确认后仍有多次低精力反馈')}}
+ if(latestFatigue&&now-latestFatigue<4*3600000&&Number(ci.at||0)>latestFatigue){signals.push('已优先采用疲惫记录之后的新状态反馈')}
  return pack(score,signals.length?signals.join('；'):why,confidence,elapsed,stuck);
 }function pack(score,why,confidence,elapsed,stuck){score=Math.max(1,Math.min(5,Math.round(score||3)));return{score:score,label:score<=1?'可能已明显透支':score===2?'认知负荷偏高':score===3?'中等负荷，先短段推进':score===4?'适合安排深度任务':'当前反馈较清醒',why:why,confidence:confidence,elapsed:elapsed||0,stuck:stuck||0}}
 function recordFeedback(score){
@@ -93,7 +94,7 @@ function render(n){
  var vt=body.querySelector('[data-cp-view-tasks]');if(vt)vt.onclick=function(){close();if(window.SY&&SY.switchAppView)SY.switchAppView('daily')};
  var vs=body.querySelector('[data-cp-source]');if(vs)vs.onclick=function(){close();if(window.SY&&SY.switchAppView)SY.switchAppView('sources')};
  }else if(step===2){
- body.innerHTML='<section class="cp-panel"><span class="cp-eyebrow">STEP 03 · AVAILABLE TIME</span><h3>给今天的任务留出真实时间</h3><p class="cp-lead">你不需要估计精力；只需确认可安排的时间窗口。系统会自动预留缓冲、休息和娱乐，不会挤占固定事项。</p><div class="cp-fields"><label>开始安排时间<input type="time" id="cpStart" value="'+prefs.start+'"></label><label>今天最晚结束<input type="time" id="cpEnd" value="'+prefs.end+'"></label><label>固定事项占用（分钟）<input type="number" min="0" max="720" step="5" id="cpFixed" value="'+prefs.fixed+'"></label><label>弹性缓冲（分钟）<input type="number" min="15" max="180" step="5" id="cpBuffer" value="'+prefs.buffer+'"></label><label>放空 / 娱乐（分钟）<input type="number" min="0" max="240" step="5" id="cpLeisure" value="'+prefs.leisure+'"></label><label>短休间隔（分钟）<select id="cpBreak"><option value="25">每 25 分钟</option><option value="35">每 35 分钟</option><option value="45" selected>每 45 分钟</option><option value="50">每 50 分钟</option></select></label></div><div class="cp-note-box">自动规则：疲惫时先恢复、减少高负荷任务；状态较好时再安排深度任务。缓冲不是待办，娱乐不是偷懒。可按现实情况修改时间窗口。</div></section>';
+ body.innerHTML='<section class="cp-panel"><span class="cp-eyebrow">STEP 03 · AVAILABLE TIME</span><h3>给今天的任务留出真实时间</h3><p class="cp-lead">你不需要估计精力；只需确认可安排的时间窗口。系统会自动预留缓冲、休息和娱乐，不会挤占固定事项。</p><div class="cp-fields"><label>开始安排时间<input type="time" id="cpStart" value="'+prefs.start+'"></label><label>今天最晚结束<input type="time" id="cpEnd" value="'+prefs.end+'"></label><label>固定事项占用（分钟）<input type="number" min="0" max="720" step="5" id="cpFixed" value="'+prefs.fixed+'"></label><label>弹性缓冲（分钟）<input type="number" min="15" max="180" step="5" id="cpBuffer" value="'+prefs.buffer+'"></label><label>放空 / 娱乐（分钟）<input type="number" min="0" max="240" step="5" id="cpLeisure" value="'+prefs.leisure+'"></label><label>短休间隔（分钟）<select id="cpBreak"><option value="20" '+(prefs.breakEvery===20?'selected':'')+'>每 20 分钟（低负荷）</option><option value="25" '+(prefs.breakEvery===25?'selected':'')+'>每 25 分钟</option><option value="35" '+(prefs.breakEvery===35?'selected':'')+'>每 35 分钟</option><option value="45" '+(prefs.breakEvery===45?'selected':'')+'>每 45 分钟</option></select></label></div><div class="cp-note-box">自动规则：疲惫时先恢复、减少高负荷任务；状态较好时再安排深度任务。缓冲不是待办，娱乐不是偷懒。可按现实情况修改时间窗口。</div></section>';
  }else if(step===3){body.innerHTML=buildPreview(b)}
  else {body.innerHTML=buildPatterns(a)}
  footer('');
