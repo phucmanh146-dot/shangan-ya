@@ -48,6 +48,14 @@ function reconcile(){
     if(!primary[title]||canonical.indexOf(node)<0)more.appendChild(node);
   }
  });
+ // Keep the unified task workspace visible in the primary task group after legacy reconciliation.
+ var taskWorkspaceButton=more.querySelector('[data-view="task-workspace"]');
+ if(taskWorkspaceButton){
+  label(taskWorkspaceButton,'任务工作区');taskWorkspaceButton.hidden=false;taskWorkspaceButton.style.removeProperty('display');taskWorkspaceButton.setAttribute('aria-hidden','false');taskWorkspaceButton.tabIndex=0;
+  var dailyButton=nav.querySelector(':scope > .app-nav-item[data-view="daily"]');
+  if(dailyButton&&taskWorkspaceButton.parentElement!==nav)nav.insertBefore(taskWorkspaceButton,dailyButton.nextSibling);
+  else if(dailyButton&&taskWorkspaceButton.parentElement===nav&&taskWorkspaceButton.previousElementSibling!==dailyButton)nav.insertBefore(taskWorkspaceButton,dailyButton.nextSibling);
+ }
  // No additional energy score, energy curve or old eight-link navigation in the left rail.
  Array.prototype.slice.call(document.querySelectorAll('.app-sidebar #energy-left-planner,.app-sidebar [data-comfort-entry]')).forEach(function(n){n.remove()});
 }
