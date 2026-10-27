@@ -50,8 +50,14 @@ function reserveDefaults(b){return{buffer:b.score<=2?45:30,leisure:b.score<=2?90
  return arr;
 }
 function estimate(t,b){
- var hist=recentHistory(t),base=hist.length?hist.reduce(function(x,y){return x+y},0)/hist.length:minutes(t),complex=isDeep(t),factor=complex?(b.score<=2?1.35:1.2):1;
- return {minutes:Math.round(Math.max(5,Math.min(180,base*factor))),basis:hist.length?'按 '+hist.length+' 条历史完成记录校准':(t.plannedMinutes||t.estMinutes||t.estimatedMinutes?'参考任务原估时，再按复杂度调整':'缺少历史耗时，使用保守初始估时'),complex:complex,samples:hist.length};
+ var hist=recentHistory(t).sort(function(a,c){return a-c}),range=t.estimateRange&&typeof t.estimateRange==='object'?t.estimateRange:{},complex=isDeep(t),factor=complex?(b.score<=2?1.25:1.1):1;
+ function pct(arr,p){if(!arr.length)return 0;var pos=(arr.length-1)*p,lo=Math.floor(pos),hi=Math.ceil(pos);return arr[lo]+(arr[hi]-arr[lo])*(pos-lo)}
+ var base=hist.length?pct(hist,.5):(Number(range.min)>0&&Number(range.max)>=Number(range.min)?(Number(range.min)+Number(range.max))/2:minutes(t));
+ var lo=hist.length>=3?pct(hist,.25):(Number(range.min)>0?Number(range.min):base*.8),hi=hist.length>=3?pct(hist,.75):(Number(range.max)>=lo?Number(range.max):base*1.35);
+ lo=Math.max(5,Math.round(lo*factor));hi=Math.max(lo,Math.round(hi*factor));base=Math.max(lo,Math.min(hi,Math.round(base*factor)));
+ var confidence=hist.length>=5?'中等':hist.length>=2?'偏低': '低';
+ var basis=hist.length>=2?'按 '+hist.length+' 条真实耗时估算 P50/P25–P75':(range.min&&range.max?'使用 AI 草稿估时范围；尚无足够个人历史':'缺少个人样本，使用保守初始范围');
+ return {minutes:Math.round(Math.max(5,Math.min(180,base))),min:lo,max:hi,basis:basis,complex:complex,samples:hist.length,confidence:confidence};
 }
 function getPrefs(){var a=account()||{},p=a.plannerSettings||{},w=a.wellbeingPlan||{},start=nowRounded(),end=21*60;if(start>=20*60)end=23*60+30;if(end-start<60)end=Math.min(1439,start+180);var d=reserveDefaults(brain());return{start:localTime(start),end:localTime(end),buffer:d.buffer,leisure:Math.max(d.leisure,Number(p.dailyLeisureMinutes||0)),recovery:d.recovery,fixed:Math.max(0,Number(w.meet||p.fixedMinutes||0)),breakEvery:brain().score<=2?25:35}}function selectedTasks(){var all=pending();return all.filter(function(t){return chosen.indexOf(taskId(t))>=0})}
 function chooseDefaults(){var all=pending().slice().sort(function(a,b){return priority(b)-priority(a)}),acct=account()||{},active=String(window.__SYTaskWorkspaceSelectedTaskId||((acct.activeTimer||{}).taskId)||acct.priorityFocusTaskId||'');chosen=all.filter(function(t){return taskId(t)===active}).map(taskId);if(!chosen.length)chosen=all.slice(0,Math.min(3,all.length)).map(taskId)}
@@ -101,17 +107,18 @@ function buildPreview(b){
  var available=end-start,rest=b.score<=1?25:b.score===2?20:10,chosenList=selectedTasks(),remaining=Math.max(0,available-fixed-buffer-leisure),cursor=start,blocks=[],deferred=[],focusCount=0,deepCount=0;
  function add(title,duration,kind,reason){duration=Math.max(0,Math.round(duration));if(!duration||cursor+duration>end)return false;blocks.push({start:cursor,end:cursor+duration,title:title,minutes:duration,kind:kind,reason:reason||''});cursor+=duration;return true}
  function reserveLeisure(label,duration,kind,reason){if(duration<=0||remaining<=0)return;var d=Math.min(duration,remaining,Math.max(0,end-cursor-buffer));if(d>=5&&add(label,d,kind,reason))remaining-=d}
- if(b.score<=2){reserveLeisure('恢复窗口：离开屏幕、喝水、走动或安静休息',Math.min(rest,20),'rest','疲惫时先恢复，不要求立刻回到深度工作');}
+ if(b.score<=2){var recoveryBlock=Math.min(rest,20);if(reserveLeisure('恢复窗口：离开屏幕、喝水、走动或安静休息',recoveryBlock,'rest','疲惫时先恢复，不要求立刻回到深度工作'))remaining=Math.max(0,remaining-recoveryBlock);}
  var ranked=chosenList.slice().sort(function(a,c){return priority(c)-priority(a)}),daydream=Math.max(15,Math.round(leisure*.3)),entertain=Math.max(0,leisure-daydream),daydreamAdded=false;
  ranked.forEach(function(t,index){
-  var est=estimate(t,b),deep=est.complex;
+  var est=estimate(t,b),deep=est.complex,a0=account()||{},all0=Array.isArray(a0.tasks)?a0.tasks:[],hardIds=Array.isArray(t.hardDependencyIds)?t.hardDependencyIds:[],hardNames=Array.isArray(t.hardDependencies)?t.hardDependencies:[],blocked=hardIds.map(function(id){return all0.find(function(z){return String(taskId(z))===String(id)})}).filter(function(z){return z&&!z.done&&!z.completedAt}),namedBlocked=hardNames.map(function(n){return all0.find(function(z){return String(taskName(z)).toLowerCase().trim()===String(n).toLowerCase().trim()})}).filter(function(z){return z&&!z.done&&!z.completedAt});
+  if(blocked.length||namedBlocked.length){deferred.push({task:t,reason:'存在尚未完成的硬依赖：'+blocked.concat(namedBlocked).map(taskName).join('、')+'。先检查是否确实不可绕过；软依赖/心理锁定不应自动阻塞。'});return;}
   if(b.score<=1&&deep){deferred.push({task:t,reason:'当前反馈为明显透支：本轮不安排高认知负荷任务，先恢复后重新评估'});return}
   if(b.score===2&&deep){deferred.push({task:t,reason:'当前负荷偏高：先恢复或换轻任务；休息后重新签到再决定是否继续'});return}
   if(remaining<5){deferred.push({task:t,reason:'扣除固定事项、休息、娱乐与缓冲后，可用时间不足'});return}
   var cap=deep?(b.score>=4?Math.min(40,breakEvery):Math.min(25,breakEvery)):Math.min(25,breakEvery);
   var dur=Math.min(est.minutes,cap,remaining);
   if(dur<5){deferred.push({task:t,reason:'剩余时间不足以推进一个有效工作段'});return}
-  if(!add(taskName(t),dur,deep?'focus':'light',est.basis)){deferred.push({task:t,reason:'剩余时间窗口不足'});return}
+  if(!add(taskName(t),dur,deep?'focus':'light',est.basis+'；估时范围 '+est.min+'–'+est.max+' 分钟，置信度 '+est.confidence)){deferred.push({task:t,reason:'剩余时间窗口不足'});return}
   remaining-=dur;focusCount++;if(deep)deepCount++;
   if(remaining>=5&&index<ranked.length-1){var breakMin=deep?8:5;if(add('短休：离开当前任务、喝水或活动一下',Math.min(breakMin,remaining),'break','短休用于缓解疲劳，不保证立即恢复全部表现'))remaining-=blocks[blocks.length-1].minutes}
   if(!daydreamAdded&&focusCount>=Math.min(2,Math.max(1,ranked.length))&&daydream>0){reserveLeisure('发呆 / 自由放空（不设产出目标）',daydream,'rest','每天受保护的无任务时间；可发呆、散步或安静坐一会儿');daydreamAdded=true}
