@@ -1252,9 +1252,11 @@
 
   // ===== 左侧导航：6个板块切换 =====
   var appNavItems = Array.prototype.slice.call(document.querySelectorAll('.app-nav-item'));
-  var appViews = Array.prototype.slice.call(document.querySelectorAll('.app-view'));
+  var appViews = Array.prototype.slice.call(document.querySelectorAll('.app-view')).filter(function(v){ return !(v.parentElement && v.parentElement.closest('.app-view')); });
   var appMainEl = document.querySelector('.app-main');
   function switchAppView(key){
+    var workspaceRoute = {'ai-p2':'ai','knowledge':'knowledge','comfort':'schedule','sources':'materials'};
+    if(workspaceRoute[key]){ window.__syTaskWorkspaceTab = workspaceRoute[key]; key = 'task-workspace'; }
     appNavItems.forEach(function(b){ b.classList.toggle('active', b.getAttribute('data-view') === key); });
     appViews.forEach(function(v){ v.hidden = (v.getAttribute('data-view') !== key); });
     // 切换到一个新板块时，如果之前在别的板块里往下滚动过，需要把滚动位置归零——
@@ -1280,6 +1282,7 @@
     if(key === 'deadlines') renderDeadlinesView();
     if(key === 'profile') renderProfileView();
     if(key === 'shop') renderShopView();
+    if(key === 'task-workspace' && window.SYTaskWorkspace && window.SYTaskWorkspace.renderTab) window.SYTaskWorkspace.renderTab(window.__syTaskWorkspaceTab || 'overview');
   }
   function refreshCurrentView(){
     var active = null;
@@ -1294,11 +1297,15 @@
     else if(key === 'deadlines') renderDeadlinesView();
     else if(key === 'profile') renderProfileView();
     else if(key === 'shop') renderShopView();
+    else if(key === 'task-workspace' && window.SYTaskWorkspace && window.SYTaskWorkspace.refresh) window.SYTaskWorkspace.refresh();
     else renderDailyTab();
     renderCategoryReceiptIfOpen();
   }
   appNavItems.forEach(function(btn){
-    btn.addEventListener('click', function(){ switchAppView(btn.getAttribute('data-view')); });
+    btn.addEventListener('click', function(){
+      if(btn.hasAttribute('data-workspace-home')) window.__syTaskWorkspaceTab = 'overview';
+      switchAppView(btn.getAttribute('data-view'));
+    });
   });
 
   // ===== 每日清单：列表 / 日 / 3日 / 周 / 月 =====
