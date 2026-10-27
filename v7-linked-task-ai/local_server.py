@@ -19,7 +19,7 @@ import source_workflow as sourceflow
 from public_link_reader import research as source_research
 from local_integrations import initialize, connect_local_gateway
 from local_tools import vault_info, vault_list, vault_search, vault_read, vault_save, screen_ocr
-from rescue_service import RescueError, ask_ai, extract, extract_uploaded, extract_video, preview_url, read_feishu, search_web, public_config, set_config, test_connection, observe_frame, list_models, provider_catalog, team_public_config, set_team_config
+from rescue_service import RescueError, ask_ai, extract, extract_uploaded, extract_video, preview_url, read_feishu, search_web, public_config, set_config, test_connection, observe_frame, list_models, provider_catalog, team_public_config, set_team_config, parse_memo
 from desktop_feishu_reader import read_feishu_via_browser
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -146,6 +146,7 @@ class Handler(SimpleHTTPRequestHandler):
             size = int(self.headers.get('Content-Length','0'))
             max_size = 350000 if self.path == '/api/focus-observe' else (7200000 if self.path == '/api/extract-file' else (1200000 if self.path == '/api/p2/ask' else 150000))
             if self.path == '/api/source/prepare': max_size = 4_000_000
+            if self.path == '/api/memo/parse': max_size = 500_000
             if self.path == '/api/vault-save': max_size = 12_000_000
             if size < 1 or size > max_size: return self.send_json({'error':'请求大小不正确'},413)
             data = json.loads(self.rfile.read(size))
@@ -219,6 +220,7 @@ class Handler(SimpleHTTPRequestHandler):
             if self.path in ('/api/video-extract','/api/video'):
                 return self.send_json(extract_video(str(data.get('url','')).strip()))
             if self.path=='/api/ask-ai': return self.send_json(ask_ai(data))
+            if self.path=='/api/memo/parse': return self.send_json(parse_memo(data))
             if self.path=='/api/vault-list': return self.send_json(vault_list(data.get('limit', 200), bool(data.get('with_text'))))
             if self.path=='/api/vault-search': return self.send_json(vault_search(data.get('q',''), data.get('limit', 12)))
             if self.path=='/api/vault-read': return self.send_json(vault_read(data.get('path',''), data.get('limit', 20000)))
