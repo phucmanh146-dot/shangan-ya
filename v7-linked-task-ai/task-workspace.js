@@ -77,13 +77,13 @@ if(window.SY&&SY.saveAcctData)SY.saveAcctData(a);set('twEnergySaved',markStuck?'
 }
 function markWaitingAI(){
 var a=acct(),t=task(selectedId);if(!a||!t)return;
-a.taskStatusById=a.taskStatusById||{};a.taskStatusById[String(t.id)]='WAITING_AI';
+a.taskStatusById=a.taskStatusById||{};a.taskStatusById[String(t.id)]='WAITING_AI';if(a.stuckState&&String(a.stuckState.taskId||'')===String(t.id))a.stuckState=null;
 a.taskEvents=Array.isArray(a.taskEvents)?a.taskEvents:[];a.taskEvents.push({at:Date.now(),taskId:String(t.id),type:'WAITING_AI'});if(window.SY&&SY.saveAcctData)SY.saveAcctData(a);
 set('twEnergySaved','已标记等待 AI，可先去做不依赖此任务的事项；原任务仍未完成。');render();
 }
 function resumeTask(){
 var a=acct(),t=task(selectedId);if(!a||!t)return;
-a.taskStatusById=a.taskStatusById||{};a.taskStatusById[String(t.id)]='RESUMABLE';
+a.taskStatusById=a.taskStatusById||{};a.taskStatusById[String(t.id)]='RESUMABLE';if(a.stuckState&&String(a.stuckState.taskId||'')===String(t.id))a.stuckState=null;
 a.taskEvents=Array.isArray(a.taskEvents)?a.taskEvents:[];a.taskEvents.push({at:Date.now(),taskId:String(t.id),type:'RESUMABLE'});if(window.SY&&SY.saveAcctData)SY.saveAcctData(a);
 set('twEnergySaved','原任务已标记为可恢复；请从已保存的断点继续，未自动标记完成。');render();
 }
