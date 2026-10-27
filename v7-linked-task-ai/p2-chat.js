@@ -32,8 +32,30 @@ function showDialog(id){const d=$(id);if(d&&!d.open)d.showModal();}
 function addUrl(){const input=$('#p2-link-input'),raw=input.value.trim();try{const normalized=window.SYSourceIO?.normalizeLinks(raw)?.[0]||raw;const u=new URL(normalized);if(!['http:','https:'].includes(u.protocol)||u.username||u.password)throw Error('地址不合法');if(urls.includes(u.href))return $('#p2-link-status').textContent='这条链接已经加入';if(urls.length>=20)return $('#p2-link-status').textContent='一次最多20个网页链接；更多链接请分批提交';urls.push(u.href);drawAttachments();input.value='';$('#p2-link-dialog').close();status('链接已加入，发送时会实际读取网页正文。');}catch(e){$('#p2-link-status').textContent='请输入完整有效的 https:// 网址';}}
 $('#p2-new').onclick=newChat;$('#p2-open-side').onclick=()=>$('#p2-side').classList.toggle('open');$('#p2-close-side').onclick=()=>$('#p2-side').classList.remove('open');
 $('#p2-form').onsubmit=e=>{e.preventDefault();send();};$('#p2-files').onchange=e=>{uploadBatch(e.target.files);e.target.value='';};$('#p2-add-url').onclick=()=>showDialog('#p2-link-dialog');$('#p2-confirm-link').onclick=addUrl;
-function readObsidianIntoChat(){
- const raw=window.prompt('粘贴要读取的 Obsidian 笔记链接（obsidian://open?...）。只有成功取得正文后才会加入对话。','');
+function askObsidianLink(){
+ return new Promise(resolve=>{
+  const d=document.createElement('dialog');d.className='p2-dialog';d.setAttribute('aria-labelledby','p2-obsidian-link-title');
+  const title=document.createElement('h2');title.id='p2-obsidian-link-title';title.textContent='添加 Obsidian 笔记';
+  const intro=document.createElement('p');intro.textContent='粘贴 Obsidian 分享链接。只有成功读取到笔记正文后，内容才会加入当前 AI 对话；不会仅凭链接假装读取成功。';
+  const label=document.createElement('label');label.textContent='Obsidian 笔记链接';
+  const input=document.createElement('input');input.type='text';input.autocomplete='off';input.spellcheck=false;input.placeholder='obsidian://open?vault=…&file=…';input.setAttribute('aria-label','Obsidian 笔记链接');label.append(input);
+  const note=document.createElement('p');note.className='p2-small';note.textContent='如果没有分享链接，可取消后从工作台知识库选择笔记，或上传 Markdown 文件。';
+  const actions=document.createElement('div');actions.className='p2-dialog-actions';
+  const cancel=document.createElement('button');cancel.type='button';cancel.textContent='取消';
+  const confirm=document.createElement('button');confirm.type='button';confirm.className='p2-send';confirm.textContent='读取并加入对话';
+  actions.append(cancel,confirm);d.append(title,intro,label,note,actions);document.body.append(d);
+  let settled=false;
+  function finish(value){if(settled)return;settled=true;try{d.close()}catch(_){}d.remove();resolve(value);}
+  cancel.addEventListener('click',()=>finish(''));
+  confirm.addEventListener('click',()=>finish(input.value.trim()));
+  d.addEventListener('cancel',event=>{event.preventDefault();finish('');});
+  input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();finish(input.value.trim());}});
+  d.addEventListener('close',()=>finish(''));
+  d.showModal();requestAnimationFrame(()=>input.focus());
+ });
+}
+async function readObsidianIntoChat(){
+ const raw=await askObsidianLink();
  if(!raw||!raw.trim()){status('未提供 Obsidian 笔记链接；没有读取任何内容。');return;}
  let io=window.SYSourceIO;
  try{if(window.parent&&window.parent!==window&&window.parent.SYSourceIO)io=window.parent.SYSourceIO;}catch(e){}
