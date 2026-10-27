@@ -9,6 +9,20 @@ ROOT=Path(__file__).resolve().parent
 SESSION_ROOT=Path(os.environ.get('SHANGANYA_SESSION_ROOT',str(cloud_accounts.DATA/'sessions')))
 SESSION_ROOT.mkdir(parents=True,exist_ok=True)
 SESSIONS={};LOCK=threading.RLock()
+AI_USAGE={};AI_USAGE_LOCK=threading.RLock()
+SHARED_AI_PATHS={'/api/memo/parse','/api/ask-ai','/api/p2/ask','/api/pm/ask','/api/focus-observe','/api/ai-test','/api/pm/test'}
+def shared_ai_enabled():
+ return bool(os.getenv('FOCUS_AI_API_KEY','').strip() or os.getenv('OPENAI_API_KEY','').strip())
+def allow_shared_ai(account):
+ if not account:return False,'共享 AI 仅对已登录账户开放；访客可以在当前会话中配置自己的模型密钥。'
+ key=str(account.get('storage') or account.get('id') or '')
+ if not key:return False,'无法识别当前账户，未调用共享 AI。'
+ now=time.time()
+ with AI_USAGE_LOCK:
+  recent=[t for t in AI_USAGE.get(key,[]) if now-t<3600]
+  if len(recent)>=40:return False,'该账户本小时的 AI 请求已达到安全限额，请稍后重试。'
+  recent.append(now);AI_USAGE[key]=recent
+ return True,''
 BLOCKED=('/api/wechat-private/','/api/pm/wx/','/api/pm/desktop-tool/','/api/pm/screen-')
 EXACT={'/api/screen-ocr','/api/ai-local-gateway','/api/cc-switch','/api/cc-switch/connect','/api/pm/vault-select','/api/pm/vault-open','/api/pm/vault-explorer','/api/pm/vault-reveal-note'}
 def backend(cookie):
@@ -72,6 +86,9 @@ class Public(SimpleHTTPRequestHandler):
   if self.headers.get('Origin') and urlsplit(self.headers['Origin']).netloc!=self.headers.get('Host'):return self.message({'error':'请从本网站打开'},403)
   if cloud_accounts.handle(self):return
   account=cloud_accounts.current(self)
+  if path in SHARED_AI_PATHS and shared_ai_enabled():
+   allowed,note=allow_shared_ai(account)
+   if not allowed:return self.message({'error':note,'code':'SHARED_AI_AUTH_REQUIRED' if not account else 'AI_RATE_LIMIT'},429 if account else 401)
   if account and cloud_accounts.agent_for(account['id']) and path in ('/api/pm/tutorials','/api/pm/tutorial-links','/api/source/prepare','/api/sources/read') and not (path in ('/api/pm/tutorials','/api/pm/tutorial-links','/api/source/prepare') and has_cloud_notes(account)):
    try:
     size=int(self.headers.get('Content-Length','0'))
