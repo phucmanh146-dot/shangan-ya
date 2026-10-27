@@ -8,6 +8,38 @@ let selectedHistoryBatch=[];
 function notice(t,bad=false){let x=Q('#pmaw-status');if(x){x.textContent=t;x.dataset.error=String(bad)}}
 function setFlowStep(step){Q('.pmaw-flow')?.querySelectorAll('li').forEach((n,i)=>{n.classList.toggle('is-active',i+1===step);n.classList.toggle('is-done',i+1<step)})}
 async function historyApi(path,data){if(!window.SYMultiSources?.api)throw Error('本机资料桥未加载；请确认本机读取服务正在运行。');return window.SYMultiSources.api('/api/sources/wechat',{path,method:'POST',data:data||{}})}
+function account(){return window.SY&&typeof SY.getAcctData==='function'?SY.getAcctData():{tasks:[]}}
+function save(data){if(window.SY&&typeof SY.saveAcctData==='function')SY.saveAcctData(data);else throw Error('原任务存储接口尚未加载，未保存微信证据。')}
+function taskOptions(){
+ const sel=Q('#pmaw-existing-task');if(!sel)return;
+ const previous=sel.value,a=account(),tasks=Array.isArray(a.tasks)?a.tasks:[];
+ sel.replaceChildren(new Option('新建任务（需要你确认）','new'));
+ tasks.filter(t=>t&&!t.done&&!t.deleted).forEach(t=>sel.append(new Option(String(t.name||t.title||'未命名任务')+' · '+String(t.category||'未分类'),String(t.id))));
+ sel.value=Array.from(sel.options).some(o=>o.value===previous)?previous:'new';updateNewTask();
+}
+function updateNewTask(){
+ const sel=Q('#pmaw-existing-task'),fields=Q('#pmaw-new-task-fields');if(!sel||!fields)return;
+ const creating=!sel.value||sel.value==='new';fields.hidden=!creating;
+ const name=Q('#pmaw-taskname');if(name)name.required=creating;
+ const estimate=Q('#pmaw-est-minutes');if(estimate)estimate.required=creating;
+}
+function candidates(result){
+ const host=Q('#pmaw-results');if(!host)return;host.replaceChildren();
+ const rows=Array.isArray(result&&result.candidates)?result.candidates:[];
+ host.append(El('p','pmaw-note',String(result&&result.note||'当前微信窗口搜索返回 '+rows.length+' 条候选。仅展示接口真实返回的内容；请逐条核对后再关联。')));
+ if(!rows.length){host.append(El('p','pmaw-note','没有可展示的候选消息。请检查关键词或当前微信窗口；不会把连接状态当作读取成功。'));return}
+ rows.slice(0,100).forEach((item,index)=>{
+  const row=El('article','pmaw-history-hit'),title=String(item.groupName||item.group||item.title||('候选消息 '+(index+1))),bodyText=String(item.text||item.content||item.message||item.snippet||'');
+  row.append(El('div','pmaw-history-meta',title+(item.time?' · '+String(item.time):'')),El('p','pmaw-history-text',bodyText.slice(0,1200)));
+  const btn=El('button','pmaw-light','选择并核对');btn.type='button';btn.onclick=()=>{
+   selectedHistoryMessage={id:item.id||item.messageId||'',text:bodyText,group:title,time:item.time||'',sender:item.sender||item.senderName||''};
+   selectedGroup=title;selectedGroupId=String(item.groupId||item.chatId||'');lastCandidate={label:title,scope:'window'};lastCrop=null;
+   const box=Q('#pmaw-recognition'),ocr=Q('#pmaw-ocr');if(box)box.hidden=false;if(ocr)ocr.textContent=bodyText||'接口返回了候选，但没有可展示的正文。';
+   const input=Q('#pmaw-taskname');if(input&&!input.value)input.value=bodyText.split(/\r?\n/).map(x=>x.trim()).find(Boolean)||'';
+   taskOptions();setFlowStep(3);notice('已选择接口返回的真实候选。请核对原文并确认关联，不会自动创建任务。');row.classList.add('is-selected');
+  };row.append(btn);host.append(row);
+ });
+}
 function showGroupResults(result){const host=Q('#pmaw-results');host.replaceChildren();const groups=Array.isArray(result.groups)?result.groups:[];host.append(El('p','pmaw-note','本机历史群目录匹配 '+(result.total||groups.length)+' 个群。此目录不提供置顶标记；请核对群名后选择。'));groups.slice(0,200).forEach((g,i)=>{const name=String(g.name||'').trim();if(!name)return;const row=El('div','pmaw-hit'),num=El('span','pmaw-hit-number',String(i+1).padStart(2,'0')),info=El('span','pmaw-hit-name',name),btn=El('button','pmaw-light','选中此群');btn.type='button';btn.onclick=()=>{selectedGroup=name;selectedGroupId=String(g.id||'');selectedHistoryMessage=null;Q('#pmaw-message-query')?.focus();setFlowStep(2);notice('已选中群聊「'+name+'」。输入消息关键词后，搜索本机历史记录。');host.querySelectorAll('.pmaw-hit').forEach(x=>x.classList.remove('is-selected'));row.classList.add('is-selected');btn.textContent='已选中 ✓'};row.append(num,info,btn);host.append(row)});if(result.partial)host.append(El('p','pmaw-note','匹配结果超过本批显示上限；请缩小群名关键词。'))}
 function showHistoryMessages(result,append=false){
  const host=Q('#pmaw-results');if(!append){host.replaceChildren();selectedHistoryBatch=[];}else host.querySelector('.pmaw-history-more')?.remove();
