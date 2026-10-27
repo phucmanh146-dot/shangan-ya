@@ -12,13 +12,17 @@ try:
 except (OSError,ValueError,TypeError):pass
 os.environ['FOCUS_VAULT_PATH']=str(vault)
 for key in list(os.environ):
- if key.startswith(('FEISHU_','OPENAI_','ANTHROPIC_','DEEPSEEK_','GLM_','FOCUS_AI_','SHANGANYA_API_','HEYGEN_')):os.environ.pop(key,None)
+ if key.startswith(('FEISHU_','ANTHROPIC_','DEEPSEEK_','GLM_','FOCUS_AI_','SHANGANYA_API_','HEYGEN_')):os.environ.pop(key,None)
 import local_server
 import multi_sources
 import heygen_video
+import ai_gateway
 class Worker(local_server.Handler):
  def do_GET(self):
   path=urlparse(self.path).path
+  if path=='/api/ai/status':
+   try:return self.send_json(ai_gateway.handle(path,{}))
+   except ai_gateway.GatewayError as e:return self.send_json({'error':str(e)},e.status)
   if path.startswith('/api/heygen/'):
    try:return self.send_json(heygen_video.get(path))
    except heygen_video.HeyGenError as e:return self.send_json({'error':str(e)},e.status)
@@ -37,6 +41,15 @@ class Worker(local_server.Handler):
     if not isinstance(data,dict):raise ValueError('请求无效')
     return self.send_json(heygen_video.post(path,data))
    except heygen_video.HeyGenError as e:return self.send_json({'error':str(e)},e.status)
+   except Exception as e:return self.send_json({'error':str(e)[:300]},422)
+  if path in ('/api/ai/respond','/api/memo/parse'):
+   try:
+    size=int(self.headers.get('Content-Length','0'))
+    if size<1 or size>12000000:return self.send_json({'error':'请求大小无效'},413)
+    data=json.loads(self.rfile.read(size))
+    if not isinstance(data,dict):raise ValueError('请求无效')
+    return self.send_json(ai_gateway.handle(path,data))
+   except ai_gateway.GatewayError as e:return self.send_json({'error':str(e)},e.status)
    except Exception as e:return self.send_json({'error':str(e)[:300]},422)
   if self.path.startswith("/api/sources/"):
    try:
