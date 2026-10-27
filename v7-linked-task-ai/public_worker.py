@@ -23,7 +23,7 @@ class Worker(local_server.Handler):
   if path=='/api/ai/status':
    try:return self.send_json(ai_gateway.handle(path,{}))
    except ai_gateway.GatewayError as e:return self.send_json({'error':str(e)},e.status)
-  if path.startswith('/api/heygen/')
+  if path.startswith('/api/heygen/'):
    try:return self.send_json(heygen_video.get(path))
    except heygen_video.HeyGenError as e:return self.send_json({'error':str(e)},e.status)
    except Exception as e:return self.send_json({'error':str(e)[:300]},503)
