@@ -10,6 +10,7 @@ function init(){
  function isDone(t){return !!(t.done||t.completed||t.completedAt||t.status==='done'||t.status==='completed')}
  function stamp(){return new Date().toISOString()}
  function fmt(n){n=Math.max(0,Math.round(Number(n)||0));return n>=60?Math.floor(n/60)+'h '+n%60+'m':n+'m'}
+ function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
  function record(type,text){var d=acct();if(!d)return;var s=state(d);s.events.push({at:stamp(),type:type,text:text});s.events=s.events.slice(-120);persist(d);renderEvents()}
  var anchor=document.getElementById('dailyTabs');if(!anchor)return;
  var launch=document.createElement('section');launch.className='sy-ef-launch';launch.innerHTML='<div class="sy-ef-launch-main"><span class="sy-ef-launch-icon">◷</span><div><h3>精力与执行中枢</h3><p id="syEfLaunchSummary">精力、任务、计时、疲惫分析和 AI 解卡在同一工作流中。</p></div></div><div class="sy-ef-launch-battery" aria-label="当前精力电量"><div class="sy-ef-mini-battery"><span id="syEfBatteryFill" style="width:60%"></span></div><strong id="syEfEnergyValue">3/5</strong><small id="syEfEnergyText">当前电量</small></div>';
