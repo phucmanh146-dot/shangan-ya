@@ -686,7 +686,8 @@
             <article class="cp-page-card"><span class="cp-page-card-icon">◷</span><div><h3>认知负荷估算</h3><p>结合连续用脑、卡壳与状态反馈；信息不足时明确标记置信度，不假装读取脑电。</p><a href="#view-comfort" data-cp-open-link>进入状态评估 ↗</a></div></article>
             <article class="cp-page-card"><span class="cp-page-card-icon">▤</span><div><h3>真实任务排期</h3><p>只从原有待办选择任务，参考历史耗时与复杂度；延后不等于放弃，也不会自动完成。</p><a href="#view-daily" data-cp-route="daily">回到任务清单 ↗</a></div></article>
             <article class="cp-page-card"><span class="cp-page-card-icon">☁</span><div><h3>休息与弹性缓冲</h3><p>预留发呆、娱乐、短休与卡壳缓冲，不把每一分钟塞满，也不把娱乐当作欠账。</p><a href="#view-comfort" data-cp-open-link>设置恢复时间 ↗</a></div></article>
-            <article class="cp-page-card"><span class="cp-page-card-icon">⌕</span><div><h3>资料与 AI 解卡</h3><p>先从资料中心核对真实来源，再将当前任务带入 AI 解卡；未读取的笔记不会显示成已读取。</p><a href="#view-sources" data-cp-route="sources">打开资料中心 ↗</a><a href="#view-ai-p2" data-cp-route="ai-p2">打开 AI 工作区 ↗</a></div></article>
+            <article class="cp-page-card"><span class="cp-page-card-icon">⌕</span><div><h3>资料与 AI 解卡</h3><p>先从资料中心核对真实来源，再将当前任务带入 AI 解卡；未读取的笔记不会显示成已读取。AI 会参考当前任务已记录的精力与疲惫反馈，优先给出适合此刻状态的下一步。</p><a href="#view-sources" data-cp-route="sources">打开资料中心 ↗</a><a href="#view-ai-p2" data-cp-route="ai-p2">打开 AI 工作区 ↗</a></div></article>
+            <article class="cp-page-card"><span class="cp-page-card-icon">◒</span><div><h3>个人精力画像与任务耗能</h3><p>查看不同时段的精力签到、哪些任务反复出现低精力或疲惫反馈，以及真实耗时样本。样本不足会明确提示，不会凭空推断你的规律。</p><a href="#view-comfort" data-cp-open-patterns>查看个人规律 ↗</a><a href="#view-stats" data-cp-route="stats">查看历史记录 ↗</a></div></article>
           </div>
           <section class="cp-page-footnote"><strong>使用原则</strong><span>系统建议不替代你的感受。若你反馈“脑袋被抽干”，先恢复再重新评估；计划可以顺延，不以牺牲休息来补齐。</span><a href="#view-stats" data-cp-route="stats">查看历史与复盘 ↗</a></section>
         </div>
@@ -1273,9 +1274,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 var bootObs=new MutationObserver(function(){if(document.getElementById('view-daily')&&!document.getElementById('energy-left-planner'))mount()});bootObs.observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
-<script src="./comfort-planner-flow.js?v=20261027-task-monitor-v4"></script>
+<script src="./comfort-planner-flow.js?v=20261028-energy-learning-v5"></script>
 <script src="./task-workspace.js?v=20261027-monitor-v1"></script>
-<script src="./task-ai-entry.js?v=20261028-real-ai-inline-v3"></script>
+<script src="./task-ai-entry.js?v=20261028-energy-context-v4"></script>
 </body>
 </html>
 
