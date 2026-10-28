@@ -304,4 +304,11 @@ $('#p2-feishu-desktop-read').addEventListener('click',readFeishuDesktop);
 $('#p2-feishu-save').addEventListener('click',saveFeishuCredentials);
 $('#p2-feishu-test').addEventListener('click',testFeishuRead);
 $('#p2-feishu-clear').addEventListener('click',clearFeishuCredentials);
+// A direct left-sidebar hyperlink can open this dialog without adding another settings page.
+function openConfigFromLink(){
+ if(location.hash!=='#configure-ai')return;
+ window.setTimeout(function(){open($('#p2-top-provider')?.value||undefined);},180);
+}
+window.addEventListener('load',openConfigFromLink,{once:true});
+if(document.readyState==='complete')openConfigFromLink();
 })();
