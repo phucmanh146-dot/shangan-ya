@@ -8,7 +8,30 @@ function styles(){if(document.getElementById('sy-ai-v2-style'))return;const s=do
 `;document.head.appendChild(s)}
 function taskId(){const p=document.getElementById('twTaskSelect');return String(p&&p.value||window.__SYTaskWorkspaceSelectedTaskId||'').trim()}
 function getData(){try{const all=JSON.parse(localStorage.getItem(KEY)||'{}')||{};let key='guest';try{if(window.SY&&window.SY.currentAccountKey)key=String(window.SY.currentAccountKey)}catch(_){}return{all,key,account:all[key]||null}}catch(_){return{all:{},key:'guest',account:null}}}
-function context(){const d=getData(),id=taskId(),tasks=d.account&&Array.isArray(d.account.tasks)?d.account.tasks:[],t=tasks.find(x=>String(x.id)===id);if(!t)return{id,task:null,text:'当前任务 ID：'+(id||'未选择')+'。未能从当前账户原始数据中验证任务详情，请勿猜测。'};const mats=(Array.isArray(t.materials)?t.materials:[]).map(m=>typeof m==='string'?m:((m.title||m.name||'')+' '+(m.url||m.href||m.link||''))).filter(Boolean).slice(0,12),acct=d.account||{},energy=(Array.isArray(acct.energyHistory)?acct.energyHistory:[]).filter(x=>String(x.taskId||'')===String(t.id)).slice(-6),fatigue=(Array.isArray(acct.fatigueLog)?acct.fatigueLog:[]).filter(x=>String(x.taskId||'')===String(t.id)).slice(-6),recentEnergy=energy.length?energy.map(x=>{const dt=Number(x.at)||0;return (dt?new Date(dt).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})+' ':'')+'精力 '+x.score+'/5'}).join('；'):'无该任务的精力样本',fatigueText=fatigue.length?fatigue.map(x=>(x.reason||x.category||'疲惫反馈')+(x.at?'（'+new Date(Number(x.at)).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})+'）':'')).join('；'):'无该任务的疲惫记录';return{id:String(t.id),task:t,text:['【上岸鸭当前任务上下文，只读】','任务 ID：'+t.id,'名称：'+(t.name||'未命名'),'分类：'+(t.category||'未分类'),'状态：'+(t.done?'已完成':'未完成'),'计划日期：'+(t.date||'未设置'),'截止：'+(t.dueDate||'未设置')+' '+(t.dueTime||''),'预计分钟：'+(t.estMinutes||t.plannedMinutes||'未设置'),'任务步骤：'+(Array.isArray(t.steps)?t.steps.map(x=>typeof x==='string'?x:(x.name||x.title||x.text||'')).filter(Boolean).join('；'):'未设置'),'已有记录：'+[t.noteFramework,t.noteGain,t.noteKnowledge,t.noteRemark].filter(Boolean).join('；'),'该任务历史精力反馈：'+recentEnergy,'该任务历史疲惫记录：'+fatigueText,'关联资料（链接不代表正文已读取）：\n'+(mats.join('\n')||'无')].join('\n')}}
+function context(){
+ const d=getData(),id=taskId(),acct=d.account||{},tasks=Array.isArray(acct.tasks)?acct.tasks:[],t=tasks.find(x=>String(x.id)===id);
+ if(!t)return{id,task:null,text:'当前任务 ID：'+(id||'未选择')+'。未能从当前账户原始数据中验证任务详情，请勿猜测。'};
+ const mats=(Array.isArray(t.materials)?t.materials:[]).map(m=>typeof m==='string'?m:((m.title||m.name||'')+' '+(m.url||m.href||m.link||''))).filter(Boolean).slice(0,12);
+ const allEnergy=(Array.isArray(acct.energyHistory)?acct.energyHistory:[]),allFatigue=(Array.isArray(acct.fatigueLog)?acct.fatigueLog:[]);
+ const energy=allEnergy.filter(x=>String(x.taskId||'')===String(t.id)).slice(-6),fatigue=allFatigue.filter(x=>String(x.taskId||'')===String(t.id)).slice(-6);
+ const recentEnergy=energy.length?energy.map(x=>{const dt=Number(x.at)||0;return (dt?new Date(dt).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})+' ':'')+'精力 '+x.score+'/5'}).join('；'):'无该任务的精力样本';
+ const fatigueText=fatigue.length?fatigue.map(x=>(x.reason||x.category||'疲惫反馈')+(x.at?'（'+new Date(Number(x.at)).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})+'）':'')).join('；'):'无该任务的疲惫记录';
+ const recent=allEnergy.slice(-12),recentText=recent.length?recent.map(x=>{const dt=Number(x.at)||0,task=tasks.find(y=>String(y.id)===String(x.taskId));return (dt?new Date(dt).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})+' ':'')+(task?(task.name||task.title)+'：':'')+'精力 '+x.score+'/5'}).join('；'):'无近期全局精力记录';
+ const globalFatigue=allFatigue.slice(-8).map(x=>{const task=tasks.find(y=>String(y.id)===String(x.taskId));return (task?(task.name||task.title)+'：':'')+(x.reason||x.category||'疲惫反馈')}).join('；')||'无已保存的全局疲惫记录';
+ const low=recent.filter(x=>Number(x.score)<=2).length,profile=recent.length?'最近 '+recent.length+' 次精力记录中，低精力（1–2/5）'+low+' 次；这是短期样本，不足以单独证明因果。':'尚无足够的个人精力样本，不能推断固定规律。';
+ return{id:String(t.id),task:t,text:[
+ '【上岸鸭当前任务与个人执行状态上下文，只读】',
+ '任务 ID：'+t.id,'名称：'+(t.name||'未命名'),'分类：'+(t.category||t.lane||'未分类'),
+ '状态：'+(t.done?'已完成':'未完成'),'计划日期：'+(t.date||'未设置'),
+ '截止：'+(t.dueDate||t.deadline||'未设置')+' '+(t.dueTime||''),
+ '预计分钟：'+(t.estMinutes||t.plannedMinutes||t.minutes||'未设置'),
+ '任务步骤：'+(Array.isArray(t.steps)?t.steps.map(x=>typeof x==='string'?x:(x.name||x.title||x.text||'')).filter(Boolean).join('；'):'未设置'),
+ '已有记录：'+[t.noteFramework,t.noteGain,t.noteKnowledge,t.noteRemark,t.notes].filter(Boolean).join('；'),
+ '该任务历史精力反馈：'+recentEnergy,'该任务历史疲惫记录：'+fatigueText,
+ '近期个人状态摘要：'+profile,'最近全局精力记录：'+recentText,'最近全局疲惫记录：'+globalFatigue,
+ '关联资料（链接不代表正文已读取）：\n'+(mats.join('\n')||'无')
+ ].join('\n')}
+}
 async function api(url,payload,timeout){const c=new AbortController(),tm=setTimeout(()=>c.abort(),timeout||180000);try{const r=await fetch(url,{method:payload===undefined?'GET':'POST',headers:payload===undefined?{}:{'Content-Type':'application/json'},body:payload===undefined?undefined:JSON.stringify(payload),credentials:'same-origin',cache:'no-store',signal:c.signal});const j=await r.json().catch(()=>({error:'服务端没有返回有效 JSON'}));if(!r.ok||j.error)throw Error(j.error||('HTTP '+r.status));return j}finally{clearTimeout(tm)}}
 function status(msg,bad){const n=document.getElementById('sy-ai-inline-status');if(n){n.textContent=msg||'';n.classList.toggle('bad',!!bad)}}
 async function check(){try{const r=await api('/api/p2/status',undefined,16000),a=r.ai||{};const m=document.getElementById('sy-ai-inline-model');if(m)m.textContent=a.model?'当前模型：'+a.model:'尚未选择模型';status(a.verified?'真实模型已验证，可以提交问题。':a.configured?'模型已配置但未通过真实请求验证，请先测试连接。':'尚未连接真实模型。请配置 API Key 并执行真实测试。',!a.verified)}catch(e){status('无法检查真实 AI 后端：'+e.message+'。不会生成假回答。',true)}}
