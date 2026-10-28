@@ -212,5 +212,5 @@ if(document.readyState!=='loading')scheduleInit();
 observer=new MutationObserver(function(){if(!dialog){mountLauncher();quickSearchPanel();redirectDifficulty();updateLauncher()}});
 observer.observe(document.documentElement,{childList:true,subtree:true});
 window.SYComfortFlow={open:open,brain:brain,searchVault:searchVault,readVaultNote:readVaultNote,refresh:updateLauncher};
-document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-cp-open]');if(b){e.preventDefault();open(0);return}var legacy=e.target.closest&&e.target.closest('button,a,[role="button"]');if(legacy&&/舒适排期|给休息留时间/.test(legacy.textContent||'')&&!legacy.closest('.cp-dialog')){e.preventDefault();open(0)}});
+document.addEventListener('click',function(e){var patterns=e.target.closest&&e.target.closest('[data-cp-open-patterns]');if(patterns){e.preventDefault();open(4);return}var b=e.target.closest&&e.target.closest('[data-cp-open]');if(b){e.preventDefault();open(0);return}var legacy=e.target.closest&&e.target.closest('button,a,[role="button"]');if(legacy&&/舒适排期|给休息留时间/.test(legacy.textContent||'')&&!legacy.closest('.cp-dialog')){e.preventDefault();open(0)}});
 })();
