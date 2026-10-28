@@ -2,7 +2,7 @@
 
 - 日期：2026-10-28
 - 适用基线：Railway 当前生产分支 `feature/source-task-center-20261025`
-- 实施分支：`feat/energyflow-workbench-integration-20261028`
+- 实施分支：`fix/energyflow-dedup-20261028`
 - 状态：需求与代码变更记录；**尚未完成浏览器端到端验收，不代表已部署生产**。
 
 ## 1. 产品初衷
