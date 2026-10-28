@@ -34,13 +34,13 @@ function brain(){
  if(latestFatigue&&now-latestFatigue<4*3600000&&Number(ci.at||0)>latestFatigue){signals.push('已优先采用疲惫记录之后的新状态反馈')}
  return pack(score,signals.length?signals.join('；'):why,confidence,elapsed,stuck);
 }function pack(score,why,confidence,elapsed,stuck){score=Math.max(1,Math.min(5,Math.round(score||3)));return{score:score,label:score<=1?'可能已明显透支':score===2?'认知负荷偏高':score===3?'中等负荷，先短段推进':score===4?'适合安排深度任务':'当前反馈较清醒',why:why,confidence:confidence,elapsed:elapsed||0,stuck:stuck||0}}
-function recordFeedback(score){
- var a=account();if(!a)return false;var now=Date.now(),id=String((a.activeTimer||{}).taskId||a.priorityFocusTaskId||'');
- a.plannerSettings=a.plannerSettings||{};a.plannerSettings.lastCognitiveCheckin={score:score,at:now,source:'舒适排期快速反馈',taskId:id};
- a.plannerSettings.currentEnergyScore=score;a.plannerSettings.currentEnergyLevel=score<=2?'low':score>=4?'high':'medium';a.plannerSettings.energyLevelUpdatedAt=now;
- a.energyHistory=Array.isArray(a.energyHistory)?a.energyHistory:[];a.energyHistory.push({id:'comfort-'+now,date:today(),at:now,hour:new Date(now).getHours(),score:score,source:'舒适排期快速反馈',taskId:id});if(a.energyHistory.length>500)a.energyHistory=a.energyHistory.slice(-500);
- if(score<=2){a.fatigueLog=Array.isArray(a.fatigueLog)?a.fatigueLog:[];a.fatigueLog.push({at:now,score:score,taskId:id,category:'认知负荷反馈',reason:score===1?'脑袋被抽干': '读不进去/认知负荷偏高'});if(a.fatigueLog.length>200)a.fatigueLog=a.fatigueLog.slice(-200)}
- save(a);stateFeedback=score;return true;
+function recordFeedback(rawScore){
+ var a=account(),now=Date.now(),raw=Math.max(1,Math.min(10,Math.round(Number(rawScore)||5))),score=Math.max(1,Math.min(5,Math.ceil(raw/2))),id=String((a&&(a.activeTimer||{}).taskId)||((a||{}).priorityFocusTaskId)||''),p=localProfile(),sleep=$('#cpSleep',dialog),special=$('#cpSpecial',dialog);
+ p.lastCognitiveCheckin={score:score,rawScore:raw,at:now,source:'EnergyFlow 本地精力打卡',taskId:id,sleepQuality:sleep?sleep.value:'',specialState:special?special.value.trim():''};
+ p.sleepQuality=sleep?sleep.value:(p.sleepQuality||'');p.specialState=special?special.value.trim():(p.specialState||'');
+ p.energyHistory=Array.isArray(p.energyHistory)?p.energyHistory:[];p.energyHistory.push({id:'energyflow-'+now,date:today(),at:now,hour:new Date(now).getHours(),score:score,rawScore:raw,source:'EnergyFlow 本地精力打卡',taskId:id,sleepQuality:p.sleepQuality,specialState:p.specialState,localOnly:true});if(p.energyHistory.length>500)p.energyHistory=p.energyHistory.slice(-500);
+ if(score<=2){p.fatigueLog=Array.isArray(p.fatigueLog)?p.fatigueLog:[];p.fatigueLog.push({at:now,score:score,taskId:id,category:'认知负荷反馈',reason:score===1?'精力偏低：优先恢复':'认知负荷偏高'});if(p.fatigueLog.length>200)p.fatigueLog=p.fatigueLog.slice(-200)}
+ if(!saveLocalProfile(p))return false;stateFeedback=score;return true;
 }
 function localTime(n){n=Math.max(0,Math.min(1439,n));return String(Math.floor(n/60)).padStart(2,'0')+':'+String(n%60).padStart(2,'0')}
 function parseTime(s){var p=String(s||'').split(':');return Math.max(0,Math.min(1439,(Number(p[0])||0)*60+(Number(p[1])||0)))}
@@ -179,37 +179,8 @@ function buildPatterns(a){
  var enough=hist.length>=3;
  return '<section class="cp-panel"><span class="cp-eyebrow">PERSONAL PATTERNS · EVIDENCE FIRST</span><h3>你的个人规律</h3><p class="cp-lead">这些分析只用当前账号已保存的记录。样本不足时明确提示；任务低分代表“当时精力偏低”，不是医学诊断，也不单独证明任务导致疲劳。</p><div class="cp-pattern-card"><h4>1. 我的精力时段 · 按签到统计</h4>'+(hist.length>=2?groups.map(function(g){return '<div class="cp-bar-row"><span>'+g.name+'</span><div class="cp-bar"><i style="width:'+(g.n?g.avg/5*100:0)+'%"></i></div><b>'+(g.n?g.avg.toFixed(1)+'/5':'暂无')+'</b><small>'+g.n+' 次</small></div>'}).join(''):'<p class="cp-muted">目前有 '+hist.length+' 次精力记录。至少 2 次后才展示；每个时段最好有 3 次以上样本再比较。</p>')+'</div><div class="cp-pattern-card"><h4>2. 哪些任务更容易遇到低精力 / 疲惫反馈</h4>'+(expensive.length?expensive.slice(0,5).map(function(x){return '<div class="cp-bar-row"><span style="min-width:100px;max-width:40%;overflow-wrap:anywhere">'+esc(x.name)+'</span><div class="cp-bar"><i style="width:'+Math.round(Math.max(x.rate,x.fatigue/(x.checks+x.fatigue||1))*100)+'%"></i></div><b>'+(x.checks?Math.round(x.rate*100)+'%低分':'暂无低分样本')+'</b><small>'+x.checks+' 次反馈 · '+x.fatigue+' 次疲惫</small></div>'}).join(''):'<p class="cp-muted">目前还没有同一任务至少 2 次精力反馈或 2 次疲惫记录。使用“记录状态 / 记录卡壳”并关联任务后，才会形成任务级画像。</p>')+'</div><div class="cp-pattern-card"><h4>3. 任务学习曲线与耗时校准</h4><p>'+(taskHist.length>=2?'已找到 '+taskHist.length+' 条任务历史；排期会优先采用真实耗时中位数，并把重复低精力 / 疲惫反馈作为保守缓冲信号。':'目前有 '+taskHist.length+' 条可识别任务历史。至少需要 2 条有效真实耗时记录；当前不编造耗时。')+'</p></div><div class="cp-pattern-card"><h4>4. 疲惫与必要任务保护</h4><p>精力反馈 '+hist.length+' 次 · 疲惫记录 '+fatigue.length+' 条 · 当前估算置信度 '+esc(brain().confidence)+'. '+(hist.length<3?'样本不足时使用保守规则。':'系统已开始形成个人基线，但仍需结合你此刻的主观反馈。')+'排期先保留固定事项、必要任务、休息与机动缓冲；超出可用时间的任务留在待安排区，不自动标记完成。</p><p>疲惫前的任务负荷：'+(fatigueLoad.length>=2?'按已记录数据，疲惫反馈前平均关联 '+avgTasksBeforeFatigue.toFixed(1)+' 项不同任务（'+fatigueLoad.length+' 次疲惫样本）。这是记录覆盖范围内的估计，不代表全天实际完成量。':'目前只有 '+fatigueLoad.length+' 条可用于估算的疲惫负荷样本；继续在卡壳/疲惫时关联当前任务，积累后再比较。')+'</p></div><div class="cp-research"><h4>研究依据 · 用于设计，不等于个人诊断</h4><p><a href="https://pubmed.ncbi.nlm.nih.gov/39422518/" target="_blank" rel="noopener noreferrer">Dickens 等，2024：认知疲劳客观测量系统综述</a>：疲劳是复杂状态，单一信号难以可靠实时判定，因此保留主观反馈并标注置信度。</p><p><a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC9432722/" target="_blank" rel="noopener noreferrer">Albulescu 等，2022：微休息系统综述与荟萃分析</a>：对活力与疲劳有小幅改善；高消耗任务可能需要更长恢复。</p><p><a href="https://www.annualreviews.org/content/journals/10.1146/annurev-psych-022824-043825" target="_blank" rel="noopener noreferrer">Cajochen & Schmidt，2025：昼夜节律与认知综述</a>：昼夜节律会影响认知，但睡眠债、个体差异和任务类型都会改变结果。</p><p><a href="https://pubmed.ncbi.nlm.nih.gov/7669837/" target="_blank" rel="noopener noreferrer">Neubauer & Freudenthaler，1995：90 分钟认知周期检验</a>：未发现稳定的 90 分钟认知表现周期，不能把它当作普遍规律。</p></div></section>';
 }
-function quickSearchPanel(){
- var ai=$('#view-ai-p2');if(!ai||$('#cp-ai-knowledge'))return;
- var panel=document.createElement('section');panel.id='cp-ai-knowledge';panel.className='cp-ai-knowledge';
- panel.innerHTML='<div class="cp-ai-head"><div><span class="cp-kicker">LOCAL KNOWLEDGE · REAL SEARCH</span><h3>遇到困难？先检索你的本机笔记</h3><p>通过本机后端搜索「韩奕知识复盘」标题与正文。只有后端返回的真实结果才会显示；连接不上时明确提示。</p></div><button type="button" class="cp-secondary" data-cp-open-source>打开资料中心 →</button></div><form class="cp-ai-search" data-cp-search-form><input type="search" data-cp-query placeholder="输入当前卡住的问题：例如 Agent、MCP、需求分析…" aria-label="搜索本机 Obsidian 笔记"><button type="submit" class="cp-primary">搜索本机笔记</button></form><p class="cp-ai-status" data-cp-ai-status role="status" aria-live="polite">尚未检索；不会假装已读取。</p><div class="cp-ai-results" data-cp-ai-results></div>';
- var head=$('.embedded-p2-head',ai);if(head)head.before(panel);else ai.prepend(panel);
- panel.querySelector('[data-cp-open-source]').onclick=function(){if(window.SY&&SY.switchAppView)SY.switchAppView('sources')};
- panel.querySelector('[data-cp-search-form]').onsubmit=function(e){e.preventDefault();searchVault(panel.querySelector('[data-cp-query]').value.trim(),panel)};
-}
-async function backend(path,data){
- if(window.SY&&typeof SY.backendCall==='function'){var r=await SY.backendCall(path,data,60000);if(!r||!r.ok)throw Error(r&&r.error||'本机知识库后端未返回成功');return r.data||{}}
- throw Error('本机后端接口未就绪。请在本机启动工作台配套服务后重试。');
-}
-async function searchVault(q,panel){
- var status=$('[data-cp-ai-status]',panel),host=$('[data-cp-ai-results]',panel);status.textContent='正在请求本机后端，搜索真实笔记…';host.replaceChildren();
- try{var data=await backend('/api/pm/tutorials?q='+encodeURIComponent(q));lastNotes=data.notes||[];status.textContent='后端已返回：'+(data.name||'本机知识库')+' · 共 '+(data.total??lastNotes.length)+' 篇 · 命中 '+(data.matched??lastNotes.length)+' 篇。';
- if(!lastNotes.length){host.textContent='没有匹配到笔记。试试任务关键词、项目名称或技术名词。';return}
- lastNotes.slice(0,8).forEach(function(note){var card=document.createElement('article');card.className='cp-note-result';var title=document.createElement('strong');title.textContent=note.title||note.name||note.path||'未命名笔记';var meta=document.createElement('small');meta.textContent=note.path||note.relativePath||note.url||'本机知识库返回的记录';var excerpt=document.createElement('p');excerpt.textContent=String(note.excerpt||note.preview||note.snippet||'检索命中。点击“读取全文”后，才会请求正文。').slice(0,320);var actions=document.createElement('div');actions.className='cp-inline-actions';var read=document.createElement('button');read.type='button';read.className='cp-secondary';read.textContent='读取全文';read.onclick=function(){readVaultNote(note,panel,card)};var ai=document.createElement('button');ai.type='button';ai.className='cp-secondary';ai.textContent='带入 AI 解卡';ai.onclick=function(){readVaultNote(note,panel,card,true)};actions.append(read,ai);card.append(title,meta,excerpt,actions);host.append(card)})
- }catch(e){status.textContent='本机知识库读取失败：'+(e.message||String(e))+'。请检查本机后端是否运行及 Vault 是否已配置；未显示虚构结果。';status.dataset.error='true'}
-}
-async function readVaultNote(note,panel,card,sendToAI){
- var status=$('[data-cp-ai-status]',panel);status.textContent='正在读取笔记全文…';
- try{var path=note.path||note.relativePath||note.filePath;if(!path)throw Error('搜索结果未返回可读取的笔记路径，无法请求全文');var data=await backend('/api/pm/tutorial-links',{path:path});var content=String(data.content||data.text||'');if(!content.trim())throw Error('后端未返回正文，不能标记为已读取');var pre=card.querySelector('pre');if(!pre){pre=document.createElement('pre');pre.className='cp-fulltext';card.append(pre)}pre.textContent=content.slice(0,10000)+(content.length>10000?'\n…全文超过展示上限，原文仍保留在本机库。':'');status.textContent='已从本机后端读取全文：'+(data.title||note.title||path)+' · '+content.length+' 字。';
- if(sendToAI){var frame=$('#embeddedP2Frame');var doc=null;try{doc=frame&&frame.contentDocument}catch(e){}var candidates=doc?Array.from(doc.querySelectorAll('textarea,input[type="text"],[contenteditable="true"]')):[];var input=candidates.find(function(x){var hint=((x.placeholder||'')+' '+(x.getAttribute('aria-label')||'')+' '+(x.parentElement&&x.parentElement.innerText||'')).toLowerCase();return /提问|问题|向 ai|ask|message|输入/.test(hint)&&!/(api|key|token|模型名称)/.test(hint)})||candidates.find(function(x){return x.tagName==='TEXTAREA'&&!/api|key|token/i.test(x.placeholder||'')});if(input){var task=(account()&&account().tasks||[]).find(function(t){return chosen.indexOf(taskId(t))>=0});input.value='请结合我的真实任务'+(task?'「'+taskName(task)+'」':'')+'和以下 Obsidian 原文，解释我卡住的原因，并给出下一步可执行动作。不要编造原文没有的信息。\n\n笔记标题：'+(data.title||note.title||'')+'\n来源：'+path+'\n\n'+content.slice(0,12000);input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));input.focus();status.textContent='已读取原文并带入 AI 解卡输入框，请检查后点击 AI 的发送按钮；不会擅自发送或消耗模型额度。'}else{var copy=document.createElement('button');copy.type='button';copy.className='cp-secondary';copy.textContent='复制原文与任务问题';copy.onclick=function(){var txt='任务：'+(task?taskName(task):'请先选择任务')+'\n笔记：'+(data.title||note.title||'')+'\n\n'+content;navigator.clipboard&&navigator.clipboard.writeText(txt).then(function(){status.textContent='已复制，可粘贴到 AI 解卡。'}).catch(function(){status.textContent='浏览器未授权剪贴板，请选中上方全文手动复制。'})};card.querySelector('.cp-inline-actions').append(copy);status.textContent='原文已读取，但未定位到 AI 输入框；可以复制原文后交给 AI。'}}
- }catch(e){status.textContent='读取全文失败：'+(e.message||String(e))+'。连接成功不代表正文读取成功。';status.dataset.error='true'}
-}
-function redirectDifficulty(){
- var nav=$('#appNav');if(!nav)return;
- Array.from(nav.querySelectorAll('.app-nav-item')).forEach(function(b){if(b.dataset.cpRedirected==='1')return;var label=(b.textContent||'').replace(/\s+/g,'').trim();if(label==='遇到困难'||label==='困难救援'||label==='卡壳救援'){b.dataset.cpRedirected='1';b.title='遇到困难请使用 AI 解卡';b.addEventListener('click',function(e){e.preventDefault();e.stopImmediatePropagation();if(window.SY&&SY.switchAppView)SY.switchAppView('ai-p2');var q=$('#cp-ai-knowledge [data-cp-query]');if(q)q.focus()},{capture:true});b.style.display='none';b.setAttribute('aria-hidden','true')}})
-}
 function init(){
- mountLauncher();quickSearchPanel();redirectDifficulty();
+ mountLauncher();
  var details=$('#sy-energy-daily-details');if(details){details.open=false;details.style.display='none'}
  // Keep the three evidence-dependent trend cards inside the separate "个人规律" step, never expanded on the homepage.
  var old=$('#energy-left-planner');if(old)old.style.display='none';
@@ -218,8 +189,8 @@ function init(){
 function scheduleInit(){if(!document.body)return;init()}
 document.addEventListener('DOMContentLoaded',scheduleInit);document.addEventListener('sy:ready',scheduleInit);
 if(document.readyState!=='loading')scheduleInit();
-observer=new MutationObserver(function(){if(!dialog){mountLauncher();quickSearchPanel();redirectDifficulty();updateLauncher()}});
+observer=new MutationObserver(function(){if(!dialog){mountLauncher();updateLauncher()}});
 observer.observe(document.documentElement,{childList:true,subtree:true});
-window.SYComfortFlow={open:open,brain:brain,searchVault:searchVault,readVaultNote:readVaultNote,refresh:updateLauncher};
+window.SYComfortFlow={open:open,brain:brain,refresh:updateLauncher,localProfile:localProfile};
 document.addEventListener('click',function(e){var patterns=e.target.closest&&e.target.closest('[data-cp-open-patterns]');if(patterns){e.preventDefault();open(4);return}var b=e.target.closest&&e.target.closest('[data-cp-open]');if(b){e.preventDefault();open(0);return}var legacy=e.target.closest&&e.target.closest('button,a,[role="button"]');if(legacy&&/舒适排期|给休息留时间/.test(legacy.textContent||'')&&!legacy.closest('.cp-dialog')){e.preventDefault();open(0)}});
 })();
