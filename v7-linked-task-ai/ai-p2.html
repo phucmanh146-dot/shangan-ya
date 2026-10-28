@@ -22,8 +22,13 @@
 .p2-controls-left{flex-wrap:wrap;gap:7px}
 .p2-welcome{max-width:860px;margin-inline:auto}
 .p2-prompts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-/* Keep one visible model entry; provider/docs/reconnect/back links are redundant in the embedded task flow. */
-.p2-model-quick>.p2-top-provider-label,.p2-model-quick>#p2-top-provider,.p2-model-quick>#p2-top-docs,.p2-model-quick>#p2-reconnect-ai,.p2-model-quick>.p2-workbench,.p2-back{display:none!important}
+/* Compact but visible model controls: provider docs and the actual live model remain one click away. */
+.p2-model-quick>.p2-workbench,.p2-back{display:none!important}
+.p2-model-quick{gap:8px;flex-wrap:wrap}
+.p2-model-quick>.p2-top-provider-label{display:inline-flex!important;font-size:11px;color:var(--muted,#8d929b)}
+.p2-model-quick>#p2-top-provider,.p2-model-quick>#p2-top-model{display:inline-flex!important;max-width:190px;min-width:120px}
+.p2-model-quick>#p2-top-docs{display:inline-flex!important;font-size:11px;white-space:nowrap}
+@media(max-width:760px){.p2-model-quick>#p2-top-provider,.p2-model-quick>#p2-top-model{max-width:44vw;min-width:95px}.p2-model-quick>#p2-top-docs{display:none!important}}
 .p2-more-prompts{grid-column:1/-1;border:1px solid #dfe5df;border-radius:12px;padding:10px 12px;background:#f8faf8}
 .p2-more-prompts>summary{cursor:pointer;font-weight:700;color:#425c4a;font-size:13px}
 .p2-prompts-secondary{margin-top:10px}
@@ -47,7 +52,7 @@
     <header class="p2-topbar">
       <div class="p2-top-left"><button class="p2-menu" id="p2-open-side" aria-label="打开对话列表">☰</button>
       <div><div class="p2-top-title">进阶 AI 工具 <span>按需使用 · 视频解析 · 思维导图 · 通俗讲解</span></div><div class="p2-model-status" id="p2-model-status">正在检查真实模型连接…</div></div></div>
-      <div class="p2-actions p2-model-quick"><label class="p2-top-provider-label" for="p2-top-provider">AI 模型</label><select id="p2-top-provider" aria-label="选择 AI 模型供应商"><option value="">正在读取模型列表…</option></select><a id="p2-top-docs" class="p2-api-doc-link" href="https://platform.openai.com/docs" target="_blank" rel="noopener noreferrer">官方 API 文档 ↗</a><button id="p2-reconnect-ai" class="p2-config" type="button" title="重新检查已配置的 AI API 并恢复连接">↻ 重新连接 AI</button><button id="p2-open-config" class="p2-config">模型设置</button><a class="p2-workbench" href="./index.html">工作台 ↗</a></div>
+      <div class="p2-actions p2-model-quick"><label class="p2-top-provider-label" for="p2-top-provider">服务商</label><select id="p2-top-provider" aria-label="选择 AI 模型服务商"><option value="">正在读取服务商列表…</option></select><label class="p2-top-provider-label" for="p2-top-model">模型</label><select id="p2-top-model" aria-label="选择当前实际调用的 AI 模型" title="模型列表由已配置服务商实时读取"><option value="">先配置 API</option></select><a id="p2-top-docs" class="p2-api-doc-link" href="https://platform.openai.com/docs" target="_blank" rel="noopener noreferrer">官方 API 文档 ↗</a><button id="p2-reconnect-ai" class="p2-config" type="button" title="重新检查已配置的 AI API 并恢复连接">↻ 重新连接 AI</button><button id="p2-open-config" class="p2-config">模型设置</button><a class="p2-workbench" href="./index.html">工作台 ↗</a></div>
     </header>
     <section id="p2-timeline" class="p2-timeline" aria-live="polite">
       <div id="p2-welcome" class="p2-welcome">
@@ -112,6 +117,7 @@
   <label>模型 ID<input id="p2-model" placeholder="先读取可用模型，或手动填写准确的模型 ID"></label>
   <div class="p2-model-picker"><button id="p2-load-models" type="button">读取可用模型列表</button><select id="p2-model-list" aria-label="选择已读取的模型" hidden><option value="">选择一个已读取的模型</option></select></div>
   <p class="p2-small" id="p2-model-list-status">模型列表会通过你填写的服务商 API 实时读取；不支持列表的代理可手动填模型 ID。</p>
+  <p class="p2-small">所选模型对应的官方 API 文档：<a id="p2-model-docs" rel="noopener noreferrer" target="_blank" href="https://api-docs.deepseek.com/zh-cn/api/list-models">先选择服务商后显示对应链接 ↗</a></p>
   <label>API 地址<input id="p2-base" spellcheck="false"></label>
   <label>API Key<input type="password" id="p2-key" autocomplete="new-password" placeholder="填写该服务商的 API Key；不要填写登录密码"></label>
   <label>接口类型<select id="p2-protocol"><option value="chat">OpenAI 兼容 Chat</option><option value="responses">OpenAI Responses</option><option value="anthropic">Anthropic Claude</option></select></label>
