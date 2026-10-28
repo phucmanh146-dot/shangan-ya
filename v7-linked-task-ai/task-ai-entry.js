@@ -52,8 +52,8 @@
       var link = document.createElement('a');
       link.id = 'sy-task-ai-link';
       link.className = 'sy-task-ai-link';
-      link.textContent = '在 AI 中继续 ↗';
-      link.title = '进入完整 AI 工作区，带入当前原任务上下文';
+      link.textContent = '遇到 Bug / 卡点？AI 解卡 ↗';
+      link.title = '将当前原任务、截止时间和关联资料带入 AI，分析卡点并给出可执行修复步骤';
       actions.appendChild(link);
       updateTaskLink(link);
     }
