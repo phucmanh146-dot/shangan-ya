@@ -29,6 +29,7 @@ function brain(){
  else if(elapsed>=55){score=Math.min(score,3);signals.push('当前计时 '+elapsed+' 分钟，建议中断检查')}
  if(stuck>=12){score=Math.min(score,2);signals.push('连续卡壳约 '+stuck+' 分钟')}
  if(freshFatigue){score=Math.min(score,2);signals.push('最近疲惫反馈 '+freshFatigue+' 次，尚未出现更新的状态确认')}
+ if(lp.sleepQuality==='poor'&&age<24*3600000){score=Math.min(score,3);signals.push('睡眠质量反馈较差，今天先保守安排')}
  if(recent.length>=3){var tail=recent.slice(-4),lastSignalAt=Number(ci.at||0),lows=tail.filter(function(x){return Number(x.score)<=2&&Number(x.at)>lastSignalAt}).length;if(lows>=2){score=Math.min(score,2);signals.push('状态确认后仍有多次低精力反馈')}}
  if(latestFatigue&&now-latestFatigue<4*3600000&&Number(ci.at||0)>latestFatigue){signals.push('已优先采用疲惫记录之后的新状态反馈')}
  return pack(score,signals.length?signals.join('；'):why,confidence,elapsed,stuck);
@@ -50,7 +51,7 @@ function reserveDefaults(b){return{buffer:b.score<=2?45:30,leisure:b.score<=2?90
  return arr;
 }
 function taskLoadEvidence(t){
- var a=account()||{},id=taskId(t),eh=(Array.isArray(a.energyHistory)?a.energyHistory:[]).filter(function(x){return String(x.taskId||'')===id&&Number(x.score)>=1&&Number(x.score)<=5}),fh=(Array.isArray(a.fatigueLog)?a.fatigueLog:[]).filter(function(x){return String(x.taskId||'')===id}),n=eh.length,low=n?eh.filter(function(x){return Number(x.score)<=2}).length:0,rate=n?low/n:0;
+ var a=account()||{},id=taskId(t),eh=localEnergy().concat(Array.isArray(a.energyHistory)?a.energyHistory:[]).filter(function(x){return !localEnergy().some(function(y){return String(y.id)===String(x.id)})}).filter(function(x){return String(x.taskId||'')===id&&Number(x.score)>=1&&Number(x.score)<=5}),fh=(Array.isArray(a.fatigueLog)?a.fatigueLog:[]).filter(function(x){return String(x.taskId||'')===id}),n=eh.length,low=n?eh.filter(function(x){return Number(x.score)<=2}).length:0,rate=n?low/n:0;
  return {samples:n,low:low,rate:rate,fatigue:fh.length,score:n?eh.reduce(function(v,x){return v+Number(x.score)},0)/n:0};
 }
 function estimate(t,b){
