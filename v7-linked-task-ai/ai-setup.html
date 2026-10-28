@@ -149,7 +149,7 @@ async function loadModels(){
   const wrap=document.createElement('div');wrap.className='field';const label=document.createElement('label');label.htmlFor='model-options';label.textContent='服务商真实返回的模型（'+models.length+' 个）';wrap.append(label,select);
   $('model-results').replaceChildren(wrap);
   $('model-results').append(document.createTextNode('模型目录已真实返回；这还不代表聊天接口可用。请继续点击“真实测试并保存连接”。'));
-  if(key)$('key').value='';
+  // Keep the password field only in this page's live memory until the user tests or leaves; never write it to browser storage.
  }catch(e){$('model-results').textContent='读取失败：'+showError(e)+'\n请核对 API 地址、Key、协议、账户额度与模型权限。不会将失败显示为成功。';}
  finally{btn.disabled=false;}
 }
