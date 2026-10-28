@@ -46,5 +46,5 @@ function init(){
  document.querySelectorAll('[data-ef-reload]').forEach(function(b){b.onclick=function(){var k=b.dataset.efReload,f=document.getElementById(k==='coach'?'syEfCoachFrame':'syEfAiFrame');if(f)f.src=k==='coach'?'./personal-execution-coach-demo.html':'./ai-setup.html';loaded[k]=true}});
  refresh();
 }
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+if(document.readyState==='complete')init();else document.addEventListener('DOMContentLoaded',init,{once:true});
 })();
