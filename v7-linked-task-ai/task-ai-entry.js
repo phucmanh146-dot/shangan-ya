@@ -1,73 +1,19 @@
-(function () {
-  'use strict';
-  if (window.__SYTaskAIEntryV1) return;
-  window.__SYTaskAIEntryV1 = true;
-
-  function addStyles() {
-    if (document.getElementById('sy-task-ai-entry-style')) return;
-    var style = document.createElement('style');
-    style.id = 'sy-task-ai-entry-style';
-    style.textContent = [
-      '.sy-ai-config-shortcut{display:flex;align-items:center;gap:9px;margin:10px 12px 8px;padding:11px 12px;border:1px solid var(--border,#dce5df);border-radius:11px;color:var(--text,#294638);background:var(--surface,#fff);font-size:13px;font-weight:750;text-decoration:none;line-height:1.4}',
-      '.sy-ai-config-shortcut:hover,.sy-task-ai-link:hover{border-color:var(--accent,#478565);background:var(--surface-soft,#f3f8f4)}',
-      '.sy-ai-config-shortcut small{display:block;font-size:11px;font-weight:500;color:var(--text-muted,#74857b);margin-top:2px}',
-      '.sy-task-ai-link{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:9px 12px;border:1px solid var(--border,#dce5df);border-radius:10px;background:var(--surface,#fff);color:var(--text,#294638);font-size:13px;font-weight:750;text-decoration:none}',
-      '@media(max-width:700px){.sy-ai-config-shortcut{min-height:44px}.sy-task-ai-link{width:100%}}'
-    ].join('');
-    document.head.appendChild(style);
-  }
-
-  function taskId() {
-    var picker = document.getElementById('twTaskSelect');
-    return String((picker && picker.value) || window.__SYTaskWorkspaceSelectedTaskId || '').trim();
-  }
-
-  function updateTaskLink(link) {
-    var id = taskId();
-    if (!id) {
-      link.href = './ai-p2.html';
-      link.setAttribute('aria-label', '打开 AI 工作区并选择任务');
-      return;
-    }
-    link.href = './ai-p2.html?taskId=' + encodeURIComponent(id) + '&from=task-workspace';
-    link.setAttribute('aria-label', '将当前原任务关联到 AI 工作区');
-  }
-
-  function mount() {
-    addStyles();
-    var sidebar = document.querySelector('.app-sidebar');
-    var exit = document.getElementById('exitAppBtn');
-    if (sidebar && exit && !document.getElementById('sy-ai-config-shortcut')) {
-      var config = document.createElement('a');
-      config.id = 'sy-ai-config-shortcut';
-      config.className = 'sy-ai-config-shortcut';
-      config.href = './ai-setup.html';
-      config.innerHTML = '<span aria-hidden="true">✦</span><span>配置 AI API<small>选择模型 · 填写密钥 · 测试连接</small></span><span aria-hidden="true">↗</span>';
-      config.title = '打开 AI 配置页；API Key 由你填写并通过真实请求验证';
-      sidebar.insertBefore(config, exit);
-    }
-
-    var actions = document.querySelector('.tw-hero-actions');
-    if (actions && !document.getElementById('sy-task-ai-link')) {
-      var link = document.createElement('a');
-      link.id = 'sy-task-ai-link';
-      link.className = 'sy-task-ai-link';
-      link.textContent = '遇到 Bug / 卡点？AI 解卡 ↗';
-      link.title = '将当前原任务、截止时间和关联资料带入 AI，分析卡点并给出可执行修复步骤';
-      actions.appendChild(link);
-      updateTaskLink(link);
-    }
-  }
-
-  function refresh() {
-    mount();
-    var link = document.getElementById('sy-task-ai-link');
-    if (link) updateTaskLink(link);
-  }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', refresh);
-  else refresh();
-  var observer = new MutationObserver(refresh);
-  observer.observe(document.documentElement, { childList: true, subtree: true });
-  window.setInterval(refresh, 1200);
+(function(){
+'use strict';
+if(window.__SYTaskAIEntryV2)return;window.__SYTaskAIEntryV2=true;
+const KEY='shangan_ya_app_data_v1';let busy=false;
+function styles(){if(document.getElementById('sy-ai-v2-style'))return;const s=document.createElement('style');s.id='sy-ai-v2-style';s.textContent=`
+.sy-ai-config-shortcut{display:flex;gap:9px;align-items:center;margin:10px 12px;padding:11px 12px;border:1px solid var(--border,#dce5df);border-radius:11px;background:var(--surface,#fff);color:var(--text,#294638);font-size:13px;font-weight:750;text-decoration:none}.sy-ai-config-shortcut small{display:block;font-size:11px;font-weight:500;color:var(--text-muted,#74857b);margin-top:2px}
+.sy-task-ai-link,.sy-ai-inline button,.sy-ai-inline a{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:9px 12px;border:1px solid var(--border,#dce5df);border-radius:10px;background:var(--surface,#fff);color:var(--text,#294638);font-size:12px;font-weight:750;text-decoration:none;cursor:pointer}.sy-task-ai-link{font-size:13px}.sy-ai-inline{margin:12px 0;padding:16px;border:1px solid var(--border,#dce5df);border-radius:16px;background:var(--surface,#fff);color:var(--text,#294638)}.sy-ai-inline[hidden]{display:none!important}.sy-ai-inline-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.sy-ai-inline-title{font-weight:850;font-size:15px}.sy-ai-inline-note,.sy-ai-inline-status{font-size:12px;line-height:1.6;color:var(--text-muted,#74857b);margin:5px 0 10px}.sy-ai-inline textarea{width:100%;box-sizing:border-box;min-height:94px;resize:vertical;border:1px solid var(--border,#dce5df);border-radius:11px;padding:11px;background:var(--surface,#fff);color:var(--text,#294638);font:inherit}.sy-ai-inline-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}.sy-ai-inline .sy-ai-send{background:var(--accent,#315d49);color:#fff;border-color:var(--accent,#315d49)}.sy-ai-inline button:disabled{opacity:.5;cursor:wait}.sy-ai-inline-status.bad{color:#b34c4c}.sy-ai-inline-answer{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;font-size:13px;margin-top:12px;padding:13px;border-radius:11px;background:var(--surface-soft,#f5f7f4);max-height:440px;overflow:auto}.sy-ai-inline-answer:empty{display:none}.sy-ai-inline-model{font-size:11px;color:var(--text-muted,#74857b);margin-top:6px}@media(max-width:700px){.sy-task-ai-link{width:100%}.sy-ai-inline{padding:12px}.sy-ai-inline-actions>*{flex:1}}
+`;document.head.appendChild(s)}
+function taskId(){const p=document.getElementById('twTaskSelect');return String(p&&p.value||window.__SYTaskWorkspaceSelectedTaskId||'').trim()}
+function getData(){try{const all=JSON.parse(localStorage.getItem(KEY)||'{}')||{};let key='guest';try{if(window.SY&&window.SY.currentAccountKey)key=String(window.SY.currentAccountKey)}catch(_){}return{all,key,account:all[key]||null}}catch(_){return{all:{},key:'guest',account:null}}}
+function context(){const d=getData(),id=taskId(),tasks=d.account&&Array.isArray(d.account.tasks)?d.account.tasks:[],t=tasks.find(x=>String(x.id)===id);if(!t)return{id,task:null,text:'当前任务 ID：'+(id||'未选择')+'。未能从当前账户原始数据中验证任务详情，请勿猜测。'};const mats=(Array.isArray(t.materials)?t.materials:[]).map(m=>typeof m==='string'?m:((m.title||m.name||'')+' '+(m.url||m.href||m.link||''))).filter(Boolean).slice(0,12);return{id:String(t.id),task:t,text:['【上岸鸭当前任务上下文，只读】','任务 ID：'+t.id,'名称：'+(t.name||'未命名'),'分类：'+(t.category||'未分类'),'状态：'+(t.done?'已完成':'未完成'),'计划日期：'+(t.date||'未设置'),'截止：'+(t.dueDate||'未设置')+' '+(t.dueTime||''),'预计分钟：'+(t.estMinutes||t.plannedMinutes||'未设置'),'任务步骤：'+(Array.isArray(t.steps)?t.steps.map(x=>typeof x==='string'?x:(x.name||x.title||x.text||'')).filter(Boolean).join('；'):'未设置'),'已有记录：'+[t.noteFramework,t.noteGain,t.noteKnowledge,t.noteRemark].filter(Boolean).join('；'),'关联资料（链接不代表正文已读取）：\n'+(mats.join('\n')||'无')].join('\n')}}
+async function api(url,payload,timeout){const c=new AbortController(),tm=setTimeout(()=>c.abort(),timeout||180000);try{const r=await fetch(url,{method:payload===undefined?'GET':'POST',headers:payload===undefined?{}:{'Content-Type':'application/json'},body:payload===undefined?undefined:JSON.stringify(payload),credentials:'same-origin',cache:'no-store',signal:c.signal});const j=await r.json().catch(()=>({error:'服务端没有返回有效 JSON'}));if(!r.ok||j.error)throw Error(j.error||('HTTP '+r.status));return j}finally{clearTimeout(tm)}}
+function status(msg,bad){const n=document.getElementById('sy-ai-inline-status');if(n){n.textContent=msg||'';n.classList.toggle('bad',!!bad)}}
+async function check(){try{const r=await api('/api/p2/status',undefined,16000),a=r.ai||{};const m=document.getElementById('sy-ai-inline-model');if(m)m.textContent=a.model?'当前模型：'+a.model:'尚未选择模型';status(a.verified?'真实模型已验证，可以提交问题。':a.configured?'模型已配置但未通过真实请求验证，请先测试连接。':'尚未连接真实模型。请配置 API Key 并执行真实测试。',!a.verified)}catch(e){status('无法检查真实 AI 后端：'+e.message+'。不会生成假回答。',true)}}
+async function send(){if(busy)return;const input=document.getElementById('sy-ai-inline-question'),q=String(input.value||'').trim();if(!q)return status('先写下具体卡点或报错。',true);const c=context(),answer=document.getElementById('sy-ai-inline-answer'),btn=document.getElementById('sy-ai-inline-send');busy=true;btn.disabled=true;btn.textContent='AI 正在分析…';answer.textContent='';status('正在调用真实模型，请稍候…');try{const r=await api('/api/p2/ask',{question:q,history:[],fileIds:[],urls:[],deep:true,search:false,transcribeVideo:false,videoAnalysis:false,taskContext:c.text+'\n\n请结合任务给出最可能原因、逐步验证、修复操作、验收标准与失败后的下一步。区分事实和假设，不要声称已经替用户执行。'},180000);if(!String(r.reply||'').trim())throw Error('请求返回但模型回答为空');answer.textContent=r.reply;const m=document.getElementById('sy-ai-inline-model');if(m)m.textContent='本次真实调用：'+(r.model||'服务端未返回模型名称')+(r.modelRole?' · '+r.modelRole:'')+(r.modelFallback?' · 已回退主模型':'');status('已收到真实 AI 回答。核对建议后再执行；原任务未被自动修改。')}catch(e){status('真实 AI 请求失败：'+e.message+'。问题仍保留，请检查连接诊断或模型配置。',true)}finally{busy=false;btn.disabled=false;btn.textContent='发送给真实 AI'}}
+function mountPanel(){const actions=document.querySelector('.tw-hero-actions');if(!actions||document.getElementById('sy-ai-inline-panel'))return;const panel=document.createElement('section');panel.className='sy-ai-inline';panel.id='sy-ai-inline-panel';panel.hidden=true;panel.innerHTML='<div class="sy-ai-inline-head"><div><div class="sy-ai-inline-title">✦ 当前任务 AI 解卡</div><div class="sy-ai-inline-note">直接在原工作台调用真实 AI 接口 /api/p2/ask。提交时带入当前任务详情与资料链接；不会假装读取资料正文，也不会自动改写原任务。</div></div><button type="button" id="sy-ai-inline-close">收起</button></div><textarea id="sy-ai-inline-question" placeholder="描述卡点、粘贴报错，或说明你希望 AI 帮你完成什么…"></textarea><div class="sy-ai-inline-actions"><button type="button" class="sy-ai-send" id="sy-ai-inline-send">发送给真实 AI</button><button type="button" id="sy-ai-inline-context">查看当前任务上下文</button><a href="./ai-setup.html" target="_blank" rel="noopener noreferrer">检查 / 配置模型</a><a href="./ai-p2.html" target="_blank" rel="noopener noreferrer">完整 AI 工作区 ↗</a></div><div class="sy-ai-inline-status" id="sy-ai-inline-status" role="status">正在检查真实模型连接…</div><div class="sy-ai-inline-model" id="sy-ai-inline-model"></div><div class="sy-ai-inline-answer" id="sy-ai-inline-answer" aria-live="polite"></div>';actions.insertAdjacentElement('afterend',panel);const open=document.createElement('button');open.type='button';open.id='sy-task-ai-link';open.className='sy-task-ai-link';open.textContent='遇到卡点？在当前页问 AI ↗';open.onclick=()=>{panel.hidden=!panel.hidden;if(!panel.hidden){panel.scrollIntoView({behavior:'smooth',block:'nearest'});document.getElementById('sy-ai-inline-question').focus()}};actions.appendChild(open);document.getElementById('sy-ai-inline-close').onclick=()=>panel.hidden=true;document.getElementById('sy-ai-inline-send').onclick=send;document.getElementById('sy-ai-inline-question').addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')send()});document.getElementById('sy-ai-inline-context').onclick=()=>{const c=context();document.getElementById('sy-ai-inline-answer').textContent=c.text;status(c.task?'已从当前账户读取原任务详情。':'未找到可验证的当前任务详情，请确认当前任务选择器/登录状态。',!c.task)};check()}
+function mount(){styles();const sidebar=document.querySelector('.app-sidebar'),exit=document.getElementById('exitAppBtn');if(sidebar&&exit&&!document.getElementById('sy-ai-config-shortcut')){const a=document.createElement('a');a.id='sy-ai-config-shortcut';a.className='sy-ai-config-shortcut';a.href='./ai-setup.html';a.innerHTML='<span aria-hidden="true">✦</span><span>AI 连接诊断<small>真实模型列表 · API 配置 · 实际测试</small></span><span aria-hidden="true">↗</span>';sidebar.insertBefore(a,exit)}mountPanel()}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();new MutationObserver(mount).observe(document.documentElement,{childList:true,subtree:true});
 })();
