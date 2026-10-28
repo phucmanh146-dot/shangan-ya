@@ -674,11 +674,12 @@ CONFIG = {"base": os.getenv("FOCUS_AI_BASE_URL", "").strip() or ("https://api.op
 # Model names come from the selected provider at request time, never a stale catalog.
 AI_PROVIDERS = [
     {"id": "hermes-gateway", "name": "本机 Hermes 网关 · 自动切换模型", "base": "http://127.0.0.1:8642/v1", "protocol": "chat", "docs": ""},
-    {"id": "deepseek", "name": "DeepSeek", "base": "https://api.deepseek.com/v1", "protocol": "chat", "docs": "https://api-docs.deepseek.com/api/list-models"},
-    {"id": "qwen", "name": "通义千问 · 阿里云百炼", "base": "https://dashscope.aliyuncs.com/compatible-mode/v1", "protocol": "chat", "docs": "https://help.aliyun.com/zh/model-studio/compatibility-of-openai-with-dashscope"},
+    {"id": "deepseek", "name": "DeepSeek", "base": "https://api.deepseek.com/v1", "protocol": "chat", "docs": "https://api-docs.deepseek.com/zh-cn/api/list-models"},
+    {"id": "stepfun", "name": "阶跃星辰 · Step 5 Preview", "base": "https://api.stepfun.com/v1", "protocol": "chat", "docs": "https://platform.stepfun.com/cookbook"},
+    {"id": "qwen", "name": "通义千问 · 阿里云百炼", "base": "https://dashscope.aliyuncs.com/compatible-mode/v1", "protocol": "chat", "docs": "https://help.aliyun.com/zh/model-studio/list-models"},
     {"id": "siliconflow", "name": "硅基流动 · 多模型", "base": "https://api.siliconflow.cn/v1", "protocol": "chat", "docs": "https://docs.siliconflow.cn/docs/userguide/quickstart"},
     {"id": "openrouter", "name": "OpenRouter · 多模型", "base": "https://openrouter.ai/api/v1", "protocol": "chat", "docs": "https://openrouter.ai/docs/api/api-reference/models/get-models"},
-    {"id": "zhipu", "name": "智谱 GLM", "base": "https://open.bigmodel.cn/api/paas/v4", "protocol": "chat", "docs": "https://open.bigmodel.cn/"},
+    {"id": "zhipu", "name": "智谱 GLM", "base": "https://open.bigmodel.cn/api/paas/v4", "protocol": "chat", "docs": "https://docs.bigmodel.cn/cn/guide"},
     {"id": "moonshot", "name": "月之暗面 · Kimi", "base": "https://api.moonshot.cn/v1", "protocol": "chat", "docs": "https://platform.moonshot.cn/docs/api/chat"},
     {"id": "minimax", "name": "MiniMax", "base": "https://api.minimaxi.com/v1", "protocol": "chat", "docs": "https://platform.minimaxi.com/document/ChatCompletion%20v2"},
     {"id": "volcengine", "name": "火山引擎 · 豆包", "base": "https://ark.cn-beijing.volces.com/api/v3", "protocol": "chat", "docs": "https://www.volcengine.com/docs/82379/1263482"},
