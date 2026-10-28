@@ -59,3 +59,12 @@
 .cp-fields input[type="text"],.cp-fields select{min-width:0;width:100%;box-sizing:border-box}
 @media(max-width:700px){.cp-energy-scale{grid-template-columns:repeat(5,minmax(0,1fr))}.cp-energy-score{min-height:40px}}
 @media(max-width:380px){.cp-energy-labels{font-size:10px}}
+
+.cp-risk-card{display:flex;flex-direction:column;gap:5px;padding:13px 15px;margin:12px 0;border:1px solid #dce8e0;border-radius:13px;background:#f7faf7;color:#304c3d}
+.cp-risk-card strong{font-size:13px}
+.cp-risk-card span{font-size:12px;line-height:1.65;color:#66766d}
+.cp-risk-card.risk-high{border-color:#e7c2bf;background:#fff6f5;color:#943c38}
+.cp-risk-card.risk-mid{border-color:#ead9b0;background:#fffbf0;color:#82601c}
+.cp-risk-card.risk-low{border-color:#dce8e0;background:#f7faf7;color:#304c3d}
+.cp-time-row[draggable="true"]{cursor:grab;touch-action:pan-y}
+.cp-time-row.is-dragging{opacity:.45;border:1px dashed #789985}
