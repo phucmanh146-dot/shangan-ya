@@ -44,7 +44,7 @@ header{max-width:1050px;margin:auto;padding:24px 22px 10px;display:flex;align-it
       <div class="warning">安全说明：当前服务按浏览器会话隔离模型配置，后端进程重启或会话失效后可能需要重新配置。不要在公共设备上使用个人密钥。若你尚无可用 API Key，不能通过前端代码绕过服务商授权或额度要求。</div>
     </section>
     <aside class="card">
-      <h2>连接诊断</h2>
+      <div class="linkline"><h2>连接诊断</h2><button id="refresh-diagnostics" type="button">重新检查</button></div>
       <div id="diag-health" class="status"><span class="dot"></span><div><strong>后端服务</strong><div class="muted">检查中…</div></div></div>
       <div id="diag-providers" class="status"><span class="dot"></span><div><strong>服务商目录</strong><div class="muted">检查中…</div></div></div>
       <div id="diag-config" class="status"><span class="dot"></span><div><strong>当前模型配置</strong><div class="muted">检查中…</div></div></div>
@@ -109,29 +109,30 @@ function updateConfig(config){
  }
 }
 async function diagnostics(){
- const tasks=await Promise.allSettled([api('/api/health',undefined,12000),api('/api/ai-providers',undefined,12000),api('/api/ai-config',undefined,12000)]);
- if(tasks[0].status==='fulfilled'){
-  state.health=tasks[0].value;setStatus('diag-health','后端服务','/api/health 正常响应；服务版本 '+(state.health.version||'未提供')+'。','good');
- }else setStatus('diag-health','后端服务不可用',showError(tasks[0].reason),'bad');
- if(tasks[1].status==='fulfilled'){
-  providers=(tasks[1].value.providers||[]).filter(p=>p&&p.id);
+ const refresh=$('refresh-diagnostics');if(refresh)refresh.disabled=true;
+ // Keep first-load API requests sequential so one new session worker is initialized before the next request.
+ let health=null,providerResult=null,config=null,healthError=null,providerError=null,configError=null;
+ try{health=await api('/api/health',undefined,12000);}catch(e){healthError=e;}
+ if(health){
+  state.health=health;setStatus('diag-health','后端服务','/api/health 正常响应；服务版本 '+(health.version||'未提供')+'。','good');
+ }else setStatus('diag-health','后端服务不可用',showError(healthError),'bad');
+ try{providerResult=await api('/api/ai-providers',undefined,12000);}catch(e){providerError=e;}
+ if(providerResult){
+  providers=(providerResult.providers||[]).filter(p=>p&&p.id);
   const select=$('provider');select.replaceChildren();
   providers.forEach(p=>select.append(new Option(p.name||p.id,p.id)));
-  const cfg=tasks[2].status==='fulfilled'?tasks[2].value:null;
-  const match=cfg&&providers.find(p=>p.base&&p.base===cfg.base);
-  if(match)select.value=match.id;
-  else if(providers.some(p=>p.id==='deepseek'))select.value='deepseek';
-  else select.value=providers[0]?.id||'';
   setStatus('diag-providers','服务商目录','后端返回 '+providers.length+' 个服务商；模型列表需用你的凭证实时读取。',providers.length?'good':'bad');
   fillProvider();
- }else setStatus('diag-providers','服务商目录读取失败',showError(tasks[1].reason),'bad');
- if(tasks[2].status==='fulfilled'){
-  updateConfig(tasks[2].value);
-  if(tasks[2].value.base)$('base').value=tasks[2].value.base;
-  if(tasks[2].value.model)$('model').value=tasks[2].value.model;
-  if(tasks[2].value.protocol)$('protocol').value=tasks[2].value.protocol;
-  const p=providers.find(x=>x.base===tasks[2].value.base);if(p){$('provider').value=p.id;docsLink();}
- }else setStatus('diag-config','配置状态读取失败',showError(tasks[2].reason),'bad');
+ }else setStatus('diag-providers','服务商目录读取失败',showError(providerError),'bad');
+ try{config=await api('/api/ai-config',undefined,12000);}catch(e){configError=e;}
+ if(config){
+  updateConfig(config);
+  if(config.base)$('base').value=config.base;
+  if(config.model)$('model').value=config.model;
+  if(config.protocol)$('protocol').value=config.protocol;
+  const p=providers.find(x=>x.base===config.base);if(p){$('provider').value=p.id;docsLink();}
+ }else setStatus('diag-config','配置状态读取失败',showError(configError),'bad');
+ if(refresh)refresh.disabled=false;
 }
 async function loadModels(){
  const base=$('base').value.trim(),key=$('key').value.trim(),protocol=$('protocol').value;
@@ -173,6 +174,7 @@ async function testAndSave(){
  }finally{btn.disabled=false;}
 }
 $('provider').addEventListener('change',fillProvider);
+$('refresh-diagnostics').addEventListener('click',diagnostics);
 $('load-models').addEventListener('click',loadModels);
 $('test').addEventListener('click',testAndSave);
 $('key').addEventListener('keydown',e=>{if(e.key==='Enter')testAndSave();});
