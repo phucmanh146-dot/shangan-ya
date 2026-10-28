@@ -230,7 +230,9 @@
 - 当前 Railway 工作台 Root Directory 为 v7-linked-task-ai；当前运行版本的 index.html 尚未加载 task-ai-entry.js，而待发布分支已加入。
 - 当前工作台服务未发现可见的 AI provider 环境变量；真实 AI 可用性仍需配置并测试服务商 API。此处不代表用户自行配置的 API Key 不存在于其他安全配置边界。
 - JS 语法检查通过不等于生产端到端验收完成；发布后必须实际访问和测试。
-- 必须先部署到预览服务验证，不得把“部署成功”当作全部功能验收通过。
+- 2026-10-28 已将该分支部署到 Railway 工作台服务进行预览验证；健康接口返回 ok=true，AI provider catalog 返回真实服务商目录（含 StepFun），前端模型配置脚本可访问。
+- 当前 /api/ai-config 返回 configured=false、hasKey=false、verified=false；尚未配置服务商 API Key，因此真实模型对话、模型切换、资料到 AI 的完整端到端链路仍为 BLOCKED，不能宣称 AI 全链路已验收。
+- 已部署不等于 PR 已合并；PR #66 仍待审查。不要把部署成功当作全部功能验收通过。
 
 ## 12. 界面状态文案
 
