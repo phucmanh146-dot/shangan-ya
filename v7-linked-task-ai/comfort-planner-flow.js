@@ -118,7 +118,22 @@ function buildPreview(b){
  function add(title,duration,kind,reason){duration=Math.max(0,Math.round(duration));if(!duration||cursor+duration>end)return false;blocks.push({start:cursor,end:cursor+duration,title:title,minutes:duration,kind:kind,reason:reason||''});cursor+=duration;return true}
  function reserveLeisure(label,duration,kind,reason){if(duration<=0||remaining<=0)return;var d=Math.min(duration,remaining,Math.max(0,end-cursor-buffer));if(d>=5&&add(label,d,kind,reason))remaining-=d}
  if(b.score<=2){var recoveryBlock=Math.min(rest,20);if(reserveLeisure('恢复窗口：离开屏幕、喝水、走动或安静休息',recoveryBlock,'rest','疲惫时先恢复，不要求立刻回到深度工作'))remaining=Math.max(0,remaining-recoveryBlock);}
- var ranked=chosenList.slice().sort(function(a,c){return priority(c)-priority(a)}),daydream=Math.max(15,Math.round(leisure*.3)),entertain=Math.max(0,leisure-daydream),daydreamAdded=false;
+ function essentialToday(t){
+ var a=account()||{},todayKey=today(),flag=t.mustDo===true||t.isMust===true||t.requiredToday===true||t.nonDeferrable===true||t.essentialToday===true;
+ var due=String(t.dueDate||t.deadline||t.date||'').slice(0,10);
+ return flag||(due&&/^\\d{4}-\\d{2}-\\d{2}$/.test(due)&&due<=todayKey);
+}
+var ranked=chosenList.slice().sort(function(a,c){
+ var mustDiff=Number(essentialToday(c))-Number(essentialToday(a));if(mustDiff)return mustDiff;
+ var pr=priority(c)-priority(a);if(pr)return pr;
+ var ea=taskLoadEvidence(a),ec=taskLoadEvidence(c);
+ // When energy is high, surface repeatedly draining work earlier; when it is lower, prefer tasks with fewer fatigue signals.
+ var da=ea.samples>=2||ea.fatigue>=2?(ea.rate*2+ea.fatigue):0,dc=ec.samples>=2||ec.fatigue>=2?(ec.rate*2+ec.fatigue):0;
+ if(b.score>=4&&da!==dc)return dc-da;
+ if(b.score===3&&isDeep(a)!==isDeep(c))return isDeep(a)?1:-1;
+ if(b.score<=2&&isDeep(a)!==isDeep(c))return isDeep(a)?1:-1;
+ return 0
+}),daydream=Math.max(15,Math.round(leisure*.3)),entertain=Math.max(0,leisure-daydream),daydreamAdded=false;
  ranked.forEach(function(t,index){
   var est=estimate(t,b),deep=est.complex,a0=account()||{},all0=Array.isArray(a0.tasks)?a0.tasks:[],hardIds=Array.isArray(t.hardDependencyIds)?t.hardDependencyIds:[],hardNames=Array.isArray(t.hardDependencies)?t.hardDependencies:[],blocked=hardIds.map(function(id){return all0.find(function(z){return String(taskId(z))===String(id)})}).filter(function(z){return z&&!z.done&&!z.completedAt}),namedBlocked=hardNames.map(function(n){var q=String(n||'').toLowerCase().trim();return all0.find(function(z){var zn=String(taskName(z)).toLowerCase().trim();return zn.length>=4&&q.length>=4&&(zn===q||zn.indexOf(q)>=0||q.indexOf(zn)>=0)})}).filter(function(z){return z&&!z.done&&!z.completedAt});
   if(blocked.length||namedBlocked.length){deferred.push({task:t,reason:'存在尚未完成的硬依赖：'+blocked.concat(namedBlocked).map(taskName).join('、')+'。先检查是否确实不可绕过；软依赖/心理锁定不应自动阻塞。'});return;}
