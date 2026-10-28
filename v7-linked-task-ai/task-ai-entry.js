@@ -41,7 +41,7 @@
       var config = document.createElement('a');
       config.id = 'sy-ai-config-shortcut';
       config.className = 'sy-ai-config-shortcut';
-      config.href = './ai-p2.html#configure-ai';
+      config.href = './ai-setup.html';
       config.innerHTML = '<span aria-hidden="true">✦</span><span>配置 AI API<small>选择模型 · 填写密钥 · 测试连接</small></span><span aria-hidden="true">↗</span>';
       config.title = '打开 AI 配置页；API Key 由你填写并通过真实请求验证';
       sidebar.insertBefore(config, exit);
