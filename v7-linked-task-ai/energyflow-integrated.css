@@ -7,3 +7,41 @@
 
 /* Align the existing energy engine with Shanganya green; do not create a second planner. */
 #sy-energy-daily-details{margin:0!important;border:1px solid #dce8df!important;border-radius:14px!important;background:#fff!important;overflow:hidden}#sy-energy-daily-details>summary{padding:13px 15px!important;background:#f4f8f4!important;color:#245b43!important;font-weight:800!important;cursor:pointer}#energy-left-planner{margin:0!important;padding:16px!important;border:0!important;border-radius:0!important;background:#fff!important;color:#173528!important}#energy-left-planner .elp-title{font-size:14px!important;color:#204a37!important}#energy-left-planner .elp-sub,#energy-left-planner .elp-brain-state-meta{color:#6f8376!important}#energy-left-planner select{border-color:#dce8df!important;color:#173528!important}#energy-left-planner .elp-count{border-color:#e0ebe3!important}#energy-left-planner .elp-brain-actions button,#energy-left-planner .elp-open,#energy-left-planner .elp-apply{border-color:#cbded1!important;background:#245b43!important;color:#fff!important}#energy-left-planner .elp-brain-actions button:hover,#energy-left-planner .elp-open:hover,#energy-left-planner .elp-apply:hover{background:#173c2c!important}#energy-left-planner .elp-brain-state{border-color:#dce8df!important;background:#f7faf7!important;color:#244c38!important}#energy-left-planner .elp-stuck{border-color:#dce8df!important;background:#f7faf7!important;color:#244c38!important}
+
+/* Integrated inline energy flow: no expandable/pink side panel. */
+.sy-ef-launch{align-items:center;flex-wrap:wrap}
+.sy-ef-launch-battery{display:flex;align-items:center;gap:8px;min-width:160px;color:#245b43}
+.sy-ef-launch-battery strong{font-size:15px;font-weight:850;white-space:nowrap}
+.sy-ef-launch-battery small{font-size:10px;color:#71877c;white-space:nowrap}
+.sy-ef-mini-battery{width:76px;height:9px;border:1px solid #dce8df;border-radius:99px;background:#edf3ee;overflow:hidden}
+.sy-ef-mini-battery span{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#8db7a0,#245b43);transition:width .25s}
+#syEfExistingPlannerMount details>summary,#sy-energy-daily-details>summary{display:none!important}
+#sy-energy-daily-details[open] #energy-left-planner{display:block!important}
+#energy-left-planner{border-color:#dce8df!important;background:#fff!important;color:#244c38!important}
+#energy-left-planner .elp-sub,#energy-left-planner .elp-summary,#energy-left-planner .elp-task-meta{color:#71877c!important}
+#energy-left-planner select{border-color:#dce8df!important;color:#173528!important}
+#energy-left-planner .elp-count,#energy-left-planner .elp-metric{border-color:#dce8df!important;background:#f7faf7!important}
+#energy-left-planner .elp-count b,#energy-left-planner .elp-metric b{color:#245b43!important}
+#energy-left-planner .elp-badge{background:#eaf4ed!important;color:#245b43!important}
+#energy-left-planner .elp-task-card,#energy-left-planner .elp-task{border-color:#e3ece5!important;color:#244c38!important}
+.sy-ef-live-energy{display:grid;grid-template-columns:180px minmax(0,1fr);gap:18px;align-items:center;margin:0 0 14px;padding:18px;border:1px solid #dce8df;border-radius:15px;background:linear-gradient(120deg,#f7faf7,#fff)}
+.sy-ef-energy-ring{width:150px;height:150px;position:relative;display:grid;place-items:center;margin:auto}
+.sy-ef-energy-ring:before,.sy-ef-energy-ring:after{content:"";position:absolute;border-radius:50%;border:1px solid #dce8df}
+.sy-ef-energy-ring:before{inset:8px}
+.sy-ef-energy-ring:after{inset:22px;border-style:dashed;border-color:#bcd4c4}
+.sy-ef-energy-orbit{position:absolute;inset:0;border:2px dashed #8eb69d;border-radius:50%;animation:syEfOrbit 18s linear infinite}
+.sy-ef-energy-orbit:before{content:"";position:absolute;top:-5px;left:calc(50% - 6px);width:12px;height:12px;border-radius:50%;background:#245b43;box-shadow:0 0 0 5px #e8f2eb}
+.sy-ef-energy-center{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#245b43}
+.sy-ef-energy-center small,.sy-ef-energy-center span{font-size:11px;color:#71877c}
+.sy-ef-energy-center strong{font-size:29px;line-height:1.1;font-weight:900}
+.sy-ef-energy-details h3{font-size:16px;margin:0 0 6px;color:#173c2c}
+.sy-ef-energy-details p{font-size:12px;line-height:1.65;color:#62796b;margin:0 0 12px}
+.sy-ef-five-steps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}
+.sy-ef-five-steps>div{display:grid;gap:4px;padding:9px 7px;border:1px solid #dce8df;border-radius:10px;background:#fff;min-width:0}
+.sy-ef-five-steps b{display:grid;place-items:center;width:23px;height:23px;border-radius:50%;background:#e8f2eb;color:#245b43;font-size:10px}
+.sy-ef-five-steps strong{font-size:11px;color:#244c38}
+.sy-ef-five-steps small{font-size:10px;line-height:1.4;color:#71877c}
+@keyframes syEfOrbit{to{transform:rotate(360deg)}}
+#view-heart-coach{--hc-pink:#2f735b!important;--hc-pink-soft:#eaf5ef!important}
+.hc-energy[aria-pressed="true"]{border-color:#8eb69d!important;background:#eaf5ef!important;color:#245b43!important;box-shadow:inset 0 0 0 1px #d0e4d6!important}
+@media(max-width:760px){.sy-ef-live-energy{grid-template-columns:1fr}.sy-ef-energy-ring{width:135px;height:135px}.sy-ef-five-steps{grid-template-columns:repeat(2,minmax(0,1fr))}.sy-ef-launch-battery{width:100%}}
