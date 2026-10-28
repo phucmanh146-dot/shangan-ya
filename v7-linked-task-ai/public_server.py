@@ -25,22 +25,52 @@ def allow_shared_ai(account):
  return True,''
 BLOCKED=('/api/wechat-private/','/api/pm/wx/','/api/pm/desktop-tool/','/api/pm/screen-')
 EXACT={'/api/screen-ocr','/api/ai-local-gateway','/api/cc-switch','/api/cc-switch/connect','/api/pm/vault-select','/api/pm/vault-open','/api/pm/vault-explorer','/api/pm/vault-reveal-note'}
+def discard_session(key,item,terminate=True):
+ process=item.get('process')
+ SESSIONS.pop(key,None)
+ if terminate and process and process.poll() is None:
+  try:process.terminate()
+  except OSError:pass
+
+def prune_sessions(now=None,idle_seconds=7200):
+ now=time.monotonic() if now is None else now
+ for key,item in list(SESSIONS.items()):
+  process=item.get('process')
+  dead=not process or process.poll() is not None
+  idle=now-float(item.get('seen',0))>idle_seconds
+  if dead or idle:discard_session(key,item,terminate=not dead)
+
 def backend(cookie):
  with LOCK:
+  prune_sessions()
   item=SESSIONS.get(cookie)
-  if item and item['process'].poll() is None:item['seen']=time.monotonic();return item['port']
-  if len(SESSIONS)>=40:raise RuntimeError('当前访客较多，请稍后重试')
+  if item:
+   process=item.get('process')
+   if process and process.poll() is None:
+    item['seen']=time.monotonic()
+    return item['port']
+   discard_session(cookie,item,terminate=False)
+  if len(SESSIONS)>=40:
+   raise RuntimeError('当前会话后台工作进程达到安全上限，请稍后重试；已有任务文件不会删除。')
   sock=socket.socket();sock.bind(('127.0.0.1',0));port=sock.getsockname()[1];sock.close()
   home=SESSION_ROOT/cookie;home.mkdir(exist_ok=True)
   env=os.environ.copy();env.pop('SY_WECHAT_AGENT_TOKEN',None);env.pop('SHANGANYA_ACCOUNT_DATA_DIR',None);env.update(SHANGANYA_SESSION_HOME=str(home),SHANGANYA_WORKER_PORT=str(port))
   process=subprocess.Popen([sys.executable,str(ROOT/'public_worker.py')],cwd=ROOT,env=env,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-  SESSIONS[cookie]={'process':process,'port':port,'seen':time.monotonic()}
- for _ in range(100):
-  if process.poll() is not None:raise RuntimeError('后台未能启动，请稍后重试')
+  item={'process':process,'port':port,'seen':time.monotonic()}
+  SESSIONS[cookie]=item
   try:
-   with socket.create_connection(('127.0.0.1',port),.2):return port
-  except OSError:time.sleep(.1)
- raise RuntimeError('后台启动较慢，请重试')
+   for _ in range(100):
+    if process.poll() is not None:raise RuntimeError('后台未能启动，请稍后重试')
+    try:
+     with socket.create_connection(('127.0.0.1',port),.2):
+      if process.poll() is None:
+       item['seen']=time.monotonic()
+       return port
+    except OSError:time.sleep(.1)
+   raise RuntimeError('后台启动较慢，请重试')
+  except Exception:
+   if SESSIONS.get(cookie) is item:discard_session(cookie,item)
+   raise
 def has_cloud_notes(account):
  home=SESSION_ROOT/('user_'+account['storage'])
  folders=[home/'vault']
@@ -53,9 +83,7 @@ def has_cloud_notes(account):
 def cleanup():
  while True:
   time.sleep(60)
-  with LOCK:
-   for key,item in list(SESSIONS.items()):
-    if time.monotonic()-item['seen']>7200:item['process'].terminate();del SESSIONS[key]
+  with LOCK:prune_sessions()
 threading.Thread(target=cleanup,daemon=True).start()
 atexit.register(lambda:[x['process'].terminate() for x in SESSIONS.values() if x['process'].poll() is None])
 class Public(SimpleHTTPRequestHandler):
@@ -101,15 +129,23 @@ class Public(SimpleHTTPRequestHandler):
    except Exception as exc:return self.message({'error':str(exc)[:250]},503)
   if path in EXACT or path.startswith(BLOCKED):return self.message({'error':'当前账号尚未完成此项服务授权，本次未读取数据。','code':'SERVICE_AUTHORIZATION_REQUIRED'},409)
   try:
-   port=backend(self.identity());size=int(self.headers.get('Content-Length','0'))
+   session_key=self.identity();size=int(self.headers.get('Content-Length','0'))
    if size<0 or size>32*1024*1024:return self.message({'error':'网页单次请求上限32MB，请分批导入'},413)
-   body=forward_body if forward_body is not None else (self.rfile.read(size) if size else None);connection=http.client.HTTPConnection('127.0.0.1',port,timeout=180)
-   headers={'Content-Type':self.headers.get('Content-Type','application/json'),'Host':'127.0.0.1:'+str(port),'Origin':'http://127.0.0.1:'+str(port)}
-   connection.request(self.command,self.path,body=body,headers=headers);response=connection.getresponse();payload=response.read();self.send_response(response.status)
-   for key,value in response.getheaders():
-    if key.lower() in ('content-type','content-disposition'):self.send_header(key,value)
-   self.send_header('Content-Length',str(len(payload)));self.end_headers();self.wfile.write(payload);connection.close()
-  except Exception as e:self.message({'error':str(e)},503)
+   body=forward_body if forward_body is not None else (self.rfile.read(size) if size else None)
+   for attempt in range(2):
+    port=backend(session_key);connection=http.client.HTTPConnection('127.0.0.1',port,timeout=180)
+    headers={'Content-Type':self.headers.get('Content-Type','application/json'),'Host':'127.0.0.1:'+str(port),'Origin':'http://127.0.0.1:'+str(port)}
+    try:
+     connection.request(self.command,self.path,body=body,headers=headers);response=connection.getresponse();payload=response.read();self.send_response(response.status)
+     for key,value in response.getheaders():
+      if key.lower() in ('content-type','content-disposition'):self.send_header(key,value)
+     self.send_header('Content-Length',str(len(payload)));self.end_headers();self.wfile.write(payload);return
+    except ConnectionRefusedError:
+     with LOCK:
+      item=SESSIONS.get(session_key)
+      if item and item.get('port')==port:discard_session(session_key,item)
+     if attempt:raise RuntimeError('后台服务刚刚重启，请刷新页面后重试')
+    finally:connection.close()
  def do_GET(self):
   if urlsplit(self.path).path=='/auth/claim':return cloud_accounts.handle(self)
   if urlsplit(self.path).path in ('/public-health','/publichealth'):return self.message({'ok':True,'product':'shanganya-original-complete'})
