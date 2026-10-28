@@ -37,7 +37,7 @@
 .hc-state{padding:16px 18px 18px}
 .hc-state-q{font-size:13px;font-weight:800;margin-bottom:4px}
 .hc-state-sub{font-size:11px;color:var(--hc-muted);margin-bottom:12px}
-.hc-energy-choices{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.hc-energy-choices{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
 .hc-energy{border:1px solid var(--hc-line);border-radius:12px;background:#fff;padding:10px 5px;cursor:pointer;text-align:center;color:#6c7781;min-width:0}
 .hc-energy .emoji{font-size:19px;display:block;margin-bottom:4px}.hc-energy b{font-size:11px;display:block}.hc-energy small{font-size:9px;color:var(--hc-muted)}
 .hc-energy[aria-pressed="true"]{border-color:#d78ba4;background:var(--hc-pink-soft);color:#a64768;box-shadow:inset 0 0 0 1px #f3d6e0}
@@ -70,4 +70,18 @@
 .hc-loop-step b{font-size:10px;display:block}.hc-loop-step small{font-size:9px;color:var(--hc-muted);display:block;margin-top:4px}
 .hc-foot{font-size:10px;color:#89958e;margin-top:16px;line-height:1.6}
 @media(max-width:1000px){.hc-hero{grid-template-columns:1fr}.hc-orbit{display:none}.hc-layout{grid-template-columns:1fr}.hc-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:560px){.hc-head{display:block}.hc-live{display:inline-block;margin-top:12px}.hc-hero{padding:18px}.hc-kpis{gap:7px}.hc-kpi{padding:11px}.hc-kpi strong{font-size:21px}.hc-energy-choices{grid-template-columns:repeat(2,minmax(0,1fr))}.hc-loop{grid-template-columns:1fr}.hc-loop-step:not(:last-child):after{content:"↓";right:50%;top:auto;bottom:-13px}}
+@media(max-width:560px){.hc-energy-choices{grid-template-columns:repeat(2,minmax(0,1fr))}.hc-head{display:block}.hc-live{display:inline-block;margin-top:12px}.hc-hero{padding:18px}.hc-kpis{gap:7px}.hc-kpi{padding:11px}.hc-kpi strong{font-size:21px}.hc-energy-choices{grid-template-columns:repeat(2,minmax(0,1fr))}.hc-loop{grid-template-columns:1fr}.hc-loop-step:not(:last-child):after{content:"↓";right:50%;top:auto;bottom:-13px}}
+
+/* Live account data inside the original workbench */
+.hc-current-task{background:#f5f8f6;border:1px solid #e4ece6;border-radius:12px;padding:12px;margin:8px 0 4px}
+.hc-current-label{font-size:10px;color:#658071;display:block;margin-bottom:4px}
+.hc-current-task strong{font-size:13px;display:block;overflow-wrap:anywhere}
+.hc-current-task small{font-size:10px;color:var(--hc-muted);display:block;margin-top:4px}
+.hc-task.is-current{background:#f5faf6;border-radius:10px;padding-left:8px;padding-right:8px;border:1px solid #d9e9df;margin:6px 0}
+.hc-task-select{border:1px solid #dfe8e2;border-radius:8px;background:#fff;color:#47705b;font-size:10px;font-weight:750;padding:6px 8px;cursor:pointer;white-space:nowrap}
+.hc-task-select:hover{background:#eaf5ef}
+.hc-task.is-done .hc-task-main strong{text-decoration:line-through;color:#8b9690}
+.hc-empty{padding:16px 0;color:var(--hc-muted);font-size:12px}
+.hc-empty strong{display:block;color:var(--hc-ink);font-size:13px}
+.hc-empty p{line-height:1.6}
+@media(max-width:560px){.hc-task{flex-wrap:wrap}.hc-task-main{min-width:calc(100% - 70px)}.hc-task-select{margin-left:28px}}
