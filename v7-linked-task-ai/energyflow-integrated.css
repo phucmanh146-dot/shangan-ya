@@ -49,3 +49,20 @@
 .sy-ef-field{display:grid;gap:5px;margin:8px 0 12px}.sy-ef-field label{font-size:11px;font-weight:750;color:#62796b}.sy-ef-field select{width:100%;min-height:38px;border:1px solid #dce8df;border-radius:9px;background:#fff;color:#173c2c;padding:8px 10px;font:inherit}
 /* The execution coach stays inside the integrated hub instead of duplicating a sidebar destination. */
 #appNav .app-nav-item[data-view="heart-coach"]{display:none!important}
+
+/* One green execution system: daily check-in, interruption handling, personal rhythm chart. */
+.sy-ef-checkin{display:grid;grid-template-columns:minmax(180px,.7fr) minmax(0,1.5fr);gap:18px;padding:18px;margin:0 0 14px;border:1px solid #dce8df;border-radius:15px;background:linear-gradient(110deg,#f1f7f2,#fff)}
+.sy-ef-checkin h3{margin:7px 0;color:#173c2c;font-size:16px}.sy-ef-checkin p{margin:6px 0;color:#71877c;font-size:12px;line-height:1.65}
+.sy-ef-checkin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;align-content:start}
+.sy-ef-checkin-grid label,.sy-ef-interrupt-grid label{display:grid;gap:5px;color:#526c5c;font-size:11px;font-weight:750}
+.sy-ef-checkin-grid input,.sy-ef-checkin-grid select,.sy-ef-interrupt-grid input,.sy-ef-interrupt-grid select{width:100%;min-height:38px;border:1px solid #dce8df;border-radius:9px;background:#fff;color:#173c2c;padding:8px 10px;font:inherit}
+.sy-ef-checkin-grid .sy-ef-mainline{grid-column:1/-1}
+.sy-ef-interruption{margin-top:14px}
+.sy-ef-interrupt-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(100px,.7fr) minmax(0,1fr) auto;gap:9px;align-items:end}
+.sy-ef-curve-svg{display:block;width:100%;height:auto;min-height:100px}
+.sy-ef-curve-labels{display:flex;justify-content:space-between;color:#71877c;font-size:11px}
+.sy-ef-tab[data-ef-tab="focus"],.sy-ef-tab[data-ef-tab="coach"]{display:none!important}
+#appNav .app-nav-item[data-view="heart-coach"],#appNav .app-nav-item[data-open-execution-hub="coach"]{display:none!important}
+#energy-left-planner .elp-brain-actions button[aria-pressed="true"]{background:#eaf4ed!important;border-color:#8eb69d!important;color:#245b43!important}
+@media(max-width:900px){.sy-ef-checkin{grid-template-columns:1fr}.sy-ef-interrupt-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.sy-ef-checkin-grid,.sy-ef-interrupt-grid{grid-template-columns:1fr}.sy-ef-checkin-grid .sy-ef-mainline{grid-column:auto}}
