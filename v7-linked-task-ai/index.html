@@ -641,7 +641,7 @@
         <div id="inboxBody"></div>
       </section>
 
-      <section class="app-view" data-view="task-intake" id="view-task-intake" hidden><div class="app-main-topbar" style="margin-bottom:18px;"><div><p class="app-greeting-eyebrow">COLLECT → VERIFY → LINK</p><h1 style="font-size:1.45rem;">收集任务</h1><p style="color:var(--text-soft);font-size:.92rem;">微信只负责消息采集与任务关联；Obsidian、飞书、网页和视频链接请进入独立的「资料中心」页。</p></div></div><div id="wechatTaskMount"></div></section>
+      <section class="app-view" data-view="task-intake" id="view-task-intake" hidden><div class="app-main-topbar" style="margin-bottom:18px;"><div><p class="app-greeting-eyebrow">COLLECT → VERIFY → LINK</p><h1 style="font-size:1.45rem;">收集任务</h1><p style="color:var(--text-soft);font-size:.92rem;">这里不假装已连接微信、飞书或外部知识库。可手动记录任务来源与会议结论；外部同步需单独授权接入。</p></div></div><div id="wechatTaskMount"></div></section>
       <section class="app-view" data-view="pomodoro" id="view-pomodoro" hidden>
         <div id="pomodoroBody"></div>
       </section>
@@ -746,14 +746,23 @@
             <article class="cp-page-card"><span class="cp-page-card-icon">◷</span><div><h3>认知负荷估算</h3><p>结合连续用脑、卡壳与状态反馈；信息不足时明确标记置信度，不假装读取脑电。</p><a href="#view-comfort" data-cp-open-link>进入状态评估 ↗</a></div></article>
             <article class="cp-page-card"><span class="cp-page-card-icon">▤</span><div><h3>真实任务排期</h3><p>只从原有待办选择任务，参考历史耗时与复杂度；延后不等于放弃，也不会自动完成。</p><a href="#view-daily" data-cp-route="daily">回到任务清单 ↗</a></div></article>
             <article class="cp-page-card"><span class="cp-page-card-icon">☁</span><div><h3>休息与弹性缓冲</h3><p>预留发呆、娱乐、短休与卡壳缓冲，不把每一分钟塞满，也不把娱乐当作欠账。</p><a href="#view-comfort" data-cp-open-link>设置恢复时间 ↗</a></div></article>
-            <article class="cp-page-card"><span class="cp-page-card-icon">⌕</span><div><h3>资料与 AI 解卡</h3><p>先从资料中心核对真实来源，再将当前任务带入 AI 解卡；未读取的笔记不会显示成已读取。AI 会参考当前任务已记录的精力与疲惫反馈，优先给出适合此刻状态的下一步。</p><a href="#view-sources" data-cp-route="sources">打开资料中心 ↗</a><a href="#view-ai-p2" data-cp-route="ai-p2">打开 AI 工作区 ↗</a></div></article>
+            <article class="cp-page-card"><span class="cp-page-card-icon">↻</span><div><h3>卡壳止损与任务恢复</h3><p>保存已经完成的步骤、具体卡点和下一步；按当前精力降级任务或重排，不调用未接通的私人知识库，也不伪造 AI 分析。</p><a href="#view-task-workspace" data-cp-route="task-workspace">进入原任务工作区 ↗</a><a href="#view-comfort" data-cp-open-link>重新评估精力 ↗</a></div></article>
             <article class="cp-page-card"><span class="cp-page-card-icon">◒</span><div><h3>个人精力画像与任务耗能</h3><p>查看不同时段的精力签到、哪些任务反复出现低精力或疲惫反馈，以及真实耗时样本。样本不足会明确提示，不会凭空推断你的规律。</p><a href="#view-comfort" data-cp-open-patterns>查看个人规律 ↗</a><a href="#view-stats" data-cp-route="stats">查看历史记录 ↗</a></div></article>
           </div>
           <section class="cp-page-footnote"><strong>使用原则</strong><span>系统建议不替代你的感受。若你反馈“脑袋被抽干”，先恢复再重新评估；计划可以顺延，不以牺牲休息来补齐。</span><a href="#view-stats" data-cp-route="stats">查看历史与复盘 ↗</a></section>
         </div>
       </section>
-      <section class="app-view" data-view="sources" data-tw-embedded="materials" id="view-sources" hidden>
-        <div id="sourceCenterRoot"></div>
+      <section class="app-view" data-view="sources" id="view-sources" hidden>
+        <div class="app-main-topbar" style="margin-bottom:18px;"><div><p class="app-greeting-eyebrow">LOCAL FIRST · MANUAL NOTES</p><h1 style="font-size:1.45rem;">资料暂存区</h1><p style="color:var(--text-soft);font-size:.92rem;">仅保存你主动粘贴的文字到当前浏览器。本页不连接 Obsidian，不自动读取网页链接，也不声称已同步微信/飞书。</p></div></div>
+        <section class="cp-panel" style="max-width:900px;margin:0 auto 18px;">
+          <h3>手动保存一条资料 / 会议结论</h3>
+          <p class="cp-lead">把你已经有权限查看的内容粘贴进来。外部链接只作为普通文本保存，不会自动抓取网页正文。</p>
+          <label style="display:block;margin:12px 0 6px;font-size:13px;">标题<input id="efNoteTitle" type="text" maxlength="160" placeholder="例如：Agent 比赛复盘 / 明天会议结论" style="display:block;width:100%;margin-top:5px;padding:10px;border:1px solid #d8e2dc;border-radius:9px;"></label>
+          <label style="display:block;margin:12px 0 6px;font-size:13px;">关联任务（可选）<select id="efNoteTask" style="display:block;width:100%;margin-top:5px;padding:10px;border:1px solid #d8e2dc;border-radius:9px;"><option value="">暂不关联</option></select></label>
+          <label style="display:block;margin:12px 0 6px;font-size:13px;">资料正文 / 你自己整理的摘要<textarea id="efNoteBody" rows="6" placeholder="粘贴已获得的资料、会议结论、解决步骤……" style="display:block;width:100%;margin-top:5px;padding:10px;border:1px solid #d8e2dc;border-radius:9px;resize:vertical;"></textarea></label>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><button class="btn btn-primary" type="button" id="efNoteSave">保存到本地</button><span id="efNoteStatus" role="status" aria-live="polite" style="font-size:12px;color:var(--text-soft);"></span></div>
+        </section>
+        <section class="cp-panel" style="max-width:900px;margin:0 auto;"><h3>本地资料记录</h3><div id="efNotesList"><p class="cp-muted">尚无手动保存的资料。</p></div></section>
       </section>
       </div></section><section class="app-view" data-view="deadlines" id="view-deadlines" hidden>
         <div id="deadlinesBody"></div>
@@ -1225,16 +1234,16 @@
 <script src="./pm-wechat-mini-v4.js?v=20261025-history-api-flow-v6"></script>
 <script src="./pm-materials-v4.js?v=20261025-source-center-v2"></script>
 <link rel="stylesheet" href="./pm-materials-v4.css">
-<link rel="stylesheet" href="./source-center.css?v=20261026-interactive">\n<link rel="stylesheet" href="./p2-video-presenter.css?v=20261027-task-linked-video-v1">
-<script src="./p2-video-presenter.js?v=20261027-task-linked-video-v1"></script>\n<script src="./source-center.js?v=20261027-local-obsidian-bridge-v2"></script>
+\n<link rel="stylesheet" href="./p2-video-presenter.css?v=20261027-task-linked-video-v1">
+<script src="./p2-video-presenter.js?v=20261027-task-linked-video-v1"></script>\n
 <link rel="stylesheet" href="./p2-entry.css">
 
 <link rel="stylesheet" href="./p2-embedded-in-workbench.css">
 
-<link rel="stylesheet" href="./obsidian-direct-links.css">
-<script src="./obsidian-direct-links.js?v=20261025-source-center-v2"></script>
-<link rel="stylesheet" href="./source-workflow.css">
-<script src="./source-workflow.js?v=20261025-social-verified-v1"></script>
+
+
+
+
 <link rel="stylesheet" href="./workbench-readable-ui.css?v=20261015-2248">
 <script src="./cover-module-layout.js?v=20261026-sidebar-v2"></script>
 <link rel="stylesheet" href="./sy-adaptive.css?v=20261026-original-layout-v2">
@@ -1247,8 +1256,8 @@
 <script src="./sy-reference-dynamic.js?v=20261017"></script>
 <link rel="stylesheet" href="./smart-planner-20261017.css">
 <script src="./smart-planner-20261017.js"></script>
-<script src="sy-reference-link-reader.js?v=20261017-knowledge-reader"></script>
-<script src="public-connections.js?v=20261017-knowledge-reader"></script>
+
+
 <script src="sy-multi-sources.js?v=20261025-wechat-bridge-v2"></script>
 <script src="./cloud-account.js?v=20261018"></script>
 
@@ -1334,10 +1343,25 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 var bootObs=new MutationObserver(function(){if(document.getElementById('view-daily')&&!document.getElementById('energy-left-planner'))mount()});bootObs.observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
-<script src="./comfort-planner-flow.js?v=20261028-personal-load-v6"></script>
+<script src="./comfort-planner-flow.js?v=20261028-energyflow-local-v1"></script>
 <script src="./task-workspace.js?v=20261027-monitor-v1"></script>
 <script src="./task-ai-entry.js?v=20261028-personal-profile-v5"></script>
-<script src="./heart-coach.js?v=20261028-vibe-v2"></script>
+<script src="./heart-coach.js?v=20261028-energyflow-v1"></script>
+<script id="energyflow-local-notes-v1">
+(function(){
+'use strict';
+var KEY='shanganya.energyflow.notes.v1',PROFILE='shanganya.energyflow.local.v1';
+function read(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){return[]}}
+function write(v){try{localStorage.setItem(KEY,JSON.stringify(v));return true}catch(e){return false}}
+function acct(){try{return window.SY&&SY.getAcctData?SY.getAcctData():null}catch(e){return null}}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function refresh(){var sel=document.getElementById('efNoteTask'),list=document.getElementById('efNotesList');if(!sel||!list)return;var a=acct()||{},ts=Array.isArray(a.tasks)?a.tasks:[],chosen=sel.value;sel.innerHTML='<option value="">暂不关联</option>'+ts.filter(function(t){return t&&!t.deleted}).map(function(t){var id=String(t.id||t.taskId||t.name||'');return '<option value="'+esc(id)+'">'+esc(t.name||t.title||t.text||'未命名任务')+'</option>'}).join('');sel.value=chosen;
+var notes=read().slice().reverse();list.innerHTML=notes.length?notes.map(function(n){return '<article style="padding:12px 0;border-bottom:1px solid #e6ece8;"><strong>'+esc(n.title)+'</strong><small style="display:block;color:#718079;margin:4px 0;">'+esc(n.date||'')+' · '+esc(n.taskName||'未关联任务')+' · 本机浏览器</small><p style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;">'+esc(n.body)+'</p><button class="btn btn-ghost btn-sm" type="button" data-ef-delete="'+esc(n.id)+'">删除本条</button></article>'}).join(''):'<p class="cp-muted">尚无手动保存的资料。</p>'}
+document.addEventListener('click',function(e){if(e.target&&e.target.id==='efNoteSave'){var title=document.getElementById('efNoteTitle'),body=document.getElementById('efNoteBody'),sel=document.getElementById('efNoteTask'),status=document.getElementById('efNoteStatus');if(!body.value.trim()){status.textContent='请先粘贴资料正文或会议结论。';return}var a=acct()||{},ts=Array.isArray(a.tasks)?a.tasks:[],task=ts.find(function(t){return String(t.id||t.taskId||t.name||'')===sel.value});var arr=read();arr.push({id:'ef-note-'+Date.now(),title:title.value.trim()||'未命名资料',body:body.value.trim(),taskId:sel.value,taskName:task?(task.name||task.title||task.text||'未命名任务'):'',date:new Date().toLocaleString(),createdAt:Date.now()});if(!write(arr)){status.textContent='本地存储不可用，未保存。';return}title.value='';body.value='';status.textContent='已保存在当前浏览器，不会上传云端。';refresh();return}
+var del=e.target&&e.target.closest&&e.target.closest('[data-ef-delete]');if(del){if(!confirm('删除这条本地资料？'))return;write(read().filter(function(n){return n.id!==del.dataset.efDelete}));refresh()}});
+document.addEventListener('sy:ready',refresh);document.addEventListener('DOMContentLoaded',refresh);setTimeout(refresh,1200);
+})();
+</script>
 </body>
 </html>
 
