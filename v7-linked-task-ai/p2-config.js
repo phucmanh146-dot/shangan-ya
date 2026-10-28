@@ -6,8 +6,24 @@ function updateTopDocs(providerId){
  const current=providers.find(x=>x.id===providerId);
  const docs=$('#p2-top-docs');
  if(!docs)return;
- if(current&&current.docs){docs.href=current.docs;docs.hidden=false;docs.textContent='打开 '+(current.name||current.id)+' 官方文档 ↗';docs.title=current.docs;}
- else{docs.removeAttribute('href');docs.hidden=false;docs.textContent='该服务商暂无文档链接';docs.title='请通过服务商官网查找 API 文档';}
+ if(current&&current.docs){docs.href=current.docs;docs.hidden=false;docs.textContent='官方 API 文档 ↗';docs.title=(current.name||current.id)+'：'+current.docs;docs.target='_blank';docs.rel='noopener noreferrer';}
+ else{docs.removeAttribute('href');docs.hidden=false;docs.textContent='暂无官方文档';docs.title='请通过服务商官网查找 API 文档';}
+ updateModelDocs();
+}
+function updateModelDocs(modelId){
+ const providerId=$('#p2-provider')?.value||$('#p2-top-provider')?.value||'';
+ const current=providers.find(x=>x.id===providerId);
+ const model=String(modelId||$('#p2-model')?.value||$('#p2-top-model')?.value||'').trim();
+ const links=[$('#p2-model-docs'),$('#p2-api-docs')].filter(Boolean);
+ links.forEach(link=>{
+  if(current&&current.docs){
+   link.href=current.docs;link.hidden=false;link.target='_blank';link.rel='noopener noreferrer';
+   link.textContent=model?'查看 '+(current.name||current.id)+' · '+model+' 的官方 API / 模型文档 ↗':'打开 '+(current.name||current.id)+' 官方 API / 模型文档 ↗';
+   link.title='模型目录来自服务商 API；文档链接不代表该模型已获账号授权。';
+  }else{
+   link.removeAttribute('href');link.textContent='该服务商暂无已核实的官方文档链接';link.title='请通过服务商官网查找 API 文档';
+  }
+ });
 }
 async function loadTopProviders(){
  const select=$('#p2-top-provider');if(!select)return;
@@ -21,6 +37,7 @@ async function loadTopProviders(){
   const match=providers.find(x=>x.base&&x.base===config.base);
   select.value=match?.id||(providers.some(x=>x.id==='custom')?'custom':providers[0]?.id||'');
   updateTopDocs(select.value);
+  await loadTopModels();
  }catch(e){select.replaceChildren(new Option('无法读取供应商列表',''));const docs=$('#p2-top-docs');if(docs){docs.textContent='供应商列表读取失败';docs.removeAttribute('href');}}
 }
 function message(text,bad=false){const node=$('#p2-config-status');if(node){node.textContent=text;node.classList.toggle('error',!!bad);}}
@@ -33,14 +50,7 @@ function applyProvider(){
  // Custom endpoints must be editable instead of silently retaining a different provider URL.
  $('#p2-base').value=current.id==='custom'?'':(current.base||'');
  $('#p2-protocol').value=current.protocol||'chat';
- const docs=$('#p2-api-docs');
- docs.hidden=!current.docs;
- docs.target='_blank';
- docs.rel='noopener noreferrer';
- docs.textContent=current.docs?'打开 '+(current.name||current.id)+' 官方 API 文档 ↗':'该服务商暂无官方文档链接';
- docs.title=current.docs?'跳转到 '+(current.name||current.id)+' 官方 API 文档':'请在服务商官网查找 API 文档';
- if(current.docs)docs.href=current.docs;
- else docs.removeAttribute('href');
+ updateModelDocs();
  const list=$('#p2-model-list');list.replaceChildren(new Option('选择已读取的模型',''));list.hidden=true;
  modelMessage('模型列表会通过你填写的服务商 API 实时读取；不支持列表的代理可手动填模型 ID。');
 }
@@ -65,6 +75,31 @@ async function open(preferredProvider){
   await loadFeishuConfig();
   message(config.verified?'已验证模型真实响应：'+config.model:(config.configured?'已保存配置，但尚未验证模型真实响应。':'尚未连接模型。填写自己的 API Key 后读取模型并进行真实测试。'));
  }catch(e){message('读取模型配置失败：'+e.message,true);}
+}
+async function loadTopModels(){
+ const select=$('#p2-top-model');if(!select)return;
+ select.replaceChildren(new Option('正在读取模型…',''));
+ try{
+  const config=await P2App.api('/api/ai-config',undefined,15000);
+  const currentProvider=providers.find(x=>x.id===$('#p2-top-provider')?.value);
+  if(!config.configured||!config.hasKey||!config.base||!config.model){
+   select.replaceChildren(new Option('先配置 API',''));return;
+  }
+  if(currentProvider&&currentProvider.base&&currentProvider.base!==config.base){
+   select.replaceChildren(new Option('请先切换服务商配置',''));return;
+  }
+  const result=await P2App.api('/api/ai-models',{base:config.base,protocol:config.protocol||'chat',key:'',keepKey:true},45000);
+  const models=Array.isArray(result.models)?result.models:[];
+  select.replaceChildren();
+  models.forEach(m=>select.append(new Option((m.name&&m.name!==m.id?m.name+' · ':'')+m.id,m.id)));
+  if(!models.length){select.append(new Option('模型列表暂不可用',''));return;}
+  if(models.some(m=>m.id===config.model))select.value=config.model;
+  else select.insertBefore(new Option('当前模型：'+config.model,config.model),select.firstChild);
+  updateModelDocs(config.model);
+ }catch(error){
+  select.replaceChildren(new Option('读取失败，请打开模型设置',''));
+  select.title='模型列表读取失败：'+(error&&error.message||'未知错误');
+ }
 }
 async function loadModels(){
  const btn=$('#p2-load-models'),base=$('#p2-base').value.trim(),key=$('#p2-key').value.trim(),protocol=$('#p2-protocol').value;
@@ -284,15 +319,34 @@ async function reconnectAI(){
 }
 $('#p2-reconnect-ai')?.addEventListener('click',reconnectAI);
 $('#p2-open-config').addEventListener('click',()=>open($('#p2-top-provider')?.value||undefined));
-$('#p2-top-provider').addEventListener('change',e=>{
+$('#p2-top-provider').addEventListener('change',async e=>{
  const id=e.target.value;updateTopDocs(id);
  const modalSelect=$('#p2-provider');
  if(providers.some(x=>x.id===id)){modalSelect.value=id;applyProvider();}
+ const config=await P2App.api('/api/ai-config',undefined,15000).catch(()=>({}));
+ if(!config.configured||!config.hasKey||config.base!==providers.find(x=>x.id===id)?.base){
+  const modelSelect=$('#p2-top-model');if(modelSelect)modelSelect.replaceChildren(new Option('先配置该服务商 API',''));
+  modelMessage('当前服务商与已验证配置不同。请打开“模型设置”，填写该服务商 API Key 并测试连接后再选择模型。');
+ }else await loadTopModels();
+});
+$('#p2-top-model')?.addEventListener('change',async e=>{
+ const model=e.target.value;if(!model)return;
+ const config=await P2App.api('/api/ai-config',undefined,15000).catch(()=>({}));
+ if(!config.configured||!config.hasKey){message('请先配置并验证 API。',true);return;}
+ const select=e.target,previous=config.model;select.disabled=true;
+ try{
+  message('正在验证模型 '+model+'；只有真实调用成功后才会切换当前模型…');
+  const result=await P2App.api('/api/pm/config',{base:config.base,model,protocol:config.protocol||'chat',key:'',keepKey:true},105000);
+  if(!result.verified)throw Error('服务端未确认模型真实响应');
+  message('已切换并验证模型：'+model);await P2App.checkStatus();updateModelDocs(model);
+ }catch(err){
+  message('切换模型失败：'+err.message+'。已保留原有可用配置。',true);select.value=previous||'';
+ }finally{select.disabled=false;}
 });
 $('#p2-provider').addEventListener('change',applyProvider);
 loadTopProviders();
 $('#p2-load-models').addEventListener('click',loadModels);
-$('#p2-model-list').addEventListener('change',e=>{if(e.target.value)$('#p2-model').value=e.target.value;});
+$('#p2-model-list').addEventListener('change',e=>{if(e.target.value){$('#p2-model').value=e.target.value;updateModelDocs(e.target.value);}});
 $('#p2-test-model').addEventListener('click',verify);
 $('#p2-save-team').addEventListener('click',saveTeam);
 $('#p2-clear-team').addEventListener('click',clearTeam);
