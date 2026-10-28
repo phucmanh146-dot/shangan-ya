@@ -146,7 +146,7 @@ class Public(SimpleHTTPRequestHandler):
       if item and item.get('port')==port:discard_session(session_key,item)
      if attempt:raise RuntimeError('后台服务刚刚重启，请刷新页面后重试')
     finally:connection.close()
-   except Exception as e:self.message({'error':str(e)},503)
+  except Exception as e:self.message({'error':str(e)},503)
  def do_GET(self):
   if urlsplit(self.path).path=='/auth/claim':return cloud_accounts.handle(self)
   if urlsplit(self.path).path in ('/public-health','/publichealth'):return self.message({'ok':True,'product':'shanganya-original-complete'})
