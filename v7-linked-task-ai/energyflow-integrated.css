@@ -66,3 +66,10 @@
 #energy-left-planner .elp-brain-actions button[aria-pressed="true"]{background:#eaf4ed!important;border-color:#8eb69d!important;color:#245b43!important}
 @media(max-width:900px){.sy-ef-checkin{grid-template-columns:1fr}.sy-ef-interrupt-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.sy-ef-checkin-grid,.sy-ef-interrupt-grid{grid-template-columns:1fr}.sy-ef-checkin-grid .sy-ef-mainline{grid-column:auto}}
+
+.sy-ef-report-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.7fr);gap:9px;margin-top:12px;align-items:end}
+.sy-ef-report-grid label{display:grid;gap:5px;color:#526c5c;font-size:11px;font-weight:750}
+.sy-ef-report-grid input,.sy-ef-report-grid select{width:100%;min-height:38px;border:1px solid #dce8df;border-radius:9px;background:#fff;color:#173c2c;padding:8px 10px;font:inherit}
+.sy-ef-report-grid .sy-ef-report-note{grid-column:1/-1}
+.sy-ef-report-grid button{justify-self:start}
+@media(max-width:560px){.sy-ef-report-grid{grid-template-columns:1fr}.sy-ef-report-grid .sy-ef-report-note{grid-column:auto}}
