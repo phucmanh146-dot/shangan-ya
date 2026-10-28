@@ -49,3 +49,22 @@
 .cp-page-footnote{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:16px;margin-top:18px;padding:18px 22px;border:1px solid #355c4c;border-radius:18px;color:#b7ccbf;background:#15372e;font-size:13px;line-height:1.75}
 .cp-page-footnote strong{color:#e5edd7;white-space:nowrap}.cp-page-footnote a{white-space:nowrap}
 @media(max-width:760px){.cp-page-top{flex-direction:column}.cp-page-hero{grid-template-columns:1fr}.cp-page-hero-visual{height:190px}.cp-page-grid{grid-template-columns:1fr}.cp-page-footnote{grid-template-columns:1fr}.cp-page-footnote a{white-space:normal}}
+
+/* EnergyFlow 1–10 local check-in; preserves the existing page layout */
+.cp-energy-scale{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:7px;margin:16px 0 8px}
+.cp-energy-score{min-height:42px;border:1px solid #dce7e0;border-radius:11px;background:#fff;color:#375346;font-weight:750;font-size:14px;cursor:pointer;transition:transform .15s,border-color .15s,background .15s}
+.cp-energy-score:hover{transform:translateY(-1px);border-color:#8cb8a0}
+.cp-energy-score.is-selected{background:#244d3c;color:#fff;border-color:#244d3c;box-shadow:0 4px 12px #244d3c20}
+.cp-energy-labels{display:flex;justify-content:space-between;gap:8px;color:var(--cp-muted,#718079);font-size:11px;margin-bottom:14px}
+.cp-fields input[type="text"],.cp-fields select{min-width:0;width:100%;box-sizing:border-box}
+@media(max-width:700px){.cp-energy-scale{grid-template-columns:repeat(5,minmax(0,1fr))}.cp-energy-score{min-height:40px}}
+@media(max-width:380px){.cp-energy-labels{font-size:10px}}
+
+.cp-risk-card{display:flex;flex-direction:column;gap:5px;padding:13px 15px;margin:12px 0;border:1px solid #dce8e0;border-radius:13px;background:#f7faf7;color:#304c3d}
+.cp-risk-card strong{font-size:13px}
+.cp-risk-card span{font-size:12px;line-height:1.65;color:#66766d}
+.cp-risk-card.risk-high{border-color:#e7c2bf;background:#fff6f5;color:#943c38}
+.cp-risk-card.risk-mid{border-color:#ead9b0;background:#fffbf0;color:#82601c}
+.cp-risk-card.risk-low{border-color:#dce8e0;background:#f7faf7;color:#304c3d}
+.cp-time-row[draggable="true"]{cursor:grab;touch-action:pan-y}
+.cp-time-row.is-dragging{opacity:.45;border:1px dashed #789985}

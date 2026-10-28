@@ -125,8 +125,9 @@
 @media(max-width:650px){#energy-left-planner{padding:14px!important}#energy-left-planner .elp-brain-actions{grid-template-columns:1fr}#energy-left-planner .elp-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}#energy-left-planner .elp-brain-question{font-size:18px}}
 
 </style>
-<link rel="stylesheet" href="./comfort-planner-flow.css?v=20261027-task-monitor-v4">
+<link rel="stylesheet" href="./comfort-planner-flow.css?v=20261028-energyflow-local-v2">
 <link rel="stylesheet" href="./task-workspace.css?v=20261027-monitor-v1">
+<link rel="stylesheet" href="./heart-coach.css?v=20261028-energyflow-v2">
 </head>
 <body>
 
@@ -443,6 +444,9 @@
           <span>每日清单</span>
         </button>
 <button class="app-nav-item" data-view="task-workspace" data-workspace-home type="button"><span class="app-nav-icon">✦</span><span>任务工作区</span></button>
+<button class="app-nav-item" data-view="heart-coach" type="button"><span class="app-nav-icon">♥</span><span>心航 · AI 执行教练</span></button>
+<a class="app-nav-item" href="./personal-execution-coach-demo.html" target="_blank" rel="noopener" style="text-decoration:none"><span class="app-nav-icon">◎</span><span>个人执行教练 Demo ↗</span></a>
+<a class="app-nav-item" href="./shanganya-product-positioning-prd.html" target="_blank" rel="noopener" style="text-decoration:none"><span class="app-nav-icon">▤</span><span>产品定位与 PRD ↗</span></a>
 
         <button class="app-nav-item" data-view="quadrant" type="button">
           <span class="app-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="3.5" width="7.5" height="7.5" rx="1.5"/><rect x="3.5" y="13" width="7.5" height="7.5" rx="1.5"/><rect x="13" y="13" width="7.5" height="7.5" rx="1.5"/></svg></span>
@@ -637,7 +641,7 @@
         <div id="inboxBody"></div>
       </section>
 
-      <section class="app-view" data-view="task-intake" id="view-task-intake" hidden><div class="app-main-topbar" style="margin-bottom:18px;"><div><p class="app-greeting-eyebrow">COLLECT → VERIFY → LINK</p><h1 style="font-size:1.45rem;">收集任务</h1><p style="color:var(--text-soft);font-size:.92rem;">微信只负责消息采集与任务关联；Obsidian、飞书、网页和视频链接请进入独立的「资料中心」页。</p></div></div><div id="wechatTaskMount"></div></section>
+      <section class="app-view" data-view="task-intake" id="view-task-intake" hidden><div class="app-main-topbar" style="margin-bottom:18px;"><div><p class="app-greeting-eyebrow">COLLECT → VERIFY → LINK</p><h1 style="font-size:1.45rem;">收集任务</h1><p style="color:var(--text-soft);font-size:.92rem;">这里不假装已连接微信、飞书或外部知识库。可手动记录任务来源与会议结论；外部同步需单独授权接入。</p></div></div><div id="wechatTaskMount"></div></section>
       <section class="app-view" data-view="pomodoro" id="view-pomodoro" hidden>
         <div id="pomodoroBody"></div>
       </section>
@@ -657,8 +661,8 @@
 <header class="tw-head"><div><p class="tw-eyebrow">ONE TASK · REAL EVIDENCE · ADAPTIVE PLAN</p><h1>任务工作区</h1><p>监测任务是否卡住，读取真实资料，按证据拆解下一步，再根据实际耗时与精力安排执行。</p></div><span class="tw-state-pill"><i></i><span id="twMonitorStatus">核对任务状态中</span></span></header>
 <div class="tw-context-bar"><label class="tw-task-picker" for="twTaskSelect"><span>当前任务</span><select id="twTaskSelect"><option value="">正在读取原有任务…</option></select></label><div class="tw-task-metrics" id="twTaskMetrics"></div></div>
 <nav class="tw-tabs" aria-label="任务工作区步骤" role="tablist"><button type="button" role="tab" aria-selected="true" class="is-active" data-tw-tab="overview">任务监测</button><button type="button" role="tab" aria-selected="false" data-tw-tab="materials">资料与证据</button><button type="button" role="tab" aria-selected="false" data-tw-tab="ai">AI 解卡与拆解</button><button type="button" role="tab" aria-selected="false" data-tw-tab="schedule">精力与排期</button><button type="button" role="tab" aria-selected="false" data-tw-tab="knowledge">知识库</button></nav>
-<div data-tw-panel="overview"><section class="tw-overview-hero"><div><span class="tw-kicker">CURRENT TASK</span><h2 id="twSelectedTaskTitle">先选择一个真实任务</h2><p id="twSelectedTaskDesc">不虚构进度；根据真实任务、资料、计时和状态反馈判断下一步。</p></div><div class="tw-hero-actions"><button type="button" class="tw-btn tw-btn-primary" data-tw-go="materials">核对资料 →</button><button type="button" class="tw-btn" data-tw-go="ai">按资料拆解</button><button type="button" class="tw-btn" data-tw-go="schedule">重新排期</button></div></section>
-<div class="tw-overview-grid"><article class="tw-card"><div class="tw-card-head"><span class="tw-card-icon">▤</span><div><h3>资料读取状态</h3><p>区分已保存链接与真正读取的正文</p></div></div><div id="twMaterialsSummary" class="tw-card-body"></div><button class="tw-inline-link" type="button" data-tw-go="materials">打开资料中心核对正文 ↗</button></article>
+<div data-tw-panel="overview"><section class="tw-overview-hero"><div><span class="tw-kicker">CURRENT TASK</span><h2 id="twSelectedTaskTitle">先选择一个真实任务</h2><p id="twSelectedTaskDesc">不虚构进度；根据当前任务描述、计时和你主动填写的状态判断下一步。</p></div><div class="tw-hero-actions"><button type="button" class="tw-btn tw-btn-primary" data-tw-go="materials">打开资料暂存区 →</button><button type="button" class="tw-btn" data-tw-go="ai">按任务描述拆解</button><button type="button" class="tw-btn" data-tw-go="schedule">重新排期</button></div></section>
+<div class="tw-overview-grid"><article class="tw-card"><div class="tw-card-head"><span class="tw-card-icon">▤</span><div><h3>手动资料记录</h3><p>仅展示你主动保存的文字；外部链接不会自动读取或被当作已核验正文</p></div></div><div id="twMaterialsSummary" class="tw-card-body"></div><button class="tw-inline-link" type="button" data-tw-go="materials">打开资料暂存区 ↗</button></article>
 <article class="tw-card"><div class="tw-card-head"><span class="tw-card-icon">◷</span><div><h3>实际耗时与精力反馈</h3><p>优先看真实记录，不套统一分钟数</p></div></div><div id="twHistorySummary" class="tw-card-body"></div><div class="tw-energy-checkin"><span>此刻脑袋转得动吗？</span><div><button type="button" data-tw-energy="4">清醒</button><button type="button" data-tw-energy="3">一般</button><button type="button" data-tw-energy="2">读不进去</button><button type="button" data-tw-energy="1">被抽干</button></div><p id="twEnergySaved" role="status">仅记录你的主动反馈，不通过摄像头推断。</p></div></article></div>
 <section class="tw-dependency-card"><div class="tw-section-head"><div><span class="tw-kicker">BLOCKER CHAIN</span><h3>当前项目阻塞链</h3><p>依据你描述的困难整理为依赖草图；未经确认不会写入原任务清单。</p></div><button class="tw-inline-link" type="button" data-tw-go="ai">结合真实资料细化 ↗</button></div>
 <div class="tw-dependency-flow"><div class="tw-dependency-node"><b>01</b><span>上岸鸭项目收尾</span><small>确认可演示版本、功能与未解决问题</small></div><span class="tw-dependency-arrow">↓</span><div class="tw-dependency-node"><b>02</b><span>项目证据卡</span><small>本人行动、真实产出、截图/代码/演示与反思</small></div><div class="tw-branch-row"><span>↙</span><span>↘</span></div><div class="tw-dependency-split"><div class="tw-dependency-node"><b>03A</b><span>更新自我介绍</span><small>基于证据写经历，不虚构成果</small></div><div class="tw-dependency-node"><b>03B</b><span>整理项目 PPT</span><small>复用同一份证据，按展示逻辑组织</small></div></div><span class="tw-dependency-arrow">↓</span><div class="tw-dependency-node"><b>04</b><span>口播脚本与视频</span><small>介绍稿确认后再录制、剪辑和验收</small></div><span class="tw-dependency-arrow">↓</span><div class="tw-dependency-node tw-dependency-final"><b>05</b><span>北辰青年项目投递</span><small>核对真实要求、材料与截止日期</small></div></div><p class="tw-dependency-note"><strong>处理原则：</strong>项目证据是上游；自我介绍与 PPT 可共享证据并行准备；口播依赖确认稿件；投递前核对官方要求。实际状态以原始任务为准。</p></section>
@@ -670,7 +674,63 @@
       <section class="app-view" data-view="knowledge" data-tw-embedded="knowledge" id="view-knowledge" hidden>
         <div id="knowledgeBody"></div>
       </section>
-      <section class="app-view cp-page-view" data-view="comfort" data-tw-embedded="schedule" id="view-comfort" hidden>
+      <section class="app-view" data-view="heart-coach" id="view-heart-coach" hidden>
+  <div class="hc-wrap">
+    <header class="hc-head"><div><p class="hc-eyebrow">HEART NAVIGATION · PERSONAL EXECUTION COACH</p><h1>心航 · 让计划跟上你的状态</h1><p>不是催你更努力，而是结合真实精力、任务耗时和卡壳情况，帮助你找到此刻可执行的下一步。</p></div><span class="hc-live"><i></i>V8 工作台内测原型</span></header>
+    <section class="hc-hero"><div><h2>今天不必把自己排满。<br><em>先照顾状态，再推进重要的事。</em></h2><p>每天的精力会变化，任务也会遇到意外。心航把状态反馈、任务执行、AI 解卡和复盘放在同一条流程里；保留你的选择权，不会自动覆盖原有排期。</p><div class="hc-hero-actions"><button class="hc-btn" id="hcOpenDaily" type="button">查看今日清单 →</button><button class="hc-btn secondary" id="hcOpenTaskWorkspace" type="button">进入任务 AI 解卡 ↗</button></div></div><div class="hc-orbit" aria-hidden="true"><span class="hc-orbit-label a">状态</span><span class="hc-orbit-label b">执行</span><span class="hc-orbit-label c">复盘</span><span class="hc-orbit-label d">恢复</span><div class="hc-heart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 4.6a5.4 5.4 0 0 0-7.6 0L12 5.8l-1.2-1.2a5.4 5.4 0 0 0-7.6 7.6l1.2 1.2L12 21l7.6-7.6 1.2-1.2a5.4 5.4 0 0 0 0-7.6Z"/><path d="M3.5 12h4l2-3.5 3.1 7 2.1-3.5h5.8"/></svg></div></div></section>
+    <section class="hc-kpis">
+      <article class="hc-kpi"><span class="label">当前精力自评</span><strong id="hcEnergyMetric">3/5</strong><small id="hcEnergyCaption">中等 · 短段推进</small></article>
+      <article class="hc-kpi"><span class="label">原任务完成</span><strong><span id="hcDoneCount">0</span><small> / <span id="hcTotalCount">0</span> 项</small></strong><small>直接读取上岸鸭原任务数据</small></article>
+      <article class="hc-kpi"><span class="label">当前专注计时</span><strong id="hcClock">00:00</strong><small id="hcTimerHint">计时只记录执行时长；卡壳或休息可暂停并记录</small></article>
+      <article class="hc-kpi"><span class="label">计划原则</span><strong style="font-size:19px">留白</strong><small>必要事项优先，休息与缓冲不被默认挤掉</small></article>
+    </section>
+    <div class="hc-layout">
+      <div>
+        <section class="hc-panel"><div class="hc-panel-head"><div><h3>现在的你，适合做什么？</h3><p>只需报告此刻状态，不需要预测一整天。</p></div><span class="hc-badge">主动反馈</span></div>
+          <div class="hc-state"><div class="hc-state-q">你现在的精力怎么样？</div><div class="hc-state-sub">这只是自我反馈，不是医学判断，也不会自动读取摄像头。</div>
+            <div class="hc-energy-choices">
+              <button class="hc-energy" type="button" data-hc-energy="1" aria-pressed="false"><span class="emoji">🫠</span><b>被抽干了</b><small>先恢复</small></button>
+              <button class="hc-energy" type="button" data-hc-energy="2" aria-pressed="false"><span class="emoji">🌧️</span><b>有点疲惫</b><small>降负荷</small></button>
+              <button class="hc-energy" type="button" data-hc-energy="3" aria-pressed="true"><span class="emoji">🌤️</span><b>还可以</b><small>短时推进</small></button>
+              <button class="hc-energy" type="button" data-hc-energy="4" aria-pressed="false"><span class="emoji">☀️</span><b>状态不错</b><small>推进重点</small></button>
+              <button class="hc-energy" type="button" data-hc-energy="5" aria-pressed="false"><span class="emoji">⚡</span><b>精力充沛</b><small>深度专注</small></button>
+            </div>
+            <div class="hc-state-result" id="hcStateAdvice" aria-live="polite"><strong>短时推进，保留缓冲</strong>先做一个 15 分钟内可验证的动作。</div>
+            <div class="hc-task-actions"><button class="hc-btn pink" id="hcSaveFeedback" type="button">记录本次状态</button><button class="hc-btn secondary" id="hcStuck" type="button">我卡住了，帮我止损</button></div>
+          </div>
+        </section>
+        <section class="hc-panel" style="margin-top:14px"><div class="hc-panel-head"><div><h3>今日任务 · 原工作台数据</h3><p>直接读取你已有的任务；切换当前任务会同步影响精力记录与计时。</p></div><span class="hc-badge">实时关联</span></div>
+          <div class="hc-tasks">
+            <div class="hc-current-task"><span class="hc-current-label">正在处理</span><strong id="hcCurrentTaskTitle">正在读取原有任务…</strong><small id="hcCurrentTaskMeta">从账号任务数据中选择当前任务</small></div>
+            <div id="hcTaskList" aria-live="polite"><p class="hc-task-time">正在读取原有任务…</p></div>
+            <div class="hc-task-actions"><button class="hc-btn" id="hcTimerButton" type="button">开始计时</button><button class="hc-btn secondary" id="hcResetTimer" type="button">重置计时</button><button class="hc-btn secondary" id="hcOpenDaily2" type="button">回到原每日清单 ↗</button></div>
+          </div>
+        </section>
+      </div>
+      <div>
+        <section class="hc-panel"><div class="hc-panel-head"><div><h3>私人 AI 解卡</h3><p>先用最小步骤恢复进展，再进入真实任务工作区。</p></div><span class="hc-badge">需要真实上下文</span></div>
+          <div class="hc-timer"><div class="hc-timer-current"><span class="overline">当前执行原则</span><h4>别让一个难题吞掉整天</h4><div class="hc-timer-note">超出估时或没有进展时，先保存已尝试步骤，再判断继续、拆分、切换或休息。</div></div>
+            <button class="hc-btn" id="hcAiHelp" type="button">生成解卡步骤（演示）</button><div class="hc-ai-out" id="hcAiOutput" aria-live="polite"></div>
+          </div>
+          <div class="hc-ai-card"><div class="hc-ai-title"><span class="hc-ai-icon">✦</span>遇到真实 Bug 怎么办？</div><p>当前页面的按钮演示的是产品流程。真实 AI 解卡请从任务工作区选择实际任务，提供报错或资料，由已配置的模型处理。</p><button class="hc-btn secondary" id="hcOpenTaskWorkspace2" type="button" onclick="document.querySelector('#appNav [data-view=task-workspace]')?.click()">打开原任务工作区 ↗</button></div>
+          <div class="hc-timer" style="padding-top:0"><div id="hcStuckPlan" class="hc-ai-out" hidden></div></div>
+        </section>
+      </div>
+    </div>
+    <section class="hc-panel" style="margin-top:14px"><div class="hc-panel-head"><div><h3>心航执行闭环</h3><p>六个功能围绕原有任务中心工作，而不是六个孤立页面。</p></div><span class="hc-badge">产品逻辑</span></div>
+      <div class="hc-loop">
+        <div class="hc-loop-step"><span class="n">01</span><b>状态反馈</b><small>精力与可用时间</small></div>
+        <div class="hc-loop-step"><span class="n">02</span><b>舒适排期</b><small>必要任务与缓冲</small></div>
+        <div class="hc-loop-step"><span class="n">03</span><b>执行监测</b><small>计时与进度</small></div>
+        <div class="hc-loop-step"><span class="n">04</span><b>AI 解卡 / 止损</b><small>最小步骤与切换</small></div>
+        <div class="hc-loop-step"><span class="n">05</span><b>复盘学习</b><small>真实耗时回流</small></div>
+      </div>
+    </section>
+    <p class="hc-foot">原有 V8 的任务中心、四象限、舒适排期和任务工作区保持不变。本页面目前是嵌入式 Vibe Coding 原型；状态反馈和演示任务保存在当前浏览器，尚未与原有任务数据库及真实模型打通。摄像头状态识别不默认启用。</p>
+    <div id="hcNotice" role="status" aria-live="polite" hidden style="position:sticky;bottom:12px;margin:10px auto 0;max-width:420px;background:#22352f;color:white;border-radius:12px;padding:11px 14px;font-size:12px;text-align:center;box-shadow:0 8px 28px #22352f20"></div>
+  </div>
+</section>
+<section class="app-view cp-page-view" data-view="comfort" data-tw-embedded="schedule" id="view-comfort" hidden>
         <div class="cp-page">
           <header class="cp-page-top">
             <div><p class="app-greeting-eyebrow">COGNITIVE LOAD · ADAPTIVE PLANNING</p><h1>舒适排期</h1><p>先接住你的状态，再安排真实任务。工作、休息、放空和缓冲一起进入日程。</p></div>
@@ -686,13 +746,23 @@
             <article class="cp-page-card"><span class="cp-page-card-icon">◷</span><div><h3>认知负荷估算</h3><p>结合连续用脑、卡壳与状态反馈；信息不足时明确标记置信度，不假装读取脑电。</p><a href="#view-comfort" data-cp-open-link>进入状态评估 ↗</a></div></article>
             <article class="cp-page-card"><span class="cp-page-card-icon">▤</span><div><h3>真实任务排期</h3><p>只从原有待办选择任务，参考历史耗时与复杂度；延后不等于放弃，也不会自动完成。</p><a href="#view-daily" data-cp-route="daily">回到任务清单 ↗</a></div></article>
             <article class="cp-page-card"><span class="cp-page-card-icon">☁</span><div><h3>休息与弹性缓冲</h3><p>预留发呆、娱乐、短休与卡壳缓冲，不把每一分钟塞满，也不把娱乐当作欠账。</p><a href="#view-comfort" data-cp-open-link>设置恢复时间 ↗</a></div></article>
-            <article class="cp-page-card"><span class="cp-page-card-icon">⌕</span><div><h3>资料与 AI 解卡</h3><p>先从资料中心核对真实来源，再将当前任务带入 AI 解卡；未读取的笔记不会显示成已读取。</p><a href="#view-sources" data-cp-route="sources">打开资料中心 ↗</a><a href="#view-ai-p2" data-cp-route="ai-p2">打开 AI 工作区 ↗</a></div></article>
+            <article class="cp-page-card"><span class="cp-page-card-icon">↻</span><div><h3>卡壳止损与任务恢复</h3><p>保存已经完成的步骤、具体卡点和下一步；按当前精力降级任务或重排，不调用未接通的私人知识库，也不伪造 AI 分析。</p><a href="#view-task-workspace" data-cp-route="task-workspace">进入原任务工作区 ↗</a><a href="#view-comfort" data-cp-open-link>重新评估精力 ↗</a></div></article>
+            <article class="cp-page-card"><span class="cp-page-card-icon">◒</span><div><h3>个人精力画像与任务耗能</h3><p>查看不同时段的精力签到、哪些任务反复出现低精力或疲惫反馈，以及真实耗时样本。样本不足会明确提示，不会凭空推断你的规律。</p><a href="#view-comfort" data-cp-open-patterns>查看个人规律 ↗</a><a href="#view-stats" data-cp-route="stats">查看历史记录 ↗</a></div></article>
           </div>
           <section class="cp-page-footnote"><strong>使用原则</strong><span>系统建议不替代你的感受。若你反馈“脑袋被抽干”，先恢复再重新评估；计划可以顺延，不以牺牲休息来补齐。</span><a href="#view-stats" data-cp-route="stats">查看历史与复盘 ↗</a></section>
         </div>
       </section>
-      <section class="app-view" data-view="sources" data-tw-embedded="materials" id="view-sources" hidden>
-        <div id="sourceCenterRoot"></div>
+      <section class="app-view" data-view="sources" id="view-sources" hidden>
+        <div class="app-main-topbar" style="margin-bottom:18px;"><div><p class="app-greeting-eyebrow">LOCAL FIRST · MANUAL NOTES</p><h1 style="font-size:1.45rem;">资料暂存区</h1><p style="color:var(--text-soft);font-size:.92rem;">仅保存你主动粘贴的文字到当前浏览器。本页不连接 Obsidian，不自动读取网页链接，也不声称已同步微信/飞书。</p></div></div>
+        <section class="cp-panel" style="max-width:900px;margin:0 auto 18px;">
+          <h3>手动保存一条资料 / 会议结论</h3>
+          <p class="cp-lead">把你已经有权限查看的内容粘贴进来。外部链接只作为普通文本保存，不会自动抓取网页正文。</p>
+          <label style="display:block;margin:12px 0 6px;font-size:13px;">标题<input id="efNoteTitle" type="text" maxlength="160" placeholder="例如：Agent 比赛复盘 / 明天会议结论" style="display:block;width:100%;margin-top:5px;padding:10px;border:1px solid #d8e2dc;border-radius:9px;"></label>
+          <label style="display:block;margin:12px 0 6px;font-size:13px;">关联任务（可选）<select id="efNoteTask" style="display:block;width:100%;margin-top:5px;padding:10px;border:1px solid #d8e2dc;border-radius:9px;"><option value="">暂不关联</option></select></label>
+          <label style="display:block;margin:12px 0 6px;font-size:13px;">资料正文 / 你自己整理的摘要<textarea id="efNoteBody" rows="6" placeholder="粘贴已获得的资料、会议结论、解决步骤……" style="display:block;width:100%;margin-top:5px;padding:10px;border:1px solid #d8e2dc;border-radius:9px;resize:vertical;"></textarea></label>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><button class="btn btn-primary" type="button" id="efNoteSave">保存到本地</button><span id="efNoteStatus" role="status" aria-live="polite" style="font-size:12px;color:var(--text-soft);"></span></div>
+        </section>
+        <section class="cp-panel" style="max-width:900px;margin:0 auto;"><h3>本地资料记录</h3><div id="efNotesList"><p class="cp-muted">尚无手动保存的资料。</p></div></section>
       </section>
       </div></section><section class="app-view" data-view="deadlines" id="view-deadlines" hidden>
         <div id="deadlinesBody"></div>
@@ -1164,16 +1234,16 @@
 <script src="./pm-wechat-mini-v4.js?v=20261025-history-api-flow-v6"></script>
 <script src="./pm-materials-v4.js?v=20261025-source-center-v2"></script>
 <link rel="stylesheet" href="./pm-materials-v4.css">
-<link rel="stylesheet" href="./source-center.css?v=20261026-interactive">\n<link rel="stylesheet" href="./p2-video-presenter.css?v=20261027-task-linked-video-v1">
-<script src="./p2-video-presenter.js?v=20261027-task-linked-video-v1"></script>\n<script src="./source-center.js?v=20261027-local-obsidian-bridge-v2"></script>
+\n<link rel="stylesheet" href="./p2-video-presenter.css?v=20261027-task-linked-video-v1">
+<script src="./p2-video-presenter.js?v=20261027-task-linked-video-v1"></script>\n
 <link rel="stylesheet" href="./p2-entry.css">
 
 <link rel="stylesheet" href="./p2-embedded-in-workbench.css">
 
-<link rel="stylesheet" href="./obsidian-direct-links.css">
-<script src="./obsidian-direct-links.js?v=20261025-source-center-v2"></script>
-<link rel="stylesheet" href="./source-workflow.css">
-<script src="./source-workflow.js?v=20261025-social-verified-v1"></script>
+
+
+
+
 <link rel="stylesheet" href="./workbench-readable-ui.css?v=20261015-2248">
 <script src="./cover-module-layout.js?v=20261026-sidebar-v2"></script>
 <link rel="stylesheet" href="./sy-adaptive.css?v=20261026-original-layout-v2">
@@ -1186,8 +1256,8 @@
 <script src="./sy-reference-dynamic.js?v=20261017"></script>
 <link rel="stylesheet" href="./smart-planner-20261017.css">
 <script src="./smart-planner-20261017.js"></script>
-<script src="sy-reference-link-reader.js?v=20261017-knowledge-reader"></script>
-<script src="public-connections.js?v=20261017-knowledge-reader"></script>
+
+
 <script src="sy-multi-sources.js?v=20261025-wechat-bridge-v2"></script>
 <script src="./cloud-account.js?v=20261018"></script>
 
@@ -1273,8 +1343,25 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 var bootObs=new MutationObserver(function(){if(document.getElementById('view-daily')&&!document.getElementById('energy-left-planner'))mount()});bootObs.observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
-<script src="./comfort-planner-flow.js?v=20261027-task-monitor-v4"></script>
-<script src="./task-workspace.js?v=20261027-monitor-v1"></script>
+<script src="./comfort-planner-flow.js?v=20261028-energyflow-local-v2"></script>
+<script src="./task-workspace.js?v=20261028-task-only-context-v2"></script>
+<script src="./task-ai-entry.js?v=20261028-task-only-context-v2"></script>
+<script src="./heart-coach.js?v=20261028-energyflow-v2"></script>
+<script id="energyflow-local-notes-v1">
+(function(){
+'use strict';
+var KEY='shanganya.energyflow.notes.v1',PROFILE='shanganya.energyflow.local.v1';
+function read(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){return[]}}
+function write(v){try{localStorage.setItem(KEY,JSON.stringify(v));return true}catch(e){return false}}
+function acct(){try{return window.SY&&SY.getAcctData?SY.getAcctData():null}catch(e){return null}}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function refresh(){var sel=document.getElementById('efNoteTask'),list=document.getElementById('efNotesList');if(!sel||!list)return;var a=acct()||{},ts=Array.isArray(a.tasks)?a.tasks:[],chosen=sel.value;sel.innerHTML='<option value="">暂不关联</option>'+ts.filter(function(t){return t&&!t.deleted}).map(function(t){var id=String(t.id||t.taskId||t.name||'');return '<option value="'+esc(id)+'">'+esc(t.name||t.title||t.text||'未命名任务')+'</option>'}).join('');sel.value=chosen;
+var notes=read().slice().reverse();list.innerHTML=notes.length?notes.map(function(n){return '<article style="padding:12px 0;border-bottom:1px solid #e6ece8;"><strong>'+esc(n.title)+'</strong><small style="display:block;color:#718079;margin:4px 0;">'+esc(n.date||'')+' · '+esc(n.taskName||'未关联任务')+' · 本机浏览器</small><p style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;">'+esc(n.body)+'</p><button class="btn btn-ghost btn-sm" type="button" data-ef-delete="'+esc(n.id)+'">删除本条</button></article>'}).join(''):'<p class="cp-muted">尚无手动保存的资料。</p>'}
+document.addEventListener('click',function(e){if(e.target&&e.target.id==='efNoteSave'){var title=document.getElementById('efNoteTitle'),body=document.getElementById('efNoteBody'),sel=document.getElementById('efNoteTask'),status=document.getElementById('efNoteStatus');if(!body.value.trim()){status.textContent='请先粘贴资料正文或会议结论。';return}var a=acct()||{},ts=Array.isArray(a.tasks)?a.tasks:[],task=ts.find(function(t){return String(t.id||t.taskId||t.name||'')===sel.value});var arr=read();arr.push({id:'ef-note-'+Date.now(),title:title.value.trim()||'未命名资料',body:body.value.trim(),taskId:sel.value,taskName:task?(task.name||task.title||task.text||'未命名任务'):'',date:new Date().toLocaleString(),createdAt:Date.now()});if(!write(arr)){status.textContent='本地存储不可用，未保存。';return}title.value='';body.value='';status.textContent='已保存在当前浏览器，不会上传云端。';refresh();return}
+var del=e.target&&e.target.closest&&e.target.closest('[data-ef-delete]');if(del){if(!confirm('删除这条本地资料？'))return;write(read().filter(function(n){return n.id!==del.dataset.efDelete}));refresh()}});
+document.addEventListener('sy:ready',refresh);document.addEventListener('DOMContentLoaded',refresh);setTimeout(refresh,1200);
+})();
+</script>
 </body>
 </html>
 
