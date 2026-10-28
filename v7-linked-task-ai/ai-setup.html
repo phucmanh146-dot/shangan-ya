@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<meta name="referrer" content="same-origin">
+<title>上岸鸭 · AI 连接诊断与配置</title>
+<style>
+:root{color-scheme:dark;--bg:#101612;--panel:#17221b;--panel2:#1c2b22;--line:#304438;--text:#eef7f0;--muted:#a9b9ad;--green:#6dd39a;--green2:#2d9c63;--amber:#f4bd63;--red:#ff8787}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0%,#203c2b 0,transparent 42%),var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}
+a{color:var(--green)}button,input,select{font:inherit}button,a.btn{border:1px solid var(--line);border-radius:11px;padding:10px 14px;background:var(--panel2);color:var(--text);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}button.primary{background:var(--green2);border-color:var(--green2);color:#07170d;font-weight:800}button:disabled{opacity:.55;cursor:wait}
+header{max-width:1050px;margin:auto;padding:24px 22px 10px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.brand{font-size:14px;color:var(--green);font-weight:800;letter-spacing:.08em}.head-links{display:flex;gap:8px;flex-wrap:wrap}.wrap{max-width:1050px;margin:0 auto;padding:14px 22px 54px}h1{font-size:clamp(26px,4vw,38px);line-height:1.2;margin:12px 0}h2{font-size:19px;margin:0 0 12px}.lead{max-width:760px;color:var(--muted);margin:0 0 20px}.grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);gap:16px}.card{background:linear-gradient(160deg,rgba(28,43,34,.97),rgba(20,30,23,.98));border:1px solid var(--line);border-radius:18px;padding:20px;min-width:0}.status{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--line);background:#131d17;border-radius:13px;padding:13px;margin:10px 0 16px}.dot{flex:none;width:10px;height:10px;border-radius:50%;margin-top:7px;background:var(--amber);box-shadow:0 0 0 4px #f4bd631a}.status.good .dot{background:var(--green);box-shadow:0 0 0 4px #6dd39a1a}.status.bad .dot{background:var(--red);box-shadow:0 0 0 4px #ff87871a}.status strong{display:block}.muted{color:var(--muted);font-size:13px}.field{display:grid;gap:6px;margin:13px 0}.field label{font-weight:700;font-size:13px}.field input,.field select{width:100%;min-width:0;border:1px solid #42594a;border-radius:10px;padding:11px 12px;background:#0e1711;color:var(--text);outline:none}.field input:focus,.field select:focus{border-color:var(--green);box-shadow:0 0 0 3px #6dd39a22}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}.result{white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid var(--line);border-radius:11px;background:#0c140f;padding:12px;min-height:54px;margin-top:12px;font-size:13px}.result:empty{display:none}.step{display:flex;gap:10px;padding:11px 0;border-bottom:1px solid #2a3b30}.step:last-child{border-bottom:0}.num{width:25px;height:25px;flex:none;display:grid;place-items:center;border-radius:50%;background:#2b4b36;color:var(--green);font-weight:800;font-size:12px}.pill{font-size:12px;padding:3px 8px;border:1px solid var(--line);border-radius:99px;color:var(--muted)}.warning{border-left:3px solid var(--amber);padding:8px 12px;color:#f3d5a2;background:#f4bd630b;font-size:13px;margin-top:14px}.tiny{font-size:12px;color:var(--muted)}.linkline{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.hidden{display:none!important}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.wrap{padding:10px 14px 36px}header{padding:18px 14px 8px}.card{padding:16px}.row{grid-template-columns:1fr}.head-links{width:100%}.head-links a{flex:1}}
+</style>
+</head>
+<body>
+<header>
+  <div><div class="brand">SHANGANYA · 上岸鸭</div><div class="muted">AI 连接诊断 / 模型配置</div></div>
+  <nav class="head-links"><a class="btn" href="./index.html">← 返回工作台</a><a class="btn" href="./ai-p2.html">打开 AI 工作区 ↗</a></nav>
+</header>
+<main class="wrap">
+  <h1>把 AI 连接真正跑通</h1>
+  <p class="lead">先检查后端，再读取服务商真实模型，最后发送一条真实测试请求。页面不会伪造“已连接”，也不会把 API Key 写入网页、URL 或 localStorage。</p>
+  <div id="overall" class="status"><span class="dot"></span><div><strong>正在检查当前会话的 AI 服务…</strong><div class="muted">会检查工作台后端、服务商目录和当前配置状态。</div></div></div>
+  <div class="grid">
+    <section class="card">
+      <div class="linkline"><h2>配置并验证模型</h2><span id="cfg-pill" class="pill">尚未验证</span></div>
+      <p class="muted">请使用你自己在服务商创建的 API Key。登录密码不能代替 API Key。</p>
+      <div class="field"><label for="provider">① AI 服务商</label><select id="provider"><option value="">正在读取服务商目录…</option></select></div>
+      <div class="field"><label for="base">② API 基础地址</label><input id="base" spellcheck="false" placeholder="选择服务商后自动填入，也可填写兼容接口地址"></div>
+      <div class="row">
+        <div class="field"><label for="protocol">接口协议</label><select id="protocol"><option value="chat">OpenAI 兼容 Chat Completions</option><option value="responses">OpenAI Responses API</option><option value="anthropic">Anthropic Messages API</option></select></div>
+        <div class="field"><label for="model">③ 模型 ID</label><input id="model" spellcheck="false" placeholder="先读取模型列表后选择"></div>
+      </div>
+      <div class="field"><label for="key">④ API Key（仅本次提交使用）</label><input id="key" type="password" autocomplete="new-password" placeholder="粘贴服务商 API Key；不会保存到浏览器" aria-describedby="key-help"><div id="key-help" class="tiny">密钥只在你点击“读取模型”或“测试并保存”时通过 HTTPS 发送给当前工作台后端；页面不把它存进 localStorage/sessionStorage。测试后输入框会清空。</div></div>
+      <div class="actions">
+        <button id="load-models" type="button">读取真实模型列表</button>
+        <button id="test" class="primary" type="button">真实测试并保存连接</button>
+      </div>
+      <div id="docsline" class="tiny" style="margin-top:12px">选择服务商后显示官方 API 文档。</div>
+      <div id="model-results" class="result" role="status" aria-live="polite"></div>
+      <div id="test-results" class="result" role="status" aria-live="polite"></div>
+      <div class="warning">安全说明：当前服务按浏览器会话隔离模型配置，后端进程重启或会话失效后可能需要重新配置。不要在公共设备上使用个人密钥。若你尚无可用 API Key，不能通过前端代码绕过服务商授权或额度要求。</div>
+    </section>
+    <aside class="card">
+      <h2>连接诊断</h2>
+      <div id="diag-health" class="status"><span class="dot"></span><div><strong>后端服务</strong><div class="muted">检查中…</div></div></div>
+      <div id="diag-providers" class="status"><span class="dot"></span><div><strong>服务商目录</strong><div class="muted">检查中…</div></div></div>
+      <div id="diag-config" class="status"><span class="dot"></span><div><strong>当前模型配置</strong><div class="muted">检查中…</div></div></div>
+      <h2 style="margin-top:20px">按这个顺序操作</h2>
+      <div class="step"><span class="num">1</span><div><strong>选择服务商</strong><div class="muted">例如 DeepSeek、通义千问、OpenAI 或其他你有权限使用的服务商。</div></div></div>
+      <div class="step"><span class="num">2</span><div><strong>读取模型</strong><div class="muted">后端使用所填 API 地址和 Key 请求真实的 /models 接口；失败会显示 HTTP 状态与可操作提示。</div></div></div>
+      <div class="step"><span class="num">3</span><div><strong>测试并保存</strong><div class="muted">只有收到真实模型回答后才会标记“已验证”。失败不会覆盖原来可用的配置。</div></div></div>
+      <div class="step"><span class="num">4</span><div><strong>返回 AI 工作区</strong><div class="muted">尝试发送一条普通问题。知识库、飞书和 Obsidian 是可选能力，不应阻断普通 AI 对话。</div></div></div>
+      <div id="next-step" class="result" role="status" aria-live="polite"></div>
+    </aside>
+  </div>
+  <p class="tiny" style="margin-top:16px">此页与上岸鸭现有工作台共用同源会话和后端 API；不会创建新任务、清空任务数据或改动截止日期。模型目录可读取不代表聊天调用一定成功，二者会分别显示。</p>
+</main>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+let providers=[];
+const state={config:null,health:null};
+function setStatus(id,title,detail,kind){
+ const node=$(id);if(!node)return;
+ node.className='status'+(kind?' '+kind:'');
+ node.innerHTML='<span class="dot"></span><div><strong></strong><div class="muted"></div></div>';
+ node.querySelector('strong').textContent=title;
+ node.querySelector('.muted').textContent=detail;
+}
+function showError(error){return error&&error.message?error.message:String(error||'未知错误');}
+async function api(path,body,timeout=45000){
+ const ctrl=new AbortController();const timer=setTimeout(()=>ctrl.abort(),timeout);
+ try{
+  const res=await fetch(path,{method:body===undefined?'GET':'POST',credentials:'same-origin',cache:'no-store',headers:body===undefined?{}:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body),signal:ctrl.signal});
+  const text=await res.text();let data={};try{data=text?JSON.parse(text):{};}catch(_){throw new Error('后端返回非 JSON 内容（HTTP '+res.status+'）。');}
+  if(!res.ok||data.error)throw new Error((data.error||('HTTP '+res.status))+(data.code?' ['+data.code+']':'')+(data.httpStatus?' · 服务商 HTTP '+data.httpStatus:''));
+  return data;
+ }catch(e){if(e.name==='AbortError')throw new Error('请求超时。请检查服务商地址、网络或稍后重试。');throw e;}
+ finally{clearTimeout(timer);}
+}
+function selectedProvider(){return providers.find(p=>p.id===$('provider').value);}
+function docsLink(){
+ const p=selectedProvider();const line=$('docsline');line.replaceChildren();
+ if(p&&p.docs){const a=document.createElement('a');a.href=p.docs;a.target='_blank';a.rel='noopener noreferrer';a.textContent='打开 '+(p.name||p.id)+' 官方 API 文档 ↗';line.append(a);}
+ else line.textContent='该服务商没有已核实的官方文档链接，请在服务商官网确认 API 地址。';
+}
+function fillProvider(){
+ const p=selectedProvider();if(!p)return;
+ if(p.base)$('base').value=p.base;
+ $('protocol').value=p.protocol||'chat';
+ docsLink();
+ $('model-results').textContent='';
+}
+function updateConfig(config){
+ state.config=config;
+ const verified=!!(config&&config.verified&&config.configured);
+ $('cfg-pill').textContent=verified?'真实调用已验证':(config&&config.hasKey?'密钥已配置，尚未验证':'尚未配置 API Key');
+ setStatus('diag-config','当前模型配置',verified?'已真实验证模型：'+(config.model||'未知模型'):'configured='+(!!config?.configured)+'，hasKey='+(!!config?.hasKey)+'，verified='+(!!config?.verified)+'。请完成下方配置。',verified?'good':'');
+ if(verified){
+  setStatus('overall','AI 连接已验证','后端收到真实模型响应；可以返回 AI 工作区测试普通对话。','good');
+  $('next-step').textContent='下一步：返回 AI 工作区，发送一条普通问题验证完整聊天流程。';
+ }else{
+  setStatus('overall','AI 尚未完成真实连接','这是当前会话的配置状态，不是“已经连接”。选择服务商、读取模型并完成真实测试后状态才会变绿。','');
+  $('next-step').textContent='下一步：选择服务商 → 填写 API Key → 读取模型 → 测试并保存。';
+ }
+}
+async function diagnostics(){
+ const tasks=await Promise.allSettled([api('/api/health',undefined,12000),api('/api/ai-providers',undefined,12000),api('/api/ai-config',undefined,12000)]);
+ if(tasks[0].status==='fulfilled'){
+  state.health=tasks[0].value;setStatus('diag-health','后端服务','/api/health 正常响应；服务版本 '+(state.health.version||'未提供')+'。','good');
+ }else setStatus('diag-health','后端服务不可用',showError(tasks[0].reason),'bad');
+ if(tasks[1].status==='fulfilled'){
+  providers=(tasks[1].value.providers||[]).filter(p=>p&&p.id);
+  const select=$('provider');select.replaceChildren();
+  providers.forEach(p=>select.append(new Option(p.name||p.id,p.id)));
+  const cfg=tasks[2].status==='fulfilled'?tasks[2].value:null;
+  const match=cfg&&providers.find(p=>p.base&&p.base===cfg.base);
+  if(match)select.value=match.id;
+  else if(providers.some(p=>p.id==='deepseek'))select.value='deepseek';
+  else select.value=providers[0]?.id||'';
+  setStatus('diag-providers','服务商目录','后端返回 '+providers.length+' 个服务商；模型列表需用你的凭证实时读取。',providers.length?'good':'bad');
+  fillProvider();
+ }else setStatus('diag-providers','服务商目录读取失败',showError(tasks[1].reason),'bad');
+ if(tasks[2].status==='fulfilled'){
+  updateConfig(tasks[2].value);
+  if(tasks[2].value.base)$('base').value=tasks[2].value.base;
+  if(tasks[2].value.model)$('model').value=tasks[2].value.model;
+  if(tasks[2].value.protocol)$('protocol').value=tasks[2].value.protocol;
+  const p=providers.find(x=>x.base===tasks[2].value.base);if(p){$('provider').value=p.id;docsLink();}
+ }else setStatus('diag-config','配置状态读取失败',showError(tasks[2].reason),'bad');
+}
+async function loadModels(){
+ const base=$('base').value.trim(),key=$('key').value.trim(),protocol=$('protocol').value;
+ if(!base){$('model-results').textContent='请先选择服务商或填写 API 基础地址。';return;}
+ if(!key&&!state.config?.hasKey){$('model-results').textContent='当前会话没有已配置的 API Key。请填写 Key 后再读取模型；登录密码不能代替 API Key。';$('key').focus();return;}
+ const btn=$('load-models');btn.disabled=true;$('model-results').textContent='正在向所选服务商发送真实模型目录请求…';
+ try{
+  const result=await api('/api/ai-models',{base,protocol,key,keepKey:!key},45000);
+  const models=Array.isArray(result.models)?result.models:[];
+  if(!models.length){$('model-results').textContent='服务商没有返回模型列表。可依据官方文档手动填写模型 ID，再执行真实连接测试。';return;}
+  const select=document.createElement('select');select.id='model-options';select.setAttribute('aria-label','真实读取的模型列表');
+  select.append(new Option('选择一个真实返回的模型',''));
+  models.forEach(m=>select.append(new Option((m.name&&m.name!==m.id?m.name+' · ':'')+m.id,m.id)));
+  select.addEventListener('change',()=>{if(select.value)$('model').value=select.value;});
+  const wrap=document.createElement('div');wrap.className='field';const label=document.createElement('label');label.htmlFor='model-options';label.textContent='服务商真实返回的模型（'+models.length+' 个）';wrap.append(label,select);
+  $('model-results').replaceChildren(wrap);
+  $('model-results').append(document.createTextNode('模型目录已真实返回；这还不代表聊天接口可用。请继续点击“真实测试并保存连接”。'));
+  if(key)$('key').value='';
+ }catch(e){$('model-results').textContent='读取失败：'+showError(e)+'\n请核对 API 地址、Key、协议、账户额度与模型权限。不会将失败显示为成功。';}
+ finally{btn.disabled=false;}
+}
+async function testAndSave(){
+ const base=$('base').value.trim(),model=$('model').value.trim(),key=$('key').value.trim(),protocol=$('protocol').value;
+ if(!base||!model){$('test-results').textContent='请先填写 API 基础地址和模型 ID。';return;}
+ if(!key&&!state.config?.hasKey){$('test-results').textContent='请填写 API Key。当前会话没有可用于真实调用的密钥。';$('key').focus();return;}
+ const btn=$('test');btn.disabled=true;$('test-results').textContent='正在发出真实模型请求；等待服务商返回结果…';
+ try{
+  const result=await api('/api/pm/config',{base,model,key,protocol,keepKey:!key,verify:true},105000);
+  $('key').value='';
+  if(!result.verified||!result.configured)throw new Error('服务端未确认真实模型响应，未标记为已连接。');
+  updateConfig(result);
+  $('test-results').textContent='成功：服务端已收到真实模型响应。模型：'+result.model+'\nAPI Key 未回显；本页面没有保存密钥到浏览器存储。';
+  await diagnostics();
+ }catch(e){
+  $('key').value='';
+  $('test-results').textContent='真实连接失败：'+showError(e)+'\n原有可用配置不会被失败的候选配置覆盖。请按错误提示修正后重试。';
+  setStatus('overall','真实模型调用失败',showError(e),'bad');
+  setStatus('diag-config','当前模型配置','本次真实测试未通过；不能显示为已连接。','bad');
+ }finally{btn.disabled=false;}
+}
+$('provider').addEventListener('change',fillProvider);
+$('load-models').addEventListener('click',loadModels);
+$('test').addEventListener('click',testAndSave);
+$('key').addEventListener('keydown',e=>{if(e.key==='Enter')testAndSave();});
+diagnostics();
+})();
+</script>
+</body>
+</html>
