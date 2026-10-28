@@ -127,6 +127,7 @@
 </style>
 <link rel="stylesheet" href="./comfort-planner-flow.css?v=20261027-task-monitor-v4">
 <link rel="stylesheet" href="./task-workspace.css?v=20261027-monitor-v1">
+<link rel="stylesheet" href="./heart-coach.css?v=20261028-vibe-v1">
 </head>
 <body>
 
@@ -443,6 +444,7 @@
           <span>每日清单</span>
         </button>
 <button class="app-nav-item" data-view="task-workspace" data-workspace-home type="button"><span class="app-nav-icon">✦</span><span>任务工作区</span></button>
+<button class="app-nav-item" data-view="heart-coach" type="button"><span class="app-nav-icon">♥</span><span>心航 · AI 执行教练</span></button>
 <a class="app-nav-item" href="./personal-execution-coach-demo.html" target="_blank" rel="noopener" style="text-decoration:none"><span class="app-nav-icon">◎</span><span>个人执行教练 Demo ↗</span></a>
 <a class="app-nav-item" href="./shanganya-product-positioning-prd.html" target="_blank" rel="noopener" style="text-decoration:none"><span class="app-nav-icon">▤</span><span>产品定位与 PRD ↗</span></a>
 
@@ -672,7 +674,63 @@
       <section class="app-view" data-view="knowledge" data-tw-embedded="knowledge" id="view-knowledge" hidden>
         <div id="knowledgeBody"></div>
       </section>
-      <section class="app-view cp-page-view" data-view="comfort" data-tw-embedded="schedule" id="view-comfort" hidden>
+      <section class="app-view" data-view="heart-coach" id="view-heart-coach" hidden>
+  <div class="hc-wrap">
+    <header class="hc-head"><div><p class="hc-eyebrow">HEART NAVIGATION · PERSONAL EXECUTION COACH</p><h1>心航 · 让计划跟上你的状态</h1><p>不是催你更努力，而是结合真实精力、任务耗时和卡壳情况，帮助你找到此刻可执行的下一步。</p></div><span class="hc-live"><i></i>V8 工作台内测原型</span></header>
+    <section class="hc-hero"><div><h2>今天不必把自己排满。<br><em>先照顾状态，再推进重要的事。</em></h2><p>每天的精力会变化，任务也会遇到意外。心航把状态反馈、任务执行、AI 解卡和复盘放在同一条流程里；保留你的选择权，不会自动覆盖原有排期。</p><div class="hc-hero-actions"><button class="hc-btn" id="hcOpenDaily" type="button">查看今日清单 →</button><button class="hc-btn secondary" id="hcOpenTaskWorkspace" type="button">进入任务 AI 解卡 ↗</button></div></div><div class="hc-orbit" aria-hidden="true"><span class="hc-orbit-label a">状态</span><span class="hc-orbit-label b">执行</span><span class="hc-orbit-label c">复盘</span><span class="hc-orbit-label d">恢复</span><div class="hc-heart"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.8 4.6a5.4 5.4 0 0 0-7.6 0L12 5.8l-1.2-1.2a5.4 5.4 0 0 0-7.6 7.6l1.2 1.2L12 21l7.6-7.6 1.2-1.2a5.4 5.4 0 0 0 0-7.6Z"/><path d="M3.5 12h4l2-3.5 3.1 7 2.1-3.5h5.8"/></svg></div></div></section>
+    <section class="hc-kpis">
+      <article class="hc-kpi"><span class="label">当前精力自评</span><strong id="hcEnergyMetric">3/4</strong><small id="hcEnergyCaption">中等 · 短段推进</small></article>
+      <article class="hc-kpi"><span class="label">演示任务完成</span><strong><span id="hcDoneCount">0</span><small> / 3 项</small></strong><small>示例状态，不代表真实任务数据</small></article>
+      <article class="hc-kpi"><span class="label">当前专注计时</span><strong id="hcClock">00:00</strong><small id="hcTimerHint">计时只记录执行时长；卡壳或休息可暂停并记录</small></article>
+      <article class="hc-kpi"><span class="label">计划原则</span><strong style="font-size:19px">留白</strong><small>必要事项优先，休息与缓冲不被默认挤掉</small></article>
+    </section>
+    <div class="hc-layout">
+      <div>
+        <section class="hc-panel"><div class="hc-panel-head"><div><h3>现在的你，适合做什么？</h3><p>只需报告此刻状态，不需要预测一整天。</p></div><span class="hc-badge">主动反馈</span></div>
+          <div class="hc-state"><div class="hc-state-q">你现在的精力怎么样？</div><div class="hc-state-sub">这只是自我反馈，不是医学判断，也不会自动读取摄像头。</div>
+            <div class="hc-energy-choices">
+              <button class="hc-energy" type="button" data-hc-energy="1" aria-pressed="false"><span class="emoji">🫠</span><b>被抽干了</b><small>先恢复</small></button>
+              <button class="hc-energy" type="button" data-hc-energy="2" aria-pressed="false"><span class="emoji">🌧️</span><b>有点疲惫</b><small>降负荷</small></button>
+              <button class="hc-energy" type="button" data-hc-energy="3" aria-pressed="true"><span class="emoji">🌤️</span><b>还可以</b><small>短时推进</small></button>
+              <button class="hc-energy" type="button" data-hc-energy="4" aria-pressed="false"><span class="emoji">☀️</span><b>状态不错</b><small>攻克难题</small></button>
+            </div>
+            <div class="hc-state-result" id="hcStateAdvice" aria-live="polite"><strong>短时推进，保留缓冲</strong>先做一个 15 分钟内可验证的动作。</div>
+            <div class="hc-task-actions"><button class="hc-btn pink" id="hcSaveFeedback" type="button">记录本次状态</button><button class="hc-btn secondary" id="hcStuck" type="button">我卡住了，帮我止损</button></div>
+          </div>
+        </section>
+        <section class="hc-panel" style="margin-top:14px"><div class="hc-panel-head"><div><h3>今日任务 · 示例清单</h3><p>后续接入时应复用原有任务中心，不另建任务数据。</p></div><span class="hc-badge">可交互演示</span></div>
+          <div class="hc-tasks">
+            <div class="hc-task" data-hc-task="明确需求与验收标准"><button class="hc-task-check" type="button" data-hc-task-toggle aria-label="标记完成" aria-pressed="false"></button><div class="hc-task-main"><strong>明确需求与验收标准</strong><small>高价值 · 先定义最小产出</small></div><span class="hc-task-time">25 分钟</span></div>
+            <div class="hc-task" data-hc-task="推进一个当前项目难点"><button class="hc-task-check" type="button" data-hc-task-toggle aria-label="标记完成" aria-pressed="false"></button><div class="hc-task-main"><strong>推进一个当前项目难点</strong><small>高认知负荷 · 设置止损点</small></div><span class="hc-task-time">40 分钟</span></div>
+            <div class="hc-task" data-hc-task="休息与恢复"><button class="hc-task-check" type="button" data-hc-task-toggle aria-label="标记完成" aria-pressed="false"></button><div class="hc-task-main"><strong>休息 / 发呆 / 看剧</strong><small>恢复时间是计划的一部分</small></div><span class="hc-task-time">15 分钟</span></div>
+            <div class="hc-task-actions"><button class="hc-btn" id="hcTimerButton" type="button">开始计时</button><button class="hc-btn secondary" id="hcResetTimer" type="button">重置计时</button><button class="hc-btn secondary" id="hcOpenDaily2" type="button" onclick="document.querySelector('#appNav [data-view=daily]')?.click()">回到原每日清单 ↗</button></div>
+          </div>
+        </section>
+      </div>
+      <div>
+        <section class="hc-panel"><div class="hc-panel-head"><div><h3>私人 AI 解卡</h3><p>先用最小步骤恢复进展，再进入真实任务工作区。</p></div><span class="hc-badge">需要真实上下文</span></div>
+          <div class="hc-timer"><div class="hc-timer-current"><span class="overline">当前执行原则</span><h4>别让一个难题吞掉整天</h4><div class="hc-timer-note">超出估时或没有进展时，先保存已尝试步骤，再判断继续、拆分、切换或休息。</div></div>
+            <button class="hc-btn" id="hcAiHelp" type="button">生成解卡步骤（演示）</button><div class="hc-ai-out" id="hcAiOutput" aria-live="polite"></div>
+          </div>
+          <div class="hc-ai-card"><div class="hc-ai-title"><span class="hc-ai-icon">✦</span>遇到真实 Bug 怎么办？</div><p>当前页面的按钮演示的是产品流程。真实 AI 解卡请从任务工作区选择实际任务，提供报错或资料，由已配置的模型处理。</p><button class="hc-btn secondary" id="hcOpenTaskWorkspace2" type="button" onclick="document.querySelector('#appNav [data-view=task-workspace]')?.click()">打开原任务工作区 ↗</button></div>
+          <div class="hc-timer" style="padding-top:0"><div id="hcStuckPlan" class="hc-ai-out" hidden></div></div>
+        </section>
+      </div>
+    </div>
+    <section class="hc-panel" style="margin-top:14px"><div class="hc-panel-head"><div><h3>心航执行闭环</h3><p>六个功能围绕原有任务中心工作，而不是六个孤立页面。</p></div><span class="hc-badge">产品逻辑</span></div>
+      <div class="hc-loop">
+        <div class="hc-loop-step"><span class="n">01</span><b>状态反馈</b><small>精力与可用时间</small></div>
+        <div class="hc-loop-step"><span class="n">02</span><b>舒适排期</b><small>必要任务与缓冲</small></div>
+        <div class="hc-loop-step"><span class="n">03</span><b>执行监测</b><small>计时与进度</small></div>
+        <div class="hc-loop-step"><span class="n">04</span><b>AI 解卡 / 止损</b><small>最小步骤与切换</small></div>
+        <div class="hc-loop-step"><span class="n">05</span><b>复盘学习</b><small>真实耗时回流</small></div>
+      </div>
+    </section>
+    <p class="hc-foot">原有 V8 的任务中心、四象限、舒适排期和任务工作区保持不变。本页面目前是嵌入式 Vibe Coding 原型；状态反馈和演示任务保存在当前浏览器，尚未与原有任务数据库及真实模型打通。摄像头状态识别不默认启用。</p>
+    <div id="hcNotice" role="status" aria-live="polite" hidden style="position:sticky;bottom:12px;margin:10px auto 0;max-width:420px;background:#22352f;color:white;border-radius:12px;padding:11px 14px;font-size:12px;text-align:center;box-shadow:0 8px 28px #22352f20"></div>
+  </div>
+</section>
+<section class="app-view cp-page-view" data-view="comfort" data-tw-embedded="schedule" id="view-comfort" hidden>
         <div class="cp-page">
           <header class="cp-page-top">
             <div><p class="app-greeting-eyebrow">COGNITIVE LOAD · ADAPTIVE PLANNING</p><h1>舒适排期</h1><p>先接住你的状态，再安排真实任务。工作、休息、放空和缓冲一起进入日程。</p></div>
@@ -1279,6 +1337,7 @@ var bootObs=new MutationObserver(function(){if(document.getElementById('view-dai
 <script src="./comfort-planner-flow.js?v=20261028-personal-load-v6"></script>
 <script src="./task-workspace.js?v=20261027-monitor-v1"></script>
 <script src="./task-ai-entry.js?v=20261028-personal-profile-v5"></script>
+<script src="./heart-coach.js?v=20261028-vibe-v1"></script>
 </body>
 </html>
 
