@@ -1,4 +1,4 @@
-/* Comfort Planner Flow: task-grounded cognitive-load scheduling and real local-note retrieval. */
+/* EnergyFlow Personal Agent: local-first energy check-in and task-grounded scheduling. */
 (function(){
 'use strict';
 if(window.SYComfortFlow)return;
@@ -9,6 +9,11 @@ var account=function(){try{return window.SY&&SY.getAcctData?SY.getAcctData():nul
 var save=function(a){try{if(window.SY&&SY.saveAcctData)SY.saveAcctData(a);return true}catch(e){return false}};
 var today=function(){try{return SY.todayKey?SY.todayKey():new Date().toISOString().slice(0,10)}catch(e){return new Date().toISOString().slice(0,10)}};
 var tasks=function(){var a=account();return (a&&Array.isArray(a.tasks)?a.tasks:[]).filter(function(t){return t&&!t.done&&!t.completedAt&&!t.deleted})};
+var LOCAL_KEY='shanganya.energyflow.local.v1';
+var localProfile=function(){try{return JSON.parse(localStorage.getItem(LOCAL_KEY)||'{}')||{}}catch(e){return {}}};
+var saveLocalProfile=function(p){try{localStorage.setItem(LOCAL_KEY,JSON.stringify(p));return true}catch(e){return false}};
+var localEnergy=function(){var p=localProfile();return Array.isArray(p.energyHistory)?p.energyHistory:[]};
+
 var pending=function(){return tasks().filter(function(t){return !t.date||String(t.date).slice(0,10)<=today()})};
 var taskId=function(t){return String(t.id||t.taskId||t.name||'')};
 var taskName=function(t){return String(t.name||t.title||t.text||'未命名任务')};
