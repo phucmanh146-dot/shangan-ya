@@ -483,6 +483,24 @@ function init() {
   renderTaskPicker();
   refreshTasks();
   addTodoAction();
+  // Deep link from the current task. Never create a duplicate task if the ID is missing.
+  const requestedTaskId = new URLSearchParams(location.search).get('taskId');
+  if (requestedTaskId) {
+    const select = $('#p2-linked-task-select');
+    if (select && Array.from(select.options).some(option => option.value === requestedTaskId)) {
+      select.value = requestedTaskId;
+      updateTaskPreview();
+      window.setTimeout(function () {
+        if (selectedTask() && String(selectedTask().id || '') === requestedTaskId) {
+          attachSelectedTask().catch(function (error) {
+            setStatus('关联任务失败：' + (error && error.message ? error.message : '请手动点击“关联到本轮 AI”重试。'), true);
+          });
+        }
+      }, 220);
+    } else {
+      setStatus('链接中的任务 ID 未在当前账号找到。请刷新任务列表并手动选择；不会创建重复任务。', true);
+    }
+  }
   window.addEventListener('storage', function (event) {
     if (event.key === APP_DATA_KEY) refreshTasks();
   });
