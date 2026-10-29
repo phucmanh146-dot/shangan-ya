@@ -167,7 +167,7 @@
       var repeat = $('syEfFixedRepeat').value, date = $('syEfFixedDate').value || today();
       list.push({id:'fixed-'+Date.now(),name:name,start:start,end:end,category:$('syEfFixedCategory').value,repeat:repeat,date:date,required:$('syEfFixedRequired').value==='yes',active:true,createdAt:stamp()});
       p.fixedEvents = list.slice(-120);
-      p.fixedMinutes = totalFixedMinutes(d);
+      /* Exact fixed-event windows are counted by the planner; do not double-subtract minutes. */
       appendEvent(d,'固定事项新增',name+' · '+start+'–'+end+' · '+$('syEfFixedCategory').value);
       save(d); $('syEfFixedName').value = ''; renderFixed();
       $('syEfFixedStatus').textContent = '已保存到上岸鸭账号数据。点击“带着固定事项去重排”后，生成新时间轴并确认应用。';
@@ -182,12 +182,12 @@
       if (b.dataset.fixedAction === 'delete') {
         if (!window.confirm('删除固定事项“'+item.name+'”？')) return;
         p.fixedEvents = list.filter(function (x) { return String(x.id) !== String(id); });
-        p.fixedMinutes = totalFixedMinutes(d);
+        /* Exact fixed-event windows are counted by the planner; do not double-subtract minutes. */
         appendEvent(d,'固定事项删除',item.name);
         save(d); renderFixed();
       } else if (b.dataset.fixedAction === 'toggle') {
         item.active = item.active === false;
-        p.fixedMinutes = totalFixedMinutes(d);
+        /* Exact fixed-event windows are counted by the planner; do not double-subtract minutes. */
         appendEvent(d,'固定事项状态',item.name+' · '+(item.active?'已启用':'已停用'));
         save(d); renderFixed();
       } else if (b.dataset.fixedAction === 'edit') {
@@ -198,14 +198,14 @@
           window.alert('名称或时间格式不正确。'); return;
         }
         item.name = name.trim(); item.start = start; item.end = end;
-        p.fixedMinutes = totalFixedMinutes(d); appendEvent(d,'固定事项修改',item.name+' · '+start+'–'+end);
+        /* Exact fixed-event windows are counted by the planner; do not double-subtract minutes. */ appendEvent(d,'固定事项修改',item.name+' · '+start+'–'+end);
         save(d); renderFixed();
       }
     });
 
     if ($('syEfOpenPlanner')) $('syEfOpenPlanner').onclick = function () {
       var d = account(); if (!d) return;
-      var p = settings(d); p.fixedMinutes = totalFixedMinutes(d); save(d);
+      var p = settings(d); /* Exact fixed-event windows are counted by the planner; do not double-subtract minutes. */ save(d);
       var b = document.querySelector('[data-cp-open]');
       if (b) { b.click(); $('syEfFixedStatus').textContent = '已打开原有舒适排期流程。请检查固定事项与任务清单，生成预览后再确认应用。'; }
       else { $('syEfFixedStatus').textContent = '固定事项已保存，但原有舒适排期入口尚未加载；请稍后重试。'; }
