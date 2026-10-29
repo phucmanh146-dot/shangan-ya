@@ -1,0 +1,59 @@
+#view-heart-coach>.hc-wrap{display:none!important}
+#syCoachHub{max-width:1440px;margin:0 auto;padding:4px 0 36px;color:var(--text,#20382d)}
+#syCoachHub *{box-sizing:border-box}
+.sych-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 24px;background:linear-gradient(120deg,#123e2e,#1c5a42);color:#f3fbf5;border-radius:18px 18px 0 0}
+.sych-eyebrow{font-size:10px;letter-spacing:1.6px;font-weight:850;opacity:.75;margin:0 0 8px}
+.sych-header h1{font-size:clamp(24px,3vw,34px);line-height:1.2;margin:0 0 8px}
+.sych-header p{margin:0;color:#c8dfd1;max-width:820px;font-size:13px;line-height:1.7}
+.sych-live{background:#ffffff16;border:1px solid #ffffff2b;border-radius:999px;padding:8px 12px;font-size:11px;white-space:nowrap}
+.sych-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:14px;background:#f6faf7;border:1px solid #dce8df;border-top:0}
+.sych-summary>div{background:#fff;border:1px solid #e2ece4;border-radius:12px;padding:12px}
+.sych-summary span{display:block;font-size:11px;color:#72877a}
+.sych-summary strong{display:block;margin-top:5px;font-size:22px;color:#1c5b42}
+.sych-tabs{display:flex;gap:5px;flex-wrap:wrap;padding:10px 12px;background:#fff;border:1px solid #dce8df;border-top:0;border-radius:0 0 16px 16px;margin-bottom:14px}
+.sych-tabs button{border:1px solid transparent;background:transparent;border-radius:10px;padding:10px 12px;color:#557163;font-size:12px;font-weight:800;cursor:pointer}
+.sych-tabs button[aria-selected="true"]{background:#1c5b42;color:#fff}
+.sych-pane[hidden]{display:none!important}
+.sych-grid{display:grid;gap:14px;align-items:start}
+.sych-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.sych-card{background:#fff;border:1px solid #dce8df;border-radius:16px;padding:18px;min-width:0;box-shadow:0 6px 22px #163f2a08}
+.sych-card h2{font-size:17px;margin:0 0 7px;color:#1e4433}
+.sych-card p{line-height:1.65}
+.sych-muted{color:#71877a;font-size:12px;line-height:1.65}
+.sych-field{display:grid;gap:6px;margin:12px 0;color:#587465;font-size:12px;font-weight:750}
+.sych-field input,.sych-field select,.sych-field textarea{width:100%;min-width:0;border:1px solid #dce8df;border-radius:10px;padding:10px;background:#fff;color:#193c2c;font:inherit;font-weight:500}
+.sych-field textarea{resize:vertical}
+.sych-energy-choices{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:7px;margin:12px 0}
+.sych-energy-choices button{border:1px solid #dce8df;border-radius:11px;background:#fff;color:#5c7567;padding:11px 5px;font-size:11px;font-weight:750;cursor:pointer}
+.sych-energy-choices button[aria-pressed="true"]{background:#edf6ef;border-color:#78a98b;color:#1e5a41;box-shadow:inset 0 0 0 1px #b9d8c3}
+.sych-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.sych-primary,.sych-secondary{border:1px solid #cfe0d4;border-radius:10px;padding:10px 13px;background:#1f6248;color:#fff;font-size:12px;font-weight:800;cursor:pointer}
+.sych-secondary{background:#f4f8f5;color:#2e634a}
+.sych-notice{margin:12px 0;padding:11px 14px;background:#eef7f0;border:1px solid #d5e8d9;border-radius:10px;color:#285b41;font-size:12px;line-height:1.6}
+.sych-notice[hidden]{display:none}
+.sych-stat-row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #edf2ee;font-size:12px;color:#71877a}
+.sych-stat-row strong{color:#315f49}
+.sych-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+.sych-card-head h2{margin-bottom:4px}
+.sych-actual-summary{background:#f6faf7;border:1px solid #e3ece5;border-radius:11px;padding:12px;margin:10px 0;color:#355a45;font-size:12px}
+.sych-actual-summary strong{font-size:14px}
+.sych-actual-summary p{margin:5px 0;color:#5e7768}
+.sych-actual-summary small{color:#82968a}
+.sych-list{padding-left:19px;color:#587465;font-size:12px;line-height:1.8}
+.sych-list li{margin:5px 0}
+.sych-callout{padding:12px 13px;margin:9px 0;background:#f6faf7;border:1px solid #e2ece4;border-radius:11px}
+.sych-callout b{color:#275b42;font-size:13px}
+.sych-callout p{margin:4px 0 0;color:#71877a;font-size:12px}
+.sych-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:14px 0}
+.sych-metrics>div{padding:11px 8px;border:1px solid #e2ece4;background:#f7faf8;border-radius:11px}
+.sych-metrics span{display:block;font-size:10px;color:#71877a}
+.sych-metrics strong{display:block;font-size:19px;color:#1e5b42;margin-top:5px}
+.sych-record{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #edf2ee;font-size:11px}
+.sych-record strong{color:#335b46}
+.sych-record span{color:#71877a;text-align:right}
+#sychAiFrame{display:block;width:100%;min-height:650px;border:1px solid #dce8df;border-radius:12px;background:#f7faf8}
+#sychPlannerMount{min-width:0}
+#sychPlannerMount #energy-left-planner{margin:10px 0!important;width:100%;max-width:none}
+#sychPlannerNote{padding:10px 0}
+@media(max-width:900px){.sych-grid.two{grid-template-columns:1fr}.sych-header{display:block}.sych-live{display:inline-block;margin-top:12px}.sych-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.sych-header{padding:18px}.sych-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.sych-tabs button{padding:11px 6px}.sych-energy-choices{grid-template-columns:repeat(2,minmax(0,1fr))}.sych-summary{gap:7px;padding:9px}.sych-summary>div{padding:10px}.sych-summary strong{font-size:19px}.sych-card{padding:14px}.sych-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}#sychAiFrame{min-height:560px}}
