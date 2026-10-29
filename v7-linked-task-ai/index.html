@@ -712,9 +712,9 @@
       <div>
         <section class="hc-panel"><div class="hc-panel-head"><div><h3>私人 AI 解卡</h3><p>先用最小步骤恢复进展，再进入真实任务工作区。</p></div><span class="hc-badge">需要真实上下文</span></div>
           <div class="hc-timer"><div class="hc-timer-current"><span class="overline">当前执行原则</span><h4>别让一个难题吞掉整天</h4><div class="hc-timer-note">超出估时或没有进展时，先保存已尝试步骤，再判断继续、拆分、切换或休息。</div></div>
-            <button class="hc-btn" id="hcAiHelp" type="button">生成解卡步骤（演示）</button><div class="hc-ai-out" id="hcAiOutput" aria-live="polite"></div>
+            <button class="hc-btn" id="hcAiHelp" type="button">AI 解卡当前任务</button><div class="hc-ai-out" id="hcAiOutput" aria-live="polite"></div>
           </div>
-          <div class="hc-ai-card"><div class="hc-ai-title"><span class="hc-ai-icon">✦</span>遇到真实 Bug 怎么办？</div><p>当前页面的按钮演示的是产品流程。真实 AI 解卡请从任务工作区选择实际任务，提供报错或资料，由已配置的模型处理。</p><button class="hc-btn secondary" id="hcOpenTaskWorkspace2" type="button" onclick="document.querySelector('#appNav [data-view=task-workspace]')?.click()">打开原任务工作区 ↗</button></div>
+          <div class="hc-ai-card"><div class="hc-ai-title"><span class="hc-ai-icon">✦</span>遇到真实 Bug 怎么办？</div><p>优先调用现有 AI 解卡入口；如果模型/API 尚未配置，会打开原任务工作区让你补充真实报错、资料和已尝试步骤，不显示假回答。</p><button class="hc-btn secondary" id="hcOpenTaskWorkspace2" type="button" onclick="document.querySelector('#appNav [data-view=task-workspace]')?.click()">打开原任务工作区 ↗</button></div>
           <div class="hc-timer" style="padding-top:0"><div id="hcStuckPlan" class="hc-ai-out" hidden></div></div>
         </section>
       </div>
