@@ -1,0 +1,8 @@
+/* Placement-only styles: preserve the original EnergyFlow component and green workbench design. */
+.sy-ef-launch{display:none!important}
+#view-heart-coach>#syEfHub{display:block!important;width:100%;max-width:none;margin:0 auto}
+#view-heart-coach>.hc-wrap{display:none!important}
+#view-heart-coach{min-width:0}
+#view-heart-coach #syEfHub .sy-ef-tabs{position:sticky;top:0;z-index:3}
+#view-heart-coach #syEfHub iframe{max-width:100%}
+@media(max-width:760px){#view-heart-coach>#syEfHub{padding:0;overflow-wrap:anywhere}}
