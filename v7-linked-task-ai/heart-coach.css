@@ -128,3 +128,13 @@
 .hc-camera-card video{display:block;width:min(100%,340px);max-height:240px;object-fit:cover;border-radius:12px;background:#17231b;transform:scaleX(-1)}
 .hc-camera-card small{display:block;margin-top:7px;font-size:11px;line-height:1.55;color:var(--hc-muted,#748078)}
 @media(max-width:560px){.hc-camera-card{grid-template-columns:1fr}.hc-camera-card #hcCameraToggle{justify-self:start}}
+
+/* Personal plan importer and resource-backed task cards */
+#view-heart-coach .hc-task-toolbar{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:8px 0 12px}
+#view-heart-coach .hc-task-toolbar .hc-btn{min-height:34px;font-size:11px;padding:8px 11px}
+#view-heart-coach .hc-task-resource{display:inline-flex;align-items:center;width:max-content;max-width:100%;margin-top:6px;color:#2f735b;font-size:11px;font-weight:700;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+#view-heart-coach .hc-task-notes{margin-top:5px;font-size:11px;line-height:1.6;color:var(--hc-muted,#748078)}
+#view-heart-coach .hc-task-notes summary{cursor:pointer;color:var(--hc-ink,#202b36);font-weight:650}
+#view-heart-coach .hc-task-notes p{margin:5px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+#view-heart-coach .hc-task-notes a{color:#2f735b;text-decoration:underline;text-underline-offset:2px}
+@media(max-width:560px){#view-heart-coach .hc-task-toolbar .hc-btn{flex:1 1 44%;justify-content:center}#view-heart-coach .hc-task-toolbar .hc-urgent-btn{flex:1 1 100%}}
