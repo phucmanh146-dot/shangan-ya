@@ -1,0 +1,24 @@
+name: Coach task UI syntax check
+on:
+  push:
+    branches:
+      - feat/task-linked-ai-safe-integration-20261028
+  pull_request:
+    branches:
+      - feat/task-linked-ai-safe-integration-20261028
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check task coach JavaScript syntax
+        run: node --check v7-linked-task-ai/heart-coach.js
+      - name: Confirm scheduling controls exist
+        run: |
+          grep -q "openScheduleEditor" v7-linked-task-ai/heart-coach.js
+          grep -q "URGENT_TASK_INSERTED" v7-linked-task-ai/heart-coach.js
+          grep -q "actualSummary(t,a)" v7-linked-task-ai/heart-coach.js
+          grep -q "接下来最该做什么" v7-linked-task-ai/index.html
