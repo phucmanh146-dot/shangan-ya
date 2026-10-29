@@ -119,3 +119,12 @@
 .sy-deadline-banner[data-stage="urgent"],.sy-deadline-banner[data-stage="overdue"]{border-color:#c54b43;box-shadow:0 12px 38px #c54b4328}
 .sy-deadline-banner[data-stage="urgent"] header,.sy-deadline-banner[data-stage="overdue"] header{color:#b93636}
 @media(max-width:560px){.hc-task-toolbar{align-items:stretch}.hc-task-toolbar .hc-btn{flex:1 1 45%;justify-content:center}.hc-task-toolbar .hc-urgent-btn{flex:1 1 100%}}
+
+/* Optional local-only camera preview in the execution check-in flow */
+.hc-camera-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;margin-top:12px;padding:12px;border:1px solid var(--hc-line,#e4e9e5);border-radius:14px;background:#fbfaf7}
+.hc-camera-copy strong{display:block;font-size:12px;color:var(--hc-ink,#202b36)}
+.hc-camera-copy p{margin:5px 0 0;font-size:11px;line-height:1.6;color:var(--hc-muted,#748078)}
+.hc-camera-card #hcCameraPreview{grid-column:1/-1}
+.hc-camera-card video{display:block;width:min(100%,340px);max-height:240px;object-fit:cover;border-radius:12px;background:#17231b;transform:scaleX(-1)}
+.hc-camera-card small{display:block;margin-top:7px;font-size:11px;line-height:1.55;color:var(--hc-muted,#748078)}
+@media(max-width:560px){.hc-camera-card{grid-template-columns:1fr}.hc-camera-card #hcCameraToggle{justify-self:start}}
