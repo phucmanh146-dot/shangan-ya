@@ -85,3 +85,24 @@
 .hc-empty strong{display:block;color:var(--hc-ink);font-size:13px}
 .hc-empty p{line-height:1.6}
 @media(max-width:560px){.hc-task{flex-wrap:wrap}.hc-task-main{min-width:calc(100% - 70px)}.hc-task-select{margin-left:28px}}
+
+/* Task scheduling controls: keep the original workbench task store and timer. */
+.hc-task-row-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex-wrap:wrap}
+.hc-task-start,.hc-task-edit{border:1px solid #dfe8e2;border-radius:8px;background:#fff;color:#42644f;font-size:10px;font-weight:750;padding:7px 9px;cursor:pointer;white-space:nowrap}
+.hc-task-start{background:#286b4b;border-color:#286b4b;color:#fff}
+.hc-task-start:disabled{opacity:.45;cursor:not-allowed}
+.hc-task-edit:hover,.hc-task-select:hover{background:#eef6f0}
+.hc-urgent-btn{display:block;margin:8px 0 10px;background:#b93636!important;color:#fff!important;border-color:#b93636!important;box-shadow:0 4px 12px #b9363624}
+.hc-urgent-btn:hover{filter:brightness(.94)}
+.hc-schedule-overlay{position:fixed;inset:0;z-index:99999;background:#17231bb8;display:grid;place-items:center;padding:18px}
+.hc-schedule-modal{box-sizing:border-box;width:min(100%,520px);max-height:min(90vh,760px);overflow:auto;background:#fffdf9;color:#27382e;border:1px solid #eadfd2;border-radius:20px;padding:22px;box-shadow:0 24px 80px #17231b35;display:grid;gap:13px}
+.hc-schedule-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.hc-schedule-head small{font-size:11px;color:#8b7868;letter-spacing:.06em}
+.hc-schedule-head h3{margin:5px 0 0;font-size:18px;line-height:1.4}
+.hc-schedule-close{border:1px solid #e8d9ca;background:#fffaf4;border-radius:10px;width:34px;height:34px;font-size:22px;color:#765f4c;cursor:pointer}
+.hc-schedule-modal label{display:grid;gap:6px;font-size:12px;font-weight:700;color:#685746}
+.hc-schedule-modal input{box-sizing:border-box;width:100%;min-width:0;border:1px solid #e7d9ca;border-radius:10px;padding:10px 11px;background:#fff;color:#2c382f;font:inherit;font-weight:500}
+.hc-schedule-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.hc-schedule-hint{margin:0;background:#f7f1e8;border-radius:10px;padding:10px 12px;font-size:11px;line-height:1.65;color:#806c58}
+.hc-schedule-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding-top:4px}
+@media(max-width:560px){.hc-task-row-actions{width:100%;margin-left:28px;justify-content:flex-start}.hc-schedule-modal{padding:16px;border-radius:16px}.hc-schedule-two{grid-template-columns:1fr}}
