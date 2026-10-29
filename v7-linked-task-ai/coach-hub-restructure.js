@@ -64,9 +64,10 @@
     $$('.app-nav-item', nav).forEach(b => {
       if (b !== coach && (b.textContent || '').trim() === '个人执行教练') b.remove();
     });
-    const review = nav.querySelector(':scope > .app-nav-item[data-view="stats"]');
-    if (review) {
-      if (coach.parentElement !== nav || coach.previousElementSibling !== review) nav.insertBefore(coach, review.nextSibling);
+    // Restore the original placement: directly after the unified task workspace, under the main task group.
+    const taskWorkspace = nav.querySelector(':scope > .app-nav-item[data-view="task-workspace"]');
+    if (taskWorkspace) {
+      if (coach.parentElement !== nav || coach.previousElementSibling !== taskWorkspace) nav.insertBefore(coach, taskWorkspace.nextSibling);
     } else if (coach.parentElement !== nav) {
       nav.appendChild(coach);
     }
