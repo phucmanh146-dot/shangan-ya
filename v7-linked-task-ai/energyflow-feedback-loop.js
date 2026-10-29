@@ -49,7 +49,10 @@
     });
   }
   function totalFixedMinutes(d) {
-    return activeEvents(d).reduce(function (n,e) { return n + duration(e); }, 0);
+    var items = activeEvents(d).map(function(e){return {start:toMinutes(e.start),end:toMinutes(e.end)}}).map(function(e){if(e.end<=e.start)e.end+=1440;return e}).sort(function(a,b){return a.start-b.start;});
+    var total=0,lastEnd=-1;
+    items.forEach(function(e){var start=Math.max(e.start,lastEnd);if(e.end>start)total+=e.end-start;lastEnd=Math.max(lastEnd,e.end)});
+    return total;
   }
   function appendEvent(d, type, text, extra) {
     var s = flow(d), item = {at:stamp(), type:type, text:text};
@@ -110,6 +113,15 @@
       todayPane.insertBefore(dock, live || todayPane.firstChild);
     }
 
+    if (!$('syEfOpenFeedback')) {
+      var trigger = document.createElement('div');
+      trigger.className = 'sy-ef-extra-actions';
+      trigger.style.cssText = 'margin:8px 0 10px';
+      trigger.innerHTML = '<button class="sy-ef-extra-btn primary" id="syEfOpenFeedback" type="button">随时汇报精力 / 我现在很疲惫</button><span class="sy-ef-extra-muted">任务中途累了、卡住了，不必等到半小时。</span>';
+      var dock = $('syEfFeedbackDock');
+      todayPane.insertBefore(trigger, dock || todayPane.firstChild);
+    }
+
     if (!$('syEfFixedManager')) {
       var fixed = document.createElement('section');
       fixed.id = 'syEfFixedManager';
@@ -139,7 +151,7 @@
     return true;
   }
 
-  var bound = false;
+  var bound = false, knownDone = {};
   function bindUI() {
     if (bound) return;
     bound = true;
@@ -199,6 +211,14 @@
       else { $('syEfFixedStatus').textContent = '固定事项已保存，但原有舒适排期入口尚未加载；请稍后重试。'; }
     };
 
+    if ($('syEfOpenFeedback')) $('syEfOpenFeedback').onclick = function () {
+      var d = account() || {}, p = d.plannerSettings || {}, session = sessionInfo(d);
+      $('syEfFeedbackTitle').textContent = '随时汇报：现在的精力还够吗？';
+      $('syEfFeedbackPrompt').textContent = session ? '当前任务：'+session.name+'。如疲惫或卡住，直接选择状态，系统会记录并给出下一步。' : '选择当前精力与状态；无需等任务完成，也不必长篇填写。';
+      if (session && $('syEfCurrentTask') && session.id) $('syEfCurrentTask').value = session.id;
+      $('syEfFeedbackDock').classList.add('is-open');
+      $('syEfQuickEnergy').focus();
+    };
     if ($('syEfFeedbackDismiss')) $('syEfFeedbackDismiss').onclick = function () {
       var d = account(); if (d) { settings(d).lastEnergyPromptAt = Date.now(); save(d); }
       $('syEfFeedbackDock').classList.remove('is-open');
@@ -296,18 +316,38 @@
     renderFixed();
   }
 
+  function isDone(t) { return !!(t && (t.done || t.completed || t.completedAt || t.status === 'done' || t.status === 'completed')); }
+  function taskKey(t) { return String(t && (t.id || t.taskId || t.name || t.title) || ''); }
+  function openFeedback(title, prompt, taskId, progress) {
+    if (!$('syEfFeedbackDock')) return;
+    $('syEfFeedbackTitle').textContent = title;
+    $('syEfFeedbackPrompt').textContent = prompt;
+    if (taskId && $('syEfCurrentTask')) $('syEfCurrentTask').value = String(taskId);
+    if (progress && $('syEfQuickProgress')) $('syEfQuickProgress').value = progress;
+    $('syEfFeedbackDock').classList.add('is-open');
+  }
   function monitor() {
     var d = account(); if (!d) return;
-    var p = settings(d), session = sessionInfo(d);
+    var p = settings(d), now = Date.now(), allTasks = tasks(d), newlyDone = [];
+    allTasks.forEach(function(t) {
+      var k = taskKey(t); if (!k) return;
+      var done = isDone(t);
+      if (done && !knownDone[k]) newlyDone.push(t);
+      knownDone[k] = done;
+    });
+    if (newlyDone.length && document.visibilityState === 'visible' && !$('syEfFeedbackDock').classList.contains('is-open')) {
+      var completed = newlyDone[newlyDone.length-1], tid = completed.id || completed.taskId || '';
+      p.lastEnergyPromptAt = now; save(d);
+      openFeedback('这项任务完成了，接下来还有多少精力？','刚完成：'+taskName(completed)+'。汇报一下现在的状态，避免把前一项的耗能带进下一项。',tid,'已完成');
+      return;
+    }
+    var session = sessionInfo(d);
     if (!session) return;
-    var now = Date.now(), elapsed = now - session.start, last = Number(p.lastEnergyPromptAt || 0);
+    var elapsed = now - session.start, last = Number(p.lastEnergyPromptAt || 0);
     var nextDue = Math.max(session.start + 30*60000, last ? last + 30*60000 : 0);
     if (elapsed >= 30*60000 && now >= nextDue && document.visibilityState === 'visible' && !$('syEfFeedbackDock').classList.contains('is-open')) {
       p.lastEnergyPromptAt = now; save(d);
-      $('syEfFeedbackTitle').textContent = '这段任务已经进行一会儿了，精力还够吗？';
-      $('syEfFeedbackPrompt').textContent = '当前任务：'+session.name+'。花几秒汇报精力；如果卡住或疲惫，可以直接说，不需要硬扛。';
-      if ($('syEfCurrentTask') && session.id) $('syEfCurrentTask').value = session.id;
-      $('syEfFeedbackDock').classList.add('is-open');
+      openFeedback('这段任务已经进行一会儿了，精力还够吗？','当前任务：'+session.name+'。花几秒汇报精力；如果卡住或疲惫，可以直接说，不需要硬扛。',session.id,'进行中');
     }
   }
 
@@ -319,6 +359,7 @@
       }, 500);
       return;
     }
+    (tasks(account() || {})).forEach(function(t){ var k=taskKey(t); if(k) knownDone[k]=isDone(t); });
     window.setInterval(monitor, 60000);
     document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') monitor(); });
     var hub = $('syEfHub');
