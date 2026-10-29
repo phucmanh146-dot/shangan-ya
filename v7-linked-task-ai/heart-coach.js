@@ -6,6 +6,7 @@ root.dataset.hcMounted='1';
 const $=id=>root.querySelector('#'+id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let selectedTaskId='';
+let cameraStream=null;
 let fallbackEnergy=3;
 let noticeTimer=null;
 function account(){try{return window.SY&&typeof SY.getAcctData==='function'?SY.getAcctData():null}catch(e){return null}}
@@ -28,6 +29,9 @@ function setEnergy(v){fallbackEnergy=Number(v);root.querySelectorAll('[data-hc-e
 4:['把专注留给最重要的事','可以推进一段重要任务，但设定检查点，不默认精力全天不变。'],
 5:['趁状态好，攻克关键一步','把高专注留给最重要的任务，安排 25–40 分钟冲刺，并保留恢复时间。']
 };const item=copy[fallbackEnergy]||copy[3];$('hcStateAdvice').innerHTML='<strong>'+item[0]+'</strong>'+item[1];$('hcEnergyMetric').textContent=fallbackEnergy+'/5';$('hcEnergyCaption').textContent=['','很低 · 优先恢复','偏低 · 降低负荷','中等 · 短段推进','较好 · 推进重要任务','很高 · 深度专注'][fallbackEnergy];}
+function stopCameraPreview(){if(cameraStream){cameraStream.getTracks().forEach(t=>t.stop());cameraStream=null}const video=$('hcCameraVideo'),wrap=$('hcCameraPreview'),button=$('hcCameraToggle');if(video)video.srcObject=null;if(wrap)wrap.hidden=true;if(button)button.textContent='开启摄像头预览（本地）'}
+async function toggleCameraPreview(){if(cameraStream){stopCameraPreview();notify('摄像头已关闭，视频流已停止。');return}if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){notify('当前浏览器环境不支持摄像头访问；请在 HTTPS 页面中打开。');return}try{cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'},audio:false});const video=$('hcCameraVideo'),wrap=$('hcCameraPreview'),button=$('hcCameraToggle');if(video)video.srcObject=cameraStream;if(wrap)wrap.hidden=false;if(button)button.textContent='关闭摄像头预览';if(video)await video.play();notify('摄像头已开启，仅本地预览，不录制、不上传。')}catch(err){stopCameraPreview();notify(err&&err.name==='NotAllowedError'?'你没有授予摄像头权限；可以继续使用手动精力反馈。':'摄像头暂时不可用；任务执行不受影响。')}}
+function ensureCameraUI(){const state=root.querySelector('.hc-state');if(!state||$('hcCameraToggle'))return;const wrap=document.createElement('div');wrap.className='hc-camera-card';wrap.innerHTML='<div class="hc-camera-copy"><strong>摄像头辅助观察（可选）</strong><p>只有你主动点击后才请求权限；仅显示本地实时预览，不录制、不上传，也不会自动推断情绪或心理状态。</p></div><button class="hc-btn secondary" id="hcCameraToggle" type="button">开启摄像头预览（本地）</button><div id="hcCameraPreview" hidden><video id="hcCameraVideo" autoplay playsinline muted></video><small>如果发现自己姿势僵硬或明显疲惫，请主动调整精力反馈；状态判断仍由你确认。</small></div>';const actions=state.querySelector('.hc-task-actions');if(actions)actions.insertAdjacentElement('afterend',wrap);else state.appendChild(wrap)}
 function saveEnergy(){const a=account();if(!a){notify('尚未读取到上岸鸭任务数据。请先登录原工作台。');return}const t=currentTask(),now=Date.now(),score=fallbackEnergy,p=localProfile();p.lastCognitiveCheckin={score,rawScore:score*2,at:now,source:'心航本地精力反馈',taskId:t?String(t.id):''};p.energyHistory=Array.isArray(p.energyHistory)?p.energyHistory:[];p.energyHistory.push({id:'heart-coach-'+now,date:window.SY&&SY.todayKey?SY.todayKey():new Date().toISOString().slice(0,10),at:now,hour:new Date(now).getHours(),score,rawScore:score*2,source:'心航本地精力反馈',taskId:t?String(t.id):'',localOnly:true});if(p.energyHistory.length>500)p.energyHistory=p.energyHistory.slice(-500);if(score<=2){p.fatigueLog=Array.isArray(p.fatigueLog)?p.fatigueLog:[];p.fatigueLog.push({at:now,score,taskId:t?String(t.id):'',category:'认知负荷反馈',reason:score===1?'心航反馈：精力被抽干':'心航反馈：精力偏低'});if(p.fatigueLog.length>200)p.fatigueLog=p.fatigueLog.slice(-200)}p.taskEvents=Array.isArray(p.taskEvents)?p.taskEvents:[];p.taskEvents.push({at:now,taskId:t?String(t.id):'',type:'HEART_COACH_ENERGY',score});if(p.taskEvents.length>1000)p.taskEvents=p.taskEvents.slice(-1000);if(!saveLocalProfile(p)){notify('浏览器本地存储不可用，精力记录未保存。');return}renderTasks();notify(score<=2?'精力记录已保存在本地；建议先恢复，不会改动任务完成状态。':'精力反馈已保存在本地，可用于后续排期。')}
 function todayKey(){return window.SY&&SY.todayKey?SY.todayKey():new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0')+'-'+String(new Date().getDate()).padStart(2,'0')}
 function findTaskCard(id){return Array.from(document.querySelectorAll('.app-task[data-id]')).find(el=>String(el.dataset.id)===String(id))||null}
@@ -148,6 +152,7 @@ const startBtn=e.target.closest('[data-hc-start]');if(startBtn){startTask(startB
 const editBtn=e.target.closest('[data-hc-edit-time]');if(editBtn){openScheduleEditor(editBtn.dataset.hcEditTime);return}
 const select=e.target.closest('[data-hc-select-task]');if(select){selectedTaskId=select.dataset.hcSelectTask;renderTasks();notify('当前任务已切换，后续精力与计时将关联这项原任务。');return}
 const done=e.target.closest('[data-hc-toggle-done]');if(done){toggleDone(done.dataset.hcToggleDone);return}
+if(e.target.closest('#hcCameraToggle')){toggleCameraPreview();return}
 if(e.target.closest('#hcSaveFeedback')){saveEnergy();return}
 if(e.target.closest('#hcTimerButton')){timerAction();return}
 if(e.target.closest('#hcResetTimer')){resetTimer();return}
@@ -156,6 +161,6 @@ if(e.target.closest('#hcAiHelp')){showAiDemo();return}
 if(e.target.closest('[data-hc-open-daily]')||e.target.closest('#hcOpenDaily')||e.target.closest('#hcOpenDaily2')){openView('daily');return}
 if(e.target.closest('#hcOpenTaskWorkspace')||e.target.closest('#hcOpenTaskWorkspace2')||e.target.closest('[data-hc-open-workspace]')){openView('task-workspace');return}
 });
-const a=account()||{};fallbackEnergy=latestEnergy(a);setEnergy(fallbackEnergy);renderTasks();setInterval(renderClock,1000);setInterval(()=>{if(!root.hidden)renderTasks()},5000);
+const a=account()||{};fallbackEnergy=latestEnergy(a);setEnergy(fallbackEnergy);ensureCameraUI();renderTasks();setInterval(renderClock,1000);setInterval(()=>{if(!root.hidden)renderTasks();else if(cameraStream)stopCameraPreview()},5000);window.addEventListener('beforeunload',stopCameraPreview);
 window.addEventListener('storage',renderTasks);window.addEventListener('focus',renderTasks);document.addEventListener('sy:ready',renderTasks);
 })();
