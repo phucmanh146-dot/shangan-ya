@@ -1,6 +1,7 @@
 (function(){'use strict';
 function init(){
  var daily=document.getElementById('view-daily');if(!daily||daily.dataset.energyFlowReady==='1')return;daily.dataset.energyFlowReady='1';
+ document.addEventListener('click',function(e){var nav=e.target&&e.target.closest&&e.target.closest('[data-energy-review-nav]');if(!nav)return;var dailyNav=document.querySelector('#appNav [data-view="daily"]');if(dailyNav)dailyNav.click();var reviewTab=document.querySelector('[data-ef-tab="review"]');if(reviewTab)reviewTab.click();var hub=document.getElementById('syEfHub');if(hub&&hub.scrollIntoView)hub.scrollIntoView({behavior:'smooth',block:'start'});});
  var cameraStream=null,loaded={};
  function acct(){try{return window.SY&&SY.getAcctData?SY.getAcctData():null}catch(e){return null}}
  function persist(d){try{if(window.SY&&SY.saveAcctData){SY.saveAcctData(d);return true}}catch(e){}return false}
