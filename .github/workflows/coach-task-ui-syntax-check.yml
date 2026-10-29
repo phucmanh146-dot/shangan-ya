@@ -16,9 +16,12 @@ jobs:
           node-version: "20"
       - name: Check task coach JavaScript syntax
         run: node --check v7-linked-task-ai/heart-coach.js
+          node --check v7-linked-task-ai/deadline-checkin.js
       - name: Confirm scheduling controls exist
         run: |
           grep -q "openScheduleEditor" v7-linked-task-ai/heart-coach.js
           grep -q "URGENT_TASK_INSERTED" v7-linked-task-ai/heart-coach.js
           grep -q "actualSummary(t,a)" v7-linked-task-ai/heart-coach.js
           grep -q "接下来最该做什么" v7-linked-task-ai/index.html
+          grep -q "heart-coach.css" v7-linked-task-ai/index.html
+          grep -q "deadline-checkin.js" v7-linked-task-ai/index.html
