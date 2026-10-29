@@ -3,7 +3,7 @@
   var host=null,active=null,activeAccount='',activeStage='',KEY='sy_deadline_checkins_v2';
   function dueAt(t){
     if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(t.dueDate||''))return Infinity;
-    var date=t.dueDate.split('-').map(Number),time=/^(\\d{2}):(\\d{2})$/.exec(t.dueTime||'23:59');
+    var date=t.dueDate.split('-').map(Number),time=/^(\\d{2}):(\\d{2})$/.exec(t.dueTime||'18:00');
     if(!time||+time[1]>23||+time[2]>59)return Infinity;
     var d=new Date(date[0],date[1]-1,date[2],+time[1],+time[2]);
     return d.getFullYear()===date[0]&&d.getMonth()===date[1]-1&&d.getDate()===date[2]?d.getTime():Infinity;
@@ -17,7 +17,7 @@
     return '';
   }
   function history(){try{var data=JSON.parse(localStorage.getItem(KEY)||'{}');return data&&typeof data==='object'&&!Array.isArray(data)?data:{};}catch(_){return {};}}
-  function signature(t,stage){return String(root.SY.currentAccountKey)+':'+t.id+':'+t.dueDate+':'+(t.dueTime||'23:59')+':'+stage;}
+  function signature(t,stage){return String(root.SY.currentAccountKey)+':'+t.id+':'+t.dueDate+':'+(t.dueTime||'18:00')+':'+stage;}
   function record(action,progress){if(!active||activeAccount!==String(root.SY.currentAccountKey))return;var h=history();h[signature(active,activeStage)]={at:Date.now(),action:action,progress:progress||'',until:action==='later'?Date.now()+120000:0};try{localStorage.setItem(KEY,JSON.stringify(h));}catch(_){} }
   function eligible(tasks,now,h){return (tasks||[]).map(function(t){return {task:t,stage:stageFor(t,now)};}).filter(function(item){var t=item.task,s=item.stage,entry=h[signature(t,s)];return s&&!t.done&&!t.completedAt&&(!entry||entry.action==='later'&&now>=entry.until);}).sort(function(a,b){return dueAt(a.task)-dueAt(b.task);});}
   function hide(){if(host)host.hidden=true;active=null;activeStage='';}
