@@ -71,7 +71,7 @@ function urgentInsert(){
  const title=window.prompt('突然出现的任务是什么？\n写下必须完成的具体事项：');if(title===null||!title.trim())return;
  const minutes=Number(window.prompt('预计需要多少分钟？','30'));if(!Number.isFinite(minutes)||minutes<5||minutes>720){notify('请输入 5–720 分钟之间的预计用时。');return}
  const dueDate=window.prompt('这项临时任务有硬截止日期吗？（可留空，格式 YYYY-MM-DD）','')||'';
- if(dueDate&&!/^\\d{4}-\\d{2}-\\d{2}$/.test(dueDate)){notify('截止日期格式应为 YYYY-MM-DD。任务未创建。');return}
+ if(dueDate&&!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)){notify('截止日期格式应为 YYYY-MM-DD。任务未创建。');return}
  const now=Date.now(),date=todayKey(),id='urgent-'+now,old=a.activeTimer||{};
  if(old.taskId&&old.runningSince){old.accumulatedMs=(Number(old.accumulatedMs)||0)+(now-Number(old.runningSince));old.runningSince=null;a.activeTimer=old;a.taskStatusById=a.taskStatusById||{};a.taskStatusById[String(old.taskId)]='SWITCHED'}
  const startMinutes=(new Date()).getHours()*60+(new Date()).getMinutes();
