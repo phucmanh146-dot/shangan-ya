@@ -29,8 +29,12 @@
   function placeNav() {
     const nav = $('#appNav');
     if (!nav) return;
-    const more = $('.sy-original-more-items', nav);
-    if (!more) return; // v8-original-sidebar.js may still be arranging the rail.
+    // This entry belongs directly in the left rail, under the existing review group.
+    const legacyMore = $('.sy-original-more', nav);
+    if (legacyMore) {
+      $('.app-nav-item', legacyMore).forEach(b => nav.appendChild(b));
+      legacyMore.remove();
+    }
 
     // Reuse the exact button already labeled "个人执行教练" instead of creating a second entry.
     let coach = $('button[data-open-execution-hub="coach"]', nav);
@@ -60,7 +64,12 @@
     $$('.app-nav-item', nav).forEach(b => {
       if (b !== coach && (b.textContent || '').trim() === '个人执行教练') b.remove();
     });
-    if (coach.parentElement !== more) more.appendChild(coach);
+    const review = nav.querySelector(':scope > .app-nav-item[data-view="stats"]');
+    if (review) {
+      if (coach.parentElement !== nav || coach.previousElementSibling !== review) nav.insertBefore(coach, review.nextSibling);
+    } else if (coach.parentElement !== nav) {
+      nav.appendChild(coach);
+    }
   }
 
   function reconcile() {
