@@ -16,7 +16,7 @@ function saveLocalProfile(p){try{localStorage.setItem(LOCAL_KEY,JSON.stringify(p
 function tasks(){const a=account()||{};return (Array.isArray(a.tasks)?a.tasks:[]).filter(t=>t&&!t.deleted)}
 function taskName(t){return String(t&&(t.name||t.title||t.text)||'未命名任务')}
 function taskDone(t){return !!(t&&(t.done||t.completedAt))}
-function currentTask(){const ts=tasks(),a=account()||{};return ts.find(t=>String(t.id)===String(selectedTaskId))||ts.find(t=>String(t.id)===String((a.activeTimer||{}).taskId))||ts.find(t=>String(t.id)===String(a.priorityFocusTaskId))||ts.find(t=>!taskDone(t))||ts[0]||null}
+function currentTask(){const ts=tasks(),a=account()||{};const pick=t=>t&&t.scheduleParent?(ts.find(x=>String(x.parentTaskId)===String(t.id)&&!taskDone(x))||ts.find(x=>String(x.parentTaskId)===String(t.id))||t):t;return pick(ts.find(t=>String(t.id)===String(selectedTaskId)))||pick(ts.find(t=>String(t.id)===String((a.activeTimer||{}).taskId)))||pick(ts.find(t=>String(t.id)===String(a.priorityFocusTaskId)))||ts.find(t=>!taskDone(t)&&!t.scheduleParent)||ts.find(t=>!t.scheduleParent)||ts[0]||null}
 function durationLabel(t){const n=Number(t&&(t.plannedMinutes||t.estMinutes||t.estimatedMinutes||t.durationMinutes)||0);return n>0?(n>=60?Math.floor(n/60)+'小时'+(n%60?Math.round(n%60)+'分钟':''):Math.round(n)+'分钟'):'未设置估时'}
 function statusLabel(t,a){if(taskDone(t))return '已完成';const s=a.taskStatusById&&a.taskStatusById[String(t.id)]||'';return ({RECOVERY:'恢复优先',RESUMABLE:'可继续',STUCK:'已卡住',WAITING_AI:'等待 AI',SWITCHED:'已切换，待续'})[s]||'待推进'}
 function notify(msg){const el=$('hcNotice');if(!el)return;el.textContent=msg;el.hidden=false;if(noticeTimer)clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>el.hidden=true,3200)}
