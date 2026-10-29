@@ -75,7 +75,31 @@ function estimate(t,b){
  if(ev.samples>=3||ev.fatigue>=2)basis+='；结合该任务 '+ev.samples+' 条精力反馈、'+ev.fatigue+' 条疲惫记录';
  return {minutes:Math.round(Math.max(5,Math.min(180,base))),min:lo,max:hi,basis:basis,complex:complex,samples:hist.length,confidence:confidence,energyEvidence:ev};
 }
-function getPrefs(){var a=account()||{},p=a.plannerSettings||{},w=a.wellbeingPlan||{},lp=localProfile(),sp=lp.schedulePrefs||{},start=nowRounded(),end=21*60;if(start>=20*60)end=23*60+30;if(end-start<60)end=Math.min(1439,start+180);var d=reserveDefaults(brain());return{start:sp.start||localTime(start),end:sp.end||localTime(end),buffer:Math.max(15,Number(sp.buffer||d.buffer)),leisure:Math.max(0,Number(sp.leisure||lp.dailyLeisureMinutes||d.leisure)),recovery:d.recovery,fixed:Math.max(0,Number(sp.fixed||w.meet||p.fixedMinutes||0)),breakEvery:Number(sp.breakEvery||(brain().score<=2?25:35))}}function selectedTasks(){var all=pending();return all.filter(function(t){return chosen.indexOf(taskId(t))>=0})}
+function fixedEventsForWindow(start,end){
+ var a=account()||{},p=a.plannerSettings||{},raw=Array.isArray(p.fixedEvents)?p.fixedEvents:[],day=today(),dow=new Date().getDay(),out=[];
+ if(end<=start)end+=1440;
+ raw.forEach(function(e){
+  if(!e||e.active===false||!e.start||!e.end)return;
+  var rep=e.repeat||'once',date=String(e.date||day).slice(0,10),matches=rep==='daily'?(!e.date||date<=day):rep==='weekdays'?(dow>=1&&dow<=5&&(!e.date||date<=day)):rep==='weekly'?(!!e.date&&new Date(date+'T12:00:00').getDay()===dow&&date<=day):(date===day);
+  if(!matches)return;
+  var s=parseTime(e.start),en=parseTime(e.end);if(en<=s)en+=1440;
+  if(en<=start||s>=end)return;
+  s=Math.max(start,s);en=Math.min(end,en);
+  if(en>s)out.push({start:s,end:en,minutes:en-s,title:String(e.name||'固定事项'),category:String(e.category||'固定事项'),required:e.required!==false});
+ });
+ out.sort(function(a,b){return a.start-b.start});
+ var merged=[];
+ out.forEach(function(e){
+  var last=merged[merged.length-1];
+  if(last&&e.start<last.end){
+   last.end=Math.max(last.end,e.end);last.minutes=last.end-last.start;
+   if(last.title.indexOf(e.title)<0)last.title+=' / '+e.title;
+   last.category='固定事项';
+  }else merged.push(e);
+ });
+ return merged;
+}
+function getPrefs(){var a=account()||{},p=a.plannerSettings||{},w=a.wellbeingPlan||{},lp=localProfile(),sp=lp.schedulePrefs||{},start=nowRounded(),end=21*60;if(start>=20*60)end=23*60+30;if(end-start<60)end=Math.min(1439,start+180);var d=reserveDefaults(brain()),events=fixedEventsForWindow(start,end),eventMinutes=events.reduce(function(n,e){return n+e.minutes},0),manual=Math.max(0,Number(sp.fixed||w.meet||p.fixedMinutes||0));return{start:sp.start||localTime(start),end:sp.end||localTime(end),buffer:Math.max(15,Number(sp.buffer||d.buffer)),leisure:Math.max(0,Number(sp.leisure||lp.dailyLeisureMinutes||d.leisure)),recovery:d.recovery,fixed:Math.max(manual,eventMinutes),breakEvery:Number(sp.breakEvery||(brain().score<=2?25:35))}}function selectedTasks(){var all=pending();return all.filter(function(t){return chosen.indexOf(taskId(t))>=0})}
 function chooseDefaults(){var all=pending().slice().sort(function(a,b){return priority(b)-priority(a)}),acct=account()||{},active=String(window.__SYTaskWorkspaceSelectedTaskId||((acct.activeTimer||{}).taskId)||acct.priorityFocusTaskId||'');chosen=all.filter(function(t){return taskId(t)===active}).map(taskId);if(!chosen.length)chosen=all.slice(0,Math.min(3,all.length)).map(taskId)}
 function mountLauncher(){
  var details=$('#sy-energy-daily-details');if(details){details.open=false;details.style.display='none';}
@@ -119,6 +143,8 @@ function render(n){
 function buildPreview(b){
  var start=parseTime($('#cpStart',dialog)?.value||getPrefs().start),end=parseTime($('#cpEnd',dialog)?.value||getPrefs().end),fixed=Math.max(0,Number($('#cpFixed',dialog)?.value||0)),buffer=Math.max(15,Number($('#cpBuffer',dialog)?.value||45)),leisure=Math.max(0,Number($('#cpLeisure',dialog)?.value||60)),breakEvery=Number($('#cpBreak',dialog)?.value||35);
  if(end<=start)end+=24*60;
+ var protectedEvents=fixedEventsForWindow(start,end);
+ fixed=Math.max(fixed,protectedEvents.reduce(function(n,e){return n+e.minutes},0));
  var available=end-start,rest=b.score<=1?25:b.score===2?20:10,chosenList=selectedTasks(),remaining=Math.max(0,available-fixed-buffer-leisure),cursor=start,blocks=[],deferred=[],focusCount=0,deepCount=0;
  function add(title,duration,kind,reason){duration=Math.max(0,Math.round(duration));if(!duration||cursor+duration>end)return false;blocks.push({start:cursor,end:cursor+duration,title:title,minutes:duration,kind:kind,reason:reason||''});cursor+=duration;return true}
  function reserveLeisure(label,duration,kind,reason){if(duration<=0||remaining<=0)return;var d=Math.min(duration,remaining,Math.max(0,end-cursor-buffer));if(d>=5&&add(label,d,kind,reason))remaining-=d}
@@ -157,8 +183,38 @@ var ranked=chosenList.slice().sort(function(a,c){
  if(!daydreamAdded&&daydream>0)reserveLeisure('发呆 / 自由放空（不设产出目标）',daydream,'rest','每天受保护的无任务时间；可发呆、散步或安静坐一会儿');
  if(entertain>0)reserveLeisure('娱乐 / 看剧 / 轻松刷视频（受保护时间）',entertain,'leisure','娱乐是计划内恢复，不作为未完成任务扣分');
  var endBuffer=Math.min(buffer,Math.max(0,end-cursor));if(endBuffer>0)add('弹性缓冲：卡壳、临时事务或任务超时',endBuffer,'buffer','没有突发情况时也不强制塞入新任务');
+ /* Reflow generated work blocks around exact fixed-event time windows. */
+ var rawBlocks=blocks.slice(),timeline=[],fi=0,clock=start;
+ function putFixed(){
+  if(fi>=protectedEvents.length)return false;
+  var f=protectedEvents[fi++];
+  if(f.start>clock)timeline.push({start:clock,end:f.start,title:'固定事项前的切换 / 缓冲',minutes:f.start-clock,kind:'buffer',reason:'不在临时空档中塞入新任务'});
+  timeline.push({start:f.start,end:f.end,title:f.title,minutes:f.minutes,kind:'fixed',reason:'必须保留的固定事项 · '+f.category});
+  clock=Math.max(clock,f.end);return true;
+ }
+ rawBlocks.forEach(function(block){
+  var left=Math.max(0,Number(block.minutes)||0),guard=0;
+  while(left>0&&guard++<30){
+   while(fi<protectedEvents.length&&protectedEvents[fi].end<=clock)fi++;
+   if(fi<protectedEvents.length&&clock>=protectedEvents[fi].start){putFixed();continue}
+   if(clock>=end){if(block.kind==='focus'||block.kind==='light')deferred.push({task:{name:block.title},reason:'固定事项占用后，剩余时间不足；保留为待续任务'});break}
+   var room=end-clock;
+   if(fi<protectedEvents.length)room=Math.min(room,protectedEvents[fi].start-clock);
+   if(room<=0){if(fi<protectedEvents.length){putFixed();continue}break}
+   var part=Math.min(left,room);
+   if(part<5&&left>=5&&fi<protectedEvents.length){putFixed();continue}
+   if(part<=0)break;
+   var copy={};Object.keys(block).forEach(function(k){copy[k]=block[k]});
+   copy.start=clock;copy.end=clock+part;copy.minutes=part;
+   if(part<left)copy.reason=(copy.reason?copy.reason+'；':'')+'固定事项切分了这一工作段，剩余部分继续排布';
+   timeline.push(copy);clock+=part;left-=part;
+   if(left>0&&fi<protectedEvents.length&&clock>=protectedEvents[fi].start)putFixed();
+  }
+ });
+ while(fi<protectedEvents.length&&protectedEvents[fi].start<end){if(protectedEvents[fi].end<=clock){fi++;continue}putFixed()}
+ blocks=timeline;cursor=clock;
  var scheduled=blocks.reduce(function(n,x){return n+x.minutes},0),unused=Math.max(0,end-cursor),focusMinutes=blocks.filter(function(x){return x.kind==='focus'||x.kind==='light'}).reduce(function(n,x){return n+x.minutes},0),requestedMinutes=ranked.reduce(function(n,t){return n+estimate(t,b).minutes},0),usableMinutes=Math.max(0,available-fixed-buffer-leisure),riskRatio=usableMinutes?requestedMinutes/usableMinutes:(requestedMinutes?2:0),riskLabel=riskRatio>1.25?'高':riskRatio>.85?'中':'低',riskReason=riskRatio>1.25?'已选任务估时明显超过可用工作时间，需主动延后低优先级任务。':riskRatio>.85?'任务接近占满工作容量，临时事务可能导致延误。':'当前任务量与可用工作时间基本匹配，仍保留缓冲。';
- window.__SYComfortDraft={date:today(),createdAt:Date.now(),state:b,tasks:chosenList.map(function(t){return{id:taskId(t),title:taskName(t)}}),window:{start:localTime(start%1440),end:localTime(end%1440)},fixedMinutes:fixed,bufferMinutes:buffer,leisureMinutes:leisure,blocks:blocks,deferred:deferred,unusedMinutes:unused,scheduledMinutes:scheduled,focusMinutes:focusMinutes,confidence:b.confidence,algorithm:'adaptive-load-v2'};
+ window.__SYComfortDraft={date:today(),createdAt:Date.now(),state:b,tasks:chosenList.map(function(t){return{id:taskId(t),title:taskName(t)}}),window:{start:localTime(start%1440),end:localTime(end%1440)},fixedMinutes:fixed,fixedEvents:protectedEvents.map(function(e){return{start:localTime(e.start%1440),end:localTime(e.end%1440),title:e.title,category:e.category}}),bufferMinutes:buffer,leisureMinutes:leisure,blocks:blocks,deferred:deferred,unusedMinutes:unused,scheduledMinutes:scheduled,focusMinutes:focusMinutes,confidence:b.confidence,algorithm:'adaptive-load-v3-fixed-events'};
  return '<section class="cp-panel"><span class="cp-eyebrow">STEP 04 · ADAPTIVE TIMELINE</span><h3>今日排期预览</h3><p class="cp-lead">系统根据当前状态、真实待办与可用时间安排工作段，并把发呆、娱乐和缓冲作为保护时间。'+(b.score<=2?'当前负荷偏高：优先恢复和低负荷事项，不强迫深度任务。':'每段深度任务后安排短休，长任务拆成多个工作段。')+'</p><div class="cp-risk-card risk-'+(riskLabel==='高'?'high':riskLabel==='中'?'mid':'low')+'"><strong>今日超载风险：'+riskLabel+'</strong><span>已选任务估时 '+requestedMinutes+' 分钟 · 可用工作容量 '+usableMinutes+' 分钟。'+riskReason+'</span></div><div class="cp-plan-summary"><div><strong>'+focusMinutes+'</strong><span>工作分钟</span></div><div><strong>'+leisure+'</strong><span>放空与娱乐分钟</span></div><div><strong>'+deferred.length+'</strong><span>延后/待续任务</span></div></div><div class="cp-timeline">'+(blocks.length?blocks.map(function(x){return '<article class="cp-time-row kind-'+x.kind+'" '+((x.kind==='focus'||x.kind==='light')?'draggable="true" data-cp-draggable="1"':'')+' data-cp-block-index="'+blocks.indexOf(x)+'"><time>'+localTime(x.start%1440)+'–'+localTime(x.end%1440)+'</time><div><strong>'+esc(x.title)+'</strong><p>'+x.minutes+' 分钟'+(x.reason?' · '+esc(x.reason):'')+'</p></div><span>'+({focus:'专注',light:'轻任务',rest:'放空/恢复',break:'短休',leisure:'娱乐',buffer:'缓冲'}[x.kind]||'安排')+'</span></article>'}).join(''):'<div class="cp-empty">当前时间窗口不足，或没有选择任务。请返回调整。</div>')+'</div>'+(deferred.length?'<div class="cp-deferred"><h4>暂缓安排，不代表放弃</h4>'+deferred.map(function(x){return '<p><strong>'+esc(taskName(x.task))+'</strong>：'+esc(x.reason)+'</p>'}).join('')+'</div>':'')+'<div class="cp-note-box">研究边界：微休息对活力和疲劳的平均改善较小但有统计意义，整体表现提升并不稳定；高消耗任务可能需要更长恢复。系统不会把“90 分钟周期”当作所有人的固定生理规律。请用每次反馈和真实耗时持续校准。</div><p class="cp-note">固定事项按总分钟预留；未录入具体起止时间时，这是一份时间顺序草案，不替代日历。保存后不会自动把任务标记完成。</p></section>';
 }function bindTimelineDrag(body){
  var list=$('.cp-timeline',body);if(!list||list.dataset.dragBound)return;list.dataset.dragBound='1';var dragged=null;
