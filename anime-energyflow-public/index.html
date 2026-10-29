@@ -25,6 +25,79 @@ footer{margin-top:28px;color:#aaa1ae;font-size:10px;text-align:center}
 @media(max-width:1150px){.sidebar{width:224px}.main{margin-left:224px}.grid.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.hero{grid-template-columns:minmax(0,1fr) minmax(230px,.7fr)}}
 @media(max-width:850px){.sidebar{width:76px;padding:18px 9px}.brand{justify-content:center;padding:0 0 22px}.brand-mark{width:44px;height:44px}.brand-copy,.nav-label,.nav button .nav-text,.side-bottom{display:none}.nav button{justify-content:center;padding:13px 5px}.nav button .ico{font-size:21px}.main{margin-left:76px;padding:22px 18px 45px}.hero{grid-template-columns:1fr}.mascot-card{min-height:160px}.mascot-card svg{height:160px}.hero-copy{min-height:190px}.dashboard-grid,.two-col{grid-template-columns:1fr}}
 @media(max-width:560px){.main{padding:17px 12px 35px}.topbar{align-items:flex-start;margin-bottom:18px}.top-title{font-size:20px}.date-pill{font-size:10px;padding:7px}.hero-copy{padding:22px 19px}.hero h1{font-size:28px}.grid.stats{gap:9px}.card{padding:14px;border-radius:16px}.stat-icon{width:35px;height:35px}.stat strong{font-size:22px}.energy-list{gap:5px}.energy-choice{padding:8px 2px}.energy-choice span{font-size:18px}.energy-choice b{font-size:10px}.energy-choice small{font-size:9px}.form-grid,.flower-grid{grid-template-columns:1fr}.field.full{grid-column:auto}.page-intro h1{font-size:23px}.page-intro p{font-size:12px}.date-pill{max-width:135px}.chart{gap:5px}.chart-legend{gap:8px}}
+
+/* V2 visual pass: larger type, stronger hierarchy, workbench-like layout; functionality preserved */
+:root{--shadow:0 14px 36px #55456512}
+body{font-size:16px;line-height:1.65}
+.sidebar{width:278px;padding:30px 20px 20px}
+.brand{gap:13px;padding:4px 9px 28px}
+.brand-mark{width:50px;height:50px;font-size:28px;border-radius:17px}
+.brand b{font-size:20px}.brand small{font-size:12px}
+.nav-label{font-size:12px;padding:16px 13px 9px}
+.nav{gap:7px}
+.nav button{padding:14px 14px;border-radius:14px;font-size:15px;min-height:50px}
+.nav button .ico{font-size:21px;width:28px}
+.nav button.active{box-shadow:inset 4px 0 #8b78bd,0 5px 14px #7666a810}
+.side-bottom{padding:16px;border-radius:18px}.side-bottom b{font-size:15px}.side-bottom p{font-size:13px;line-height:1.6}.side-bottom button{font-size:13px;padding:10px}
+.main{margin-left:278px;padding:32px clamp(24px,3.4vw,52px) 72px;max-width:1760px}
+.topbar{margin-bottom:30px}.crumb{font-size:13px}.top-title{font-size:27px}
+.date-pill{font-size:14px;padding:10px 15px;border-radius:13px}
+.hero{gap:22px;margin-bottom:22px}.hero-copy{padding:34px 35px;min-height:255px;border-radius:26px}
+.eyebrow{font-size:12px}.hero h1{font-size:clamp(32px,3.1vw,44px);line-height:1.2;margin:15px 0 12px}.hero p{font-size:16px;line-height:1.8}
+.hero-actions{gap:12px;margin-top:23px}.primary,.secondary{font-size:15px;padding:12px 18px;border-radius:13px;transition:transform .18s ease,box-shadow .18s ease,filter .18s ease}
+.primary:hover,.secondary:hover{transform:translateY(-2px);box-shadow:0 8px 20px #7666a81b;filter:saturate(1.08)}
+.mascot-card{min-height:255px;border-radius:26px}.mascot-card svg{height:225px}
+.float-note{font-size:13px;padding:9px 12px}
+.grid{gap:20px}.grid.stats{gap:16px;margin-bottom:22px}
+.card{padding:23px;border-radius:21px;box-shadow:0 10px 28px #5545650a;transition:border-color .18s ease,box-shadow .18s ease}
+.card:hover{border-color:#e5d8ed;box-shadow:0 14px 32px #55456512}
+.stat{gap:14px}.stat-icon{width:48px;height:48px;border-radius:15px;font-size:23px}
+.stat small{font-size:13px}.stat strong{font-size:30px;margin-top:4px}.stat em{font-size:12px}
+.card-head{margin-bottom:16px}.card-head h2,.card-head h3{font-size:18px}.card-head p{font-size:13px;line-height:1.6}
+.tiny-link{font-size:13px;padding:5px}
+.energy-list{gap:10px}.energy-choice{padding:14px 7px;border-radius:15px;min-height:105px}.energy-choice span{font-size:25px}.energy-choice b{font-size:13px;margin:7px 0 2px}.energy-choice small{font-size:11px}
+.chart{height:165px;gap:13px}.chart-bar-wrap{height:123px}.chart-bar{width:min(32px,76%);border-radius:10px 10px 5px 5px}.chart-col small{font-size:12px}.chart-col strong{font-size:12px}.chart-legend{font-size:12px;margin-top:13px}
+.prompt{gap:13px;padding:16px;border-radius:16px;margin-top:14px}.prompt .picon{font-size:24px}.prompt b{font-size:14px}.prompt p{font-size:13px;line-height:1.7}
+.page-intro{margin-bottom:25px}.page-intro h1{font-size:34px;margin:7px 0}.page-intro p{font-size:16px;line-height:1.8}
+.form-grid{gap:16px}.field{gap:8px}.field label{font-size:13px}.field input,.field select,.field textarea{font-size:15px;padding:13px 14px;border-radius:13px}.field textarea{min-height:100px}
+.flower-grid{gap:13px}.flower-item{padding:15px;border-radius:15px}.flower-item .flower-label{font-size:13px}.flower-item input{margin:14px 0 4px;height:20px}.flower-item small{font-size:12px}
+.habit-list{gap:10px}.habit{padding:14px;border-radius:14px;font-size:14px}.habit input{width:19px;height:19px}.habit small{font-size:12px}.habit .remove,.record .remove{font-size:20px;min-width:28px;min-height:28px}
+.record-list{gap:11px}.record{gap:14px;padding:15px;border-radius:15px}.record-date{min-width:58px;border-radius:12px;padding:9px 6px;font-size:12px}.record-body b{font-size:14px}.record-body p{font-size:13px;line-height:1.7}
+.empty{padding:32px 14px;font-size:14px}
+input,select,textarea{transition:border-color .18s ease,box-shadow .18s ease}
+input:focus,select:focus,textarea:focus{border-color:#b7a2de!important;box-shadow:0 0 0 4px #eee8fa}
+.energy-choice:hover{transform:translateY(-2px);border-color:#c9b8e5;box-shadow:0 7px 18px #7666a812}
+.energy-choice{transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease,background .16s ease}
+button:active{transform:scale(.985)}
+footer{font-size:12px;margin-top:36px}
+@media(max-width:1150px){
+ .sidebar{width:242px;padding:24px 15px 16px}.main{margin-left:242px;padding:26px 22px 58px}
+ .hero{grid-template-columns:minmax(0,1fr) minmax(220px,.72fr)}.hero-copy{padding:27px;min-height:235px}
+ .grid.stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:850px){
+ .sidebar{inset:auto 0 0;width:100%;height:auto;padding:8px 10px calc(8px + env(safe-area-inset-bottom));background:#fffdfaF5;backdrop-filter:blur(18px);border-right:0;border-top:1px solid var(--line);box-shadow:0 -8px 24px #5545650b;display:block}
+ .brand,.nav-label,.side-bottom{display:none}
+ .nav{display:flex;gap:5px;overflow-x:auto;scrollbar-width:thin;padding:0 0 2px;justify-content:flex-start}
+ .nav button{flex:1 0 88px;display:flex;flex-direction:column;gap:3px;justify-content:center;min-height:58px;padding:7px 6px;font-size:12px;white-space:nowrap;border-radius:12px}
+ .nav button .ico{font-size:20px;width:auto;line-height:1.2}.nav button.active{box-shadow:inset 0 3px #8b78bd}
+ .main{margin-left:0;padding:23px 22px calc(104px + env(safe-area-inset-bottom));max-width:none}
+ .topbar{margin-bottom:22px}.top-title{font-size:24px}.hero{grid-template-columns:minmax(0,1fr) minmax(220px,.7fr)}
+ .hero-copy{padding:25px;min-height:235px}.mascot-card{min-height:235px}.mascot-card svg{height:190px}
+ .dashboard-grid,.two-col{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+ body{font-size:15px}.main{padding:17px 13px calc(102px + env(safe-area-inset-bottom))}
+ .topbar{align-items:flex-start;gap:8px}.top-title{font-size:21px}.crumb{font-size:12px}.date-pill{font-size:11px;padding:8px 9px;max-width:145px}
+ .hero{grid-template-columns:1fr;gap:12px}.hero-copy{padding:24px 20px;min-height:0;border-radius:22px}.hero h1{font-size:32px}.hero p{font-size:15px}.mascot-card{min-height:175px;border-radius:22px}.mascot-card svg{height:160px}
+ .grid.stats{gap:9px}.card{padding:15px;border-radius:17px}.stat{gap:9px}.stat-icon{width:38px;height:38px;font-size:20px;border-radius:12px}.stat small{font-size:11px}.stat strong{font-size:24px}.stat em{font-size:10px}
+ .card-head h2,.card-head h3{font-size:16px}.card-head p{font-size:12px}.energy-list{gap:5px}.energy-choice{padding:10px 2px;min-height:91px}.energy-choice span{font-size:20px}.energy-choice b{font-size:10px}.energy-choice small{font-size:9px}
+ .chart{height:145px;gap:5px}.chart-bar-wrap{height:105px}.chart-col small,.chart-col strong{font-size:10px}.page-intro h1{font-size:28px}.page-intro p{font-size:14px}
+ .form-grid,.flower-grid{grid-template-columns:1fr;gap:12px}.field.full{grid-column:auto}.field label{font-size:12px}.field input,.field select,.field textarea{font-size:15px;padding:12px}
+ .primary,.secondary{font-size:14px;padding:11px 14px}.record{padding:12px;gap:10px}.record-date{min-width:49px;font-size:10px}.record-body b{font-size:12px}.record-body p{font-size:11px}
+ .nav button{flex-basis:76px;min-height:55px;font-size:11px}.nav button .ico{font-size:19px}
+}
+
 </style>
 </head>
 <body>
