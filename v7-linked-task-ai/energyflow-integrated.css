@@ -98,3 +98,16 @@
 .sy-ef-review-metrics>div{background:#f7f8f4;border-color:var(--border,#D7E2DB)}.sy-ef-review-metrics strong{color:var(--link,#256F66)}.sy-ef-review-data{color:var(--text-soft,#3E5854)}
 .sy-ef-btn{background:var(--link,#256F66)!important;border-color:var(--link,#256F66)!important;color:#fff!important;border-radius:11px!important;box-shadow:0 3px 8px rgba(37,111,102,.12)}
 .sy-ef-muted{color:var(--text-soft,#3E5854)}
+
+/* Review interactions modeled on the supplied three screenshots, within V8's native visual system. */
+.sy-ef-flower-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px}
+.sy-ef-flower-grid>label{display:grid;grid-template-columns:minmax(100px,.8fr) minmax(0,1.4fr);align-items:center;gap:12px;padding:9px 11px;border:1px solid var(--border,#D7E2DB);border-radius:12px;background:#fff}
+.sy-ef-flower-control{display:flex;align-items:center;gap:10px;min-width:0}
+.sy-ef-flower-control input[type=range]{width:100%;min-width:0;accent-color:#B66D3A;cursor:pointer}
+.sy-ef-flower-control output{flex:none;min-width:18px;text-align:right;color:#B66D3A;font-weight:850;font-size:13px}
+.sy-ef-review-inline textarea{width:100%;min-height:68px;resize:vertical;border:1px solid var(--border,#D7E2DB);border-radius:9px;padding:9px;background:#fff;color:var(--text,#16262B);font:inherit;line-height:1.5}
+.sy-ef-review-inline textarea:focus,.sy-ef-review-inline input:focus,.sy-ef-review-inline select:focus,.sy-ef-flower-grid select:focus{outline:2px solid #b4d7cf;outline-offset:1px}
+.sy-ef-health-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.sy-ef-review-side{align-self:start;position:sticky;top:14px}
+@media(max-width:900px){.sy-ef-review-layout{grid-template-columns:minmax(0,1fr)}.sy-ef-review-side{position:static}.sy-ef-health-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.sy-ef-flower-grid{grid-template-columns:1fr}.sy-ef-flower-grid>label{grid-template-columns:110px minmax(0,1fr);padding:8px}.sy-ef-review-inline,.sy-ef-health-grid{grid-template-columns:1fr}.sy-ef-review-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
