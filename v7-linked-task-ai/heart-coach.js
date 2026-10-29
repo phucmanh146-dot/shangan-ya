@@ -90,7 +90,7 @@ function openDailyIntake(){
 }
 function exportFeishuCSV(){
  const all=tasks(),headers=['任务名称','任务类别','安排日期','固定开始时间','预计分钟','实际分钟','硬截止日期','硬截止时刻','必须完成','任务状态','来源链接','备注','父任务ID'];
- const rows=[headers].concat(all.filter(t=>!t.scheduleParent).map(t=>[taskName(t),t.category||'',t.date||'',typeof t.startMinutes==='number'?String(Math.floor(t.startMinutes/60)).padStart(2,'0')+':'+String(t.startMinutes%60).padStart(2,'0'):'',t.plannedMinutes||t.estMinutes||t.estimatedMinutes||'',t.actualMinutes||'',t.dueDate||'',t.dueTime||'',t.mustDo||t.required?'是':'否',taskDone(t)?'已完成':statusLabel(t,account()||{}),t.sourceUrl||'',t.description||'',t.parentTaskId||''])];
+ const rows=[headers].concat(all.filter(t=>!t.scheduleParent).map(t=>[taskName(t),t.category||'',t.date||'',typeof t.startMinutes==='number'?String(Math.floor(t.startMinutes/60)).padStart(2,'0')+':'+String(t.startMinutes%60).padStart(2,'0'):'',t.plannedMinutes||t.estMinutes||t.estimatedMinutes||'',t.actualMinutes||'',t.dueDate||'',t.dueTime||'',t.mustDo||t.required?'是':'否',taskDone(t)?'已完成':statusLabel(t,account()||{}),t.sourceUrl||'',t.description||'',t.parentTaskId||'']));
  const csv='\uFEFF'+rows.map(row=>row.map(v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='上岸鸭_飞书任务表_'+todayKey()+'.csv';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);notify('已导出 CSV，可导入飞书多维表格；这不是直连飞书同步。');
 }
