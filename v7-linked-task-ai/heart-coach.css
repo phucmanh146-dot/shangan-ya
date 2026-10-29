@@ -106,3 +106,16 @@
 .hc-schedule-hint{margin:0;background:#f7f1e8;border-radius:10px;padding:10px 12px;font-size:11px;line-height:1.65;color:#806c58}
 .hc-schedule-actions{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding-top:4px}
 @media(max-width:560px){.hc-task-row-actions{width:100%;margin-left:28px;justify-content:flex-start}.hc-schedule-modal{padding:16px;border-radius:16px}.hc-schedule-two{grid-template-columns:1fr}}
+
+/* Daily hard-deadline intake, weekly flexible schedule and Feishu-compatible export */
+.hc-task-toolbar{display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin:8px 0 12px}
+.hc-task-toolbar .hc-btn{min-height:34px;font-size:11px;padding:8px 11px}
+.hc-task-toolbar .hc-urgent-btn{margin:0}
+.hc-deadline-btn{background:#2f735b!important;border-color:#2f735b!important;color:#fff!important}
+.hc-intake-modal textarea{box-sizing:border-box;width:100%;resize:vertical;min-height:76px;border:1px solid #e7d9ca;border-radius:10px;padding:10px 11px;background:#fff;color:#2c382f;font:inherit;font-weight:500;line-height:1.55}
+.hc-intake-check{display:flex!important;grid-template-columns:none!important;align-items:center;gap:8px!important;background:#f8f0e6;border:1px solid #eee0d1;border-radius:10px;padding:10px 12px}
+.hc-intake-check input{width:16px!important;height:16px;min-width:16px!important;margin:0;accent-color:#2f735b}
+.sy-deadline-banner[data-stage="day-before"]{border-color:#d4a46c;box-shadow:0 12px 38px #b77b2b24}
+.sy-deadline-banner[data-stage="urgent"],.sy-deadline-banner[data-stage="overdue"]{border-color:#c54b43;box-shadow:0 12px 38px #c54b4328}
+.sy-deadline-banner[data-stage="urgent"] header,.sy-deadline-banner[data-stage="overdue"] header{color:#b93636}
+@media(max-width:560px){.hc-task-toolbar{align-items:stretch}.hc-task-toolbar .hc-btn{flex:1 1 45%;justify-content:center}.hc-task-toolbar .hc-urgent-btn{flex:1 1 100%}}
