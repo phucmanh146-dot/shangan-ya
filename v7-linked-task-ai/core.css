@@ -1654,3 +1654,9 @@ to{opacity:1;transform:translateY(0);}
 .plan-report-spill-row .plan-report-time{font-variant-numeric:tabular-nums;font-weight:700;color:var(--link);white-space:nowrap;}
 .plan-report-spill-row .plan-report-name{font-weight:600;color:var(--text);}
 .plan-report-spill-row .plan-report-why{font-size:.76rem;color:var(--text-soft);flex-basis:100%;}
+
+
+/* V8 unified shell: stronger branded sidebar and wider work area. */
+@media(min-width:1000px){.app-sidebar{width:248px;padding:24px 18px;gap:20px}.app-sidebar-brand{font-size:1.28rem;gap:11px;padding:4px 8px}.app-sidebar-brand svg{width:32px;height:32px}.app-main{min-width:0;padding:clamp(22px,3vw,38px) clamp(22px,3.2vw,42px) 60px}}
+@media(min-width:761px) and (max-width:999px){.app-sidebar{width:224px;padding:18px 12px}.app-main{padding:22px}}
+.app-sidebar-brand{font-weight:850;letter-spacing:.01em}.app-sidebar-brand svg{filter:drop-shadow(0 2px 2px rgba(218,143,30,.18))}
