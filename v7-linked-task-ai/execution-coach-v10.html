@@ -388,7 +388,7 @@ if(activeTask&&remaining[activeTask.id])remaining[activeTask.id].remain=Math.max
 var gaps=freeForDay(fixed,projectedEnd),freeTotal=gaps.reduce(function(s,g){return s+g.end-g.start},0);
 var fixedMinutes=unionMinutes(fixed),awakeFixed=unionMinutes(fixed.filter(function(x){return x.name!=='睡眠'&&x.name.indexOf('睡眠（跨夜）')!==0})),workConsumed=di===0?loggedMinutesForDay(day):0,wastedConsumed=di===0?timeLossMinutesForDay(day):0;
 if(di===0&&activeTask&&sessionStartedAt&&dayKey(new Date(sessionStartedAt))===dayKey(day))workConsumed+=Math.ceil(liveMs/60000);
-var awakeLimit=Math.max(0,(Number(state.dailyHours)||8)*60-awakeFixed-workConsumed-wastedConsumed);
+var awakeLimit=Math.max(0,(Number(state.dailyHours)||8)*60-awakeFixed-workConsumed-wastedConsumed-activeBlock);
 var usable=Math.min(freeTotal,awakeLimit),budget=Math.floor(usable*(1-reserveRate)),used=0,items=[];
 var dayEndStamp=new Date(day.getFullYear(),day.getMonth(),day.getDate()+1).getTime()-1;
 var eligible=Object.keys(remaining).map(function(k){return remaining[k]}).filter(function(x){return x.remain>0&&(!x.plan||x.plan.getTime()<=dayEndStamp)&&(!x.startAt||x.startAt.getTime()<=dayEndStamp)});
