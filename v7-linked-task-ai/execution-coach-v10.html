@@ -95,7 +95,7 @@ if(/视频|图片|截图|录屏|素材|脚本|照片/.test(s))return category===
 if(/代码|仓库|GitHub|Demo|原型|PRD|PPT|作品/.test(s))return category==='竞赛'?3:category==='学习 AI 产品经理'?3:3;
 if(/真题|错题|刷题|练习|题库/.test(s))return 3;
 if(/数据|复盘|提交|回执|结果|成片/.test(s))return 4;
-return 4;
+return -1;
 }
 function renderResourceHierarchy(t){
 var names=resourceLayerNames(t.category),raw=String(t.materials||'').split(/[\\n；;]+/).map(function(x){return x.trim()}).filter(Boolean);
