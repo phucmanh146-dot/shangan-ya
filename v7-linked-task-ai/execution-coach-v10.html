@@ -175,9 +175,13 @@ function renderAutoPlan(){var el=document.getElementById('autoPlan');if(!el)retu
 function checkScheduledStarts(){var now=Date.now();state.tasks.filter(function(t){return !t.containerOnly&&!t.done&&t.plannedStart&&new Date(t.plannedStart).getTime()<=now}).forEach(function(t){var seen=state.scheduledPrompts.some(function(x){return x.taskId===t.id});if(!seen){state.scheduledPrompts.push({taskId:t.id,at:now});save();if(document.hidden&&'Notification'in window&&Notification.permission==='granted'){new Notification('上岸鸭 · 到计划开始时间了',{body:'现在开始「'+t.name+'」吗？'})}else if(!document.getElementById('urgentOverlay').classList.contains('show')){if(confirm('「'+t.name+'」到了计划开始时间。现在开始吗？'))begin(t.id)}}});}
 function checkMorningPrompt(){var now=new Date(),day=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0'),saved=localStorage.getItem(MORNING_KEY);if(now.getHours()>=8&&saved!==day&&!document.hidden){document.getElementById('morningOverlay').classList.add('show')}}
 function splitMorningEntries(raw){
-var chunks=raw.split(/[；;\n]+/).map(function(x){return x.trim()}).filter(Boolean);if(chunks.length>1)return chunks;
-var re=/([^;；\n]*?(?:\d{1,2}\s*[:：]\s*\d{2}\s*(?:截止|前)?|\d{1,2}\s*点(?:半|\d{1,2}\s*分?)?\s*(?:截止|前)?))/g,m,out=[];
-while((m=re.exec(raw))!==null){if(m[1].trim())out.push(m[1].trim())}return out.length>1?out:chunks;
+/* 用户明确说分号代表一项；先严格按中英文分号和换行拆分。 */
+var chunks=raw.split(/[；;\n]+/).map(function(x){return x.trim()}).filter(Boolean);
+if(chunks.length>1)return chunks;
+/* 语音识别偶尔漏掉分号：同一句里若有多个截止时刻，则按每个时刻切开。 */
+var re=/([^，,。]*?)(\d{1,2}\s*[:：]\s*\d{2}|\d{1,2}\s*点(?:半|\s*\d{1,2}\s*分?)?)(?:\s*(?:截止|前完成|前提交|前交))?/g,m,out=[];
+while((m=re.exec(raw))!==null){var part=(m[1]+m[2]).trim();if(part)out.push(part)}
+return out.length>1?out:chunks;
 }
 function classifyMorningTask(line){
 if(/考研|督学|背单词|考研英语|考研数学|真题刷题/.test(line))return '考研督学';
@@ -189,20 +193,32 @@ return '待分类';
 }
 function startMorningTask(){
 var raw=document.getElementById('morningTaskText').value.trim();if(!raw){toast('请先说出或填写任务；没有新增事项请点“今天没有新增事项”。');return}
+var lines=splitMorningEntries(raw),today=new Date(),added=0,updated=0,unclassified=[];
 localStorage.setItem(MORNING_KEY,localDay(new Date()));document.getElementById('morningOverlay').classList.remove('show');
-var lines=splitMorningEntries(raw),today=new Date(),added=0,updated=0;
 lines.forEach(function(line){
-var date='',time='',hasTime=false,m=line.match(/(\d{4}-\d{1,2}-\d{1,2})/);
-if(m)date=m[1];else if(/后天/.test(line)){var d=new Date(today);d.setDate(d.getDate()+2);date=localDay(d)}else if(/明天/.test(line)){var d=new Date(today);d.setDate(d.getDate()+1);date=localDay(d)}else date=localDay(today);
+var date='',time='',hasTime=false,m=line.match(/(\d{4})[-年](\d{1,2})[-月](\d{1,2})日?/);
+if(m)date=m[1]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[3]).padStart(2,'0');
+else if(/(\d{1,2})月(\d{1,2})日?/.test(line)){var md=line.match(/(\d{1,2})月(\d{1,2})日?/);date=today.getFullYear()+'-'+String(md[1]).padStart(2,'0')+'-'+String(md[2]).padStart(2,'0')}
+else if(/后天/.test(line)){var d=new Date(today);d.setDate(d.getDate()+2);date=localDay(d)}
+else if(/明天/.test(line)){var d=new Date(today);d.setDate(d.getDate()+1);date=localDay(d)}
+else date=localDay(today);
 var tm=line.match(/(\d{1,2})\s*[:：]\s*(\d{2})/);if(tm){time=String(tm[1]).padStart(2,'0')+':'+tm[2];hasTime=true}else{var cn=line.match(/(\d{1,2})\s*点(?:\s*(半|\d{1,2}\s*分?))?/);if(cn){time=String(cn[1]).padStart(2,'0')+':'+(cn[2]==='半'?'30':cn[2]?String(parseInt(cn[2],10)||0).padStart(2,'0'):'00');hasTime=true}}time=time||'18:00';
-var cat=classifyMorningTask(line),name=line.replace(/\d{4}-\d{1,2}-\d{1,2}/g,' ').replace(/\d{1,2}\s*[:：]\s*\d{2}/g,' ').replace(/\d{1,2}\s*点(?:\s*(?:半|\d{1,2}\s*分?))?/g,' ').replace(/(截止|到期|之前|前完成|提交|完成|今天|今日|明天|后天)/g,' ').replace(/[，,。]+/g,' ').trim()||line;
-var type=cat==='运营'?(/素材|资料|找/.test(name)?'选题与素材搜集':/剪辑|拍摄|视频/.test(name)?'视频制作与剪辑':'账号运营任务'):cat==='竞赛'?'竞赛交付与材料准备':cat==='学习 AI 产品经理'?'需求分析与产品实战':cat==='学校作业'?'课程作业与资料整理':cat==='考研督学'?'科目学习与督学':'待确认任务';
-var parent=cat==='运营'?'运营任务主线':cat==='竞赛'?'竞赛任务主线':cat==='学习 AI 产品经理'?'AI 产品经理学习主线':cat==='学校作业'?'学校作业主线':cat==='考研督学'?'考研督学主线':'待分类任务';
-var existing=state.tasks.find(function(t){return !t.containerOnly&&t.name===name&&t.dueDate===date&&String(t.dueTime||'18:00')===time&&!t.done});
-var d={category:cat,type:type,name:name.slice(0,100),estimate:cat==='考研督学'?45:cat==='竞赛'?45:cat==='学校作业'?40:30,dueDate:date,dueTime:time,hardDeadline:true,deadlineTimeConfirmed:hasTime,parent:parent,acceptance:'在 '+(hasTime?time:'当天截止时刻待确认')+' 前完成，并记录提交 / 完成凭证',materials:'',done:false,stage:'待拆解',sourceLabel:'今日 08:00 晨间语音 / 文本汇报',learningKey:'curve:'+cat+'::'+type+'::'+name};
-if(existing){Object.assign(existing,d);updated++}else{state.tasks.unshift(Object.assign({id:id()},d));added++}
+var cat=classifyMorningTask(line),name=line.replace(/\d{4}[-年]\d{1,2}[-月]\d{1,2}日?/g,' ').replace(/\d{1,2}月\d{1,2}日?/g,' ').replace(/\d{1,2}\s*[:：]\s*\d{2}/g,' ').replace(/\d{1,2}\s*点(?:\s*(?:半|\d{1,2}\s*分?))?/g,' ').replace(/(截止|到期|之前|前完成|前提交|前交|提交|完成|今天|今日|明天|后天)/g,' ').replace(/[，,。]+/g,' ').trim()||line;
+var type=cat==='运营'?(/素材|资料|找/.test(name)?'选题与素材搜集':/剪辑|拍摄|视频/.test(name)?'视频制作与剪辑':'账号运营任务'):cat==='竞赛'?(/职规赛|职业生涯规划/.test(name)?'职业生涯规划赛项任务':'竞赛规则与交付准备'):cat==='学习 AI 产品经理'?'需求分析与产品实战':cat==='学校作业'?(/公司战略|风险管理|蓝海战略/.test(name)?'公司战略与风险管理｜蓝海战略学习':'课程作业与资料整理'):cat==='考研督学'?'考研科目学习与督学':'待确认任务';
+var parent=cat==='运营'?'运营账号任务':cat==='竞赛'?(/职规赛|职业生涯规划/.test(name)?'职业生涯规划大赛':'竞赛任务主线'):cat==='学习 AI 产品经理'?'AI 产品经理学习主线':cat==='学校作业'?(/公司战略|风险管理|蓝海战略/.test(name)?'公司战略与风险管理课程':'学校作业主线'):cat==='考研督学'?'考研督学':'待分类任务';
+if(cat==='待分类')unclassified.push(name);
+/* 同名未完成任务优先更新 DDL，不重建任务，不覆盖原估时、资料、耗时日志和学习曲线。 */
+var existing=state.tasks.find(function(t){return !t.containerOnly&&!t.done&&t.name===name});
+if(existing){
+existing.category=cat;existing.type=type;existing.parent=parent;existing.dueDate=date;existing.dueTime=time;existing.hardDeadline=true;existing.deadlineTimeConfirmed=hasTime;existing.sourceLabel='今日 08:00 晨间语音 / 文本汇报';existing.lastDeadlineReportedAt=Date.now();if(!existing.learningKey)existing.learningKey='curve:'+cat+'::'+type+'::'+name;updated++;
+}else{
+var estimate0=cat==='考研督学'?45:cat==='竞赛'?45:cat==='学校作业'?40:cat==='学习 AI 产品经理'?35:30;
+state.tasks.unshift({id:id(),category:cat,type:type,name:name.slice(0,100),estimate:estimate0,dueDate:date,dueTime:time,hardDeadline:true,deadlineTimeConfirmed:hasTime,parent:parent,acceptance:'在 '+(hasTime?time:'当天截止时刻待确认')+' 前完成，并记录提交 / 完成凭证',materials:'',done:false,stage:'待拆解',sourceLabel:'今日 08:00 晨间语音 / 文本汇报',learningKey:'curve:'+cat+'::'+type+'::'+name});
+added++;
+}
 });
-save();renderAll();view('tasks');document.getElementById('allTaskList').scrollIntoView({behavior:'smooth',block:'start'});toast('识别 '+lines.length+' 项：新增 '+added+' 项，更新 '+updated+' 项。已按类别分别归档，请检查待分类任务和截止日期。');
+save();renderAll();view('tasks');document.getElementById('allTaskList').scrollIntoView({behavior:'smooth',block:'start'});
+toast('按分号识别 '+lines.length+' 项：新增 '+added+' 项，更新 '+updated+' 项。'+(unclassified.length?'另有 '+unclassified.length+' 项待分类。':''));
 }
 function checkDeadlines(){var now=Date.now(),list=state.tasks.filter(function(t){return !t.containerOnly&&!t.done&&due(t)}).map(function(t){return {t:t,d:due(t),left:due(t).getTime()-now}}).filter(function(x){return x.left>0&&x.left<=48*3600000}).sort(function(a,b){return a.left-b.left}),banner=document.getElementById('deadlineBanner');if(!list.length){banner.classList.add('hidden');return}var x=list[0],stage=x.left<=24*3600000?24:48;document.getElementById('deadlineName').textContent=x.t.name;document.getElementById('deadlineText').textContent=(x.t.hardDeadline?'硬截止 ':'计划目标日 ')+x.d.toLocaleString('zh-CN')+' · 剩余约 '+Math.max(1,Math.ceil(x.left/3600000))+' 小时';banner.classList.remove('hidden');banner.dataset.task=x.t.id;var snooze=state.deadlineSnoozes[x.t.id]||0,already=state.deadlineLogs.some(function(l){return l.taskId===x.t.id&&l.stage===stage});if(Date.now()>snooze&&!already){if(document.hidden){if('Notification'in window&&Notification.permission==='granted'){new Notification((x.t.hardDeadline?'上岸鸭 · ':'上岸鸭 · 计划目标 · ')+(stage===24?'DDL 前一天红线':'DDL 提前两天提醒'),{body:x.t.name+' · 剩余约 '+Math.max(1,Math.ceil(x.left/3600000))+' 小时'});state.deadlineLogs.push({taskId:x.t.id,stage:stage,at:Date.now()});save()}}else openDeadline(x.t,x.left)}}
 function openDeadline(t,left){deadlineId=t.id;var when=t.dueTime?(t.deadlineTimeConfirmed?t.dueTime:t.dueTime+'（待官方核对）'):'当天时刻待确认';document.getElementById('deadlineDialogText').textContent='「'+t.name+'」的'+(t.hardDeadline?'硬截止':'计划目标日')+'为 '+t.dueDate+' '+when+'。剩余约 '+Math.max(1,Math.ceil(left/3600000))+' 小时。请确认完成进度、遇到的困难和当前精力。';document.querySelector('#deadlineOverlay h2').textContent=(t.hardDeadline?'🔴 硬截止':'🟠 计划目标')+(left<=24*3600000?' · 前一天进度确认':' · 提前两天风险检查');document.getElementById('deadlineOverlay').classList.add('show');var stage=left<=24*3600000?24:48;if(!state.deadlineLogs.some(function(l){return l.taskId===t.id&&l.stage===stage})){state.deadlineLogs.push({taskId:t.id,stage:stage,at:Date.now()});save()}}
