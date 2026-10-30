@@ -251,100 +251,106 @@ return h>=8&&h<18?2:0;
 }
 function renderAutoPlan(){
 var el=document.getElementById('autoPlan');if(!el)return;
-var now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),remaining={},days=[];
-function tm(v){return String(Math.floor(v/60)).padStart(2,'0')+':'+String(v%60).padStart(2,'0')}
-function dayLabel(d){return d.toLocaleDateString('zh-CN',{month:'numeric',day:'numeric',weekday:'short'})}
+var now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),remaining={},days=[],energySamples={};
+state.logs.forEach(function(l){
+if(l.startHour!==undefined&&Number(l.startEnergy)>0){var k=Number(l.startHour);(energySamples[k]||(energySamples[k]=[])).push(Number(l.startEnergy))}
+});
 function dayKey(d){return localDay(d)}
 function overlaps(a,b,c,d){return a<d&&c<b}
-function fixedForDay(day,index){
-var out=[];
-state.fixed.forEach(function(f){
-if(!plannerDayApplies(f,day,index))return;
-var s=plannerMinutes(f.start),e=plannerMinutes(f.end);
-if(e>s)out.push({name:f.name,start:s,end:e,type:'fixed'});
-else{out.push({name:f.name,start:0,end:e,type:'fixed',overnight:true});out.push({name:f.name,start:s,end:1440,type:'fixed',overnight:true})}
-});
-return out.filter(function(x){return x.end>x.start}).sort(function(a,b){return a.start-b.start});
+function unionMinutes(rows){
+var a=rows.map(function(x){return [Math.max(420,x.start),Math.min(1410,x.end)]}).filter(function(x){return x[1]>x[0]}).sort(function(x,y){return x[0]-y[0]}),m=[];
+a.forEach(function(x){var z=m[m.length-1];if(z&&x[0]<=z[1])z[1]=Math.max(z[1],x[1]);else m.push(x.slice())});
+return m.reduce(function(s,x){return s+x[1]-x[0]},0);
 }
-function freeForDay(fixed,cut){
-var blocks=fixed.filter(function(x){return x.end>420&&x.start<1410}).map(function(x){return [Math.max(420,x.start),Math.min(1410,x.end)]}).sort(function(a,b){return a[0]-b[0]);
-var merged=[];blocks.forEach(function(x){var z=merged[merged.length-1];if(z&&x[0]<=z[1])z[1]=Math.max(z[1],x[1]);else merged.push(x.slice())});
-var gaps=[],p=Math.max(420,cut);merged.forEach(function(x){if(x[1]<=p)return;if(x[0]>p)gaps.push({start:p,end:x[0]});p=Math.max(p,x[1])});if(p<1410)gaps.push({start:p,end:1410});return gaps;
+function energyFit(task,hour){
+var samples=energySamples[hour],observed=samples&&samples.length?samples.reduce(function(s,x){return s+x},0)/samples.length:null;
+if(observed!==null)return task.level==='高'?observed:task.level==='低'?6-observed:5-Math.abs(observed-3);
+if(task.level==='高')return (hour>=9&&hour<11)||(hour>=14&&hour<16)?3:(hour>=8&&hour<18?1:0);
+if(task.level==='低')return hour>=15?3:(hour>=12&&hour<19?2:1);
+return hour>=8&&hour<18?2:0;
 }
-function urgency(x,day){
-var end=x.deadline?x.deadline.getTime():Infinity;
-var mins=x.remain;
-var slack=end===Infinity?Infinity:(end-(day.getTime()+86400000))/60000-mins;
-return {end:end,slack:slack};
+function deadlineMinute(task){return task.deadline?plannerMinutes(task.t.dueTime||'23:59'):1440}
+function taskOverdue(task,day,index){
+if(!task.deadline)return false;
+var deadlineDay=new Date(task.deadline.getFullYear(),task.deadline.getMonth(),task.deadline.getDate());
+if(deadlineDay<day)return true;
+return index===0&&deadlineDay.getTime()===day.getTime()&&deadlineMinute(task)<=now.getHours()*60+now.getMinutes();
 }
-function sortTasks(list,day){
+function sortTasks(list,day,hour){
 return list.sort(function(a,b){
-var ua=urgency(a,day),ub=urgency(b,day);
-if(ua.end!==ub.end)return ua.end-ub.end;
+var ad=a.deadline?a.deadline.getTime():Infinity,bd=b.deadline?b.deadline.getTime():Infinity;
+if(ad!==bd)return ad-bd;
 if(!!a.t.hardDeadline!==!!b.t.hardDeadline)return a.t.hardDeadline?-1:1;
-if(ua.slack!==ub.slack)return ua.slack-ub.slack;
+var af=energyFit(a,hour),bf=energyFit(b,hour);if(af!==bf)return bf-af;
 return b.remain-a.remain;
 });
 }
 state.tasks.forEach(function(t){
 if(t.containerOnly||t.done)return;
-var r=Math.max(0,estimate(t)-(Number(t.accumulatedMinutes)||0));
-if(r<=0)return;
-var deadline=due(t),plan=t.planDate?new Date(t.planDate+'T00:00:00'):null;
-remaining[t.id]={t:t,remain:r,deadline:deadline,level:plannerEnergy(t),plan:plan};
+var r=Math.max(0,estimate(t)-(Number(t.accumulatedMinutes)||0));if(r<=0)return;
+remaining[t.id]={t:t,remain:r,deadline:due(t),level:plannerEnergy(t),plan:t.planDate?new Date(t.planDate+'T00:00:00'):null};
 });
 for(var di=0;di<7;di++){
 var day=new Date(today);day.setDate(day.getDate()+di);
 var fixed=fixedForDay(day,di),cut=di===0?now.getHours()*60+now.getMinutes():420;
 var gaps=freeForDay(fixed,cut),freeTotal=gaps.reduce(function(s,g){return s+g.end-g.start},0);
-var budget=Math.floor(freeTotal*.8),used=0,items=[];
+var fixedAwake=unionMinutes(fixed),awakeLimit=Math.max(0,(Number(state.dailyHours)||8)*60-fixedAwake);
+var usable=Math.min(freeTotal,awakeLimit),budget=Math.floor(usable*.8),used=0,items=[];
 var eligible=Object.keys(remaining).map(function(k){return remaining[k]}).filter(function(x){
-if(x.remain<=0)return false;
+if(x.remain<=0||taskOverdue(x,day,di))return false;
 if(x.plan&&x.plan.getTime()>day.getTime()+86399999)return false;
-if(x.deadline&&x.deadline.getTime()<day.getTime()&&di>0)return false;
+if(x.deadline&&new Date(x.deadline.getFullYear(),x.deadline.getMonth(),x.deadline.getDate())<day)return false;
 return true;
 });
-sortTasks(eligible,day);
 gaps.forEach(function(gap){
 var p=gap.start,guard=0;
-while(p<gap.end-9&&budget>=15&&guard++<100){
-eligible=eligible.filter(function(x){return x.remain>0});
-if(!eligible.length)break;
-sortTasks(eligible,day);
-var task=eligible[0],room=gap.end-p;
-if(room<15)break;
+while(p<gap.end-9&&budget>=15&&guard++<120){
+var current=eligible.filter(function(x){
+if(x.remain<=0)return false;
+if(x.deadline&&dayKey(x.deadline)===dayKey(day)&&deadlineMinute(x)<=p)return false;
+return true;
+});
+if(!current.length)break;
+sortTasks(current,day,Math.floor(p/60));
+var task=current[0],room=gap.end-p;
+if(task.deadline&&dayKey(task.deadline)===dayKey(day))room=Math.min(room,deadlineMinute(task)-p);
+if(room<15){task.remain=task.remain;break}
 var work=Math.min(50,task.remain,room,budget);
-if(work<15&&task.remain>work)break;
+if(work<15)break;
 var item={type:'task',t:task.t,start:p,end:p+work,mins:work,level:task.level,deadline:task.deadline};
 items.push(item);p+=work;budget-=work;used+=work;task.remain-=work;
-if(task.remain>0&&p+10<=gap.end&&budget>=10){items.push({type:'rest',name:'眼睛休息 / 起身活动',start:p,end:p+10,mins:10});p+=10;budget-=10;used+=10}
-else if(task.remain<=0&&eligible.some(function(x){return x.remain>0})&&p+10<=gap.end&&budget>=10){items.push({type:'rest',name:'任务切换 / 恢复',start:p,end:p+10,mins:10});p+=10;budget-=10;used+=10}
+if(p+10<=gap.end&&budget>=10&&(task.remain>0||current.some(function(x){return x!==task&&x.remain>0}))){
+items.push({type:'rest',name:'眼睛休息 / 起身活动',start:p,end:p+10,mins:10});p+=10;budget-=10;used+=10;
+}
 }
 if(p<gap.end)items.push({type:'buffer',name:'机动缓冲 / 自由时间',start:p,end:gap.end,mins:gap.end-p});
 });
 fixed.forEach(function(f){items.push(f)});
-items.sort(function(a,b){return a.start-b.start||((a.type==='fixed')?-1:1)});
 var conflicts=[];
 for(var i=0;i<fixed.length;i++)for(var j=i+1;j<fixed.length;j++)if(overlaps(fixed[i].start,fixed[i].end,fixed[j].start,fixed[j].end))conflicts.push(fixed[i].name+' 与 '+fixed[j].name);
 var conflictText=Array.from(new Set(conflicts));
 var missed=eligible.filter(function(x){return x.remain>0});
-var htmlRows=items.map(function(x){
+var htmlRows=items.sort(function(a,b){return a.start-b.start||((a.type==='fixed')?-1:1)}).map(function(x){
 var ended=di===0&&x.end<=cut,tag='',name='',meta='',color='#e7eee9';
 if(x.type==='fixed'){tag='固定事务';name=x.name;meta='已锁定，不安排任务';color='#dce6e1'}
-else if(x.type==='task'){tag='执行任务';name=x.t.name;meta=x.mins+' 分钟 · '+x.level+'精力 · DDL '+(x.deadline?dayKey(x.deadline)+' '+(x.t.dueTime||'18:00'):'未设置')+' · '+learningSummary(x.t);color='#cfe5da'}
+else if(x.type==='task'){
+tag=x.t.hardDeadline?'硬截止任务':'DDL任务';name=x.t.name;var predicted=estimate(x.t),acc=Number(x.t.accumulatedMinutes)||0;
+meta='本段 '+x.mins+' 分钟 · 预计总耗时 '+predicted+' 分钟 · 已累计 '+acc+' 分钟 · '+x.level+'精力 · DDL '+(x.deadline?dayKey(x.deadline)+' '+(x.t.dueTime||'23:59'):'未设置')+' · '+learningSummary(x.t);
+color=x.t.hardDeadline?'#cfe0d8':'#dce9e3';
+}
 else if(x.type==='rest'){tag='恢复休息';name=x.name;meta=x.mins+' 分钟 · 不安排新任务';color='#f4e8cf'}
-else{tag='缓冲 / 自由';name=x.name;meta=x.mins+' 分钟 · 留给突发情况、发呆或自由安排';color='#e8e9ef'}
+else{tag='缓冲 / 自由';name=x.name;meta=x.mins+' 分钟 · 留给突发情况、疲惫或自由安排';color='#e8e9ef'}
 var button=x.type==='task'?'<button class="btn soft" data-start="'+esc(x.t.id)+'">开始计时</button>':'';
-return '<div style="display:grid;grid-template-columns:92px 5px minmax(0,1fr);gap:9px;align-items:stretch;padding:9px 7px;border-bottom:1px solid var(--line);'+(ended?'opacity:.48;':'')+'"><div style="font-weight:750;font-size:13px;white-space:nowrap">'+tm(x.start)+'<br><span style="color:var(--muted);font-weight:500">至 '+tm(x.end)+'</span></div><div style="background:'+color+';border-radius:8px;min-height:48px"></div><div style="min-width:0"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><b style="font-size:14px">'+esc(name)+'</b><span class="tag">'+tag+'</span>'+button+'</div><div class="task-meta">'+esc(meta)+(ended?' · 已结束':'')+'</div></div></div>';
+return '<div style="display:grid;grid-template-columns:92px 5px minmax(0,1fr);gap:9px;align-items:stretch;padding:9px 7px;border-bottom:1px solid var(--line);'+(ended?'opacity:.48;':'')+'"><div style="font-weight:750;font-size:13px;white-space:nowrap">'+plannerClock(x.start)+'<br><span style="color:var(--muted);font-weight:500">至 '+plannerClock(x.end)+'</span></div><div style="background:'+color+';border-radius:8px;min-height:48px"></div><div style="min-width:0"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><b style="font-size:14px">'+esc(name)+'</b><span class="tag">'+tag+'</span>'+button+'</div><div class="task-meta">'+esc(meta)+(ended?' · 已结束':'')+'</div></div></div>';
 }).join('');
 var totalWork=items.filter(function(x){return x.type==='task'}).reduce(function(s,x){return s+x.mins},0);
-var fixedMinutes=fixed.filter(function(x){return x.start>=420&&x.end<=1410}).reduce(function(s,x){return s+x.end-x.start},0);
-var heading='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><b style="font-size:16px">'+dayLabel(day)+(di===0?' · 今天':'')+'</b><span class="status">'+totalWork+' 分钟任务 · '+used+' 分钟已排</span></div>';
+var fixedMinutes=unionMinutes(fixed);
+var heading='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><b style="font-size:16px">'+day.toLocaleDateString('zh-CN',{month:'numeric',day:'numeric',weekday:'short'})+(di===0?' · 今天':'')+'</b><span class="status">'+totalWork+' 分钟任务 · '+used+' 分钟含休息已排</span></div>';
 var conflict=conflictText.length?'<div class="info" style="border-color:#d88b73;color:#a45140">固定时间冲突：'+conflictText.map(esc).join('；')+'。请调整其中一个时间，系统不会擅自覆盖。</div>':'';
 var miss=missed.length?'<div class="info" style="border-color:#d88b73;color:#a45140">DDL 前容量不足 / 尚未排入：'+missed.map(function(x){return esc(x.t.name)+'（还需 '+Math.ceil(x.remain)+' 分钟）'}).join('；')+'</div>':'';
-days.push('<section class="card" style="margin:10px 0;padding:12px">'+heading+'<div class="task-meta" style="margin:4px 0 8px">固定事务 '+fixedMinutes+' 分钟 · 可用空档 '+freeTotal+' 分钟 · 已预留约 20% 机动容量</div>'+conflict+htmlRows+miss+'</section>');
+days.push('<section class="card" style="margin:10px 0;padding:12px">'+heading+'<div class="task-meta" style="margin:4px 0 8px">固定事务 '+fixedMinutes+' 分钟 · 可用空档 '+freeTotal+' 分钟 · 每日清醒预算 '+Math.floor(awakeLimit/60)+'小时'+(awakeLimit%60?' '+awakeLimit%60+'分钟':'')+' · 已预留约 20% 机动容量</div>'+conflict+htmlRows+miss+'</section>');
 }
-el.innerHTML=days.join('')+'<div class="info"><b>动态排期逻辑：</b>固定事务优先锁定；未完成任务按 DDL、硬截止、剩余预测耗时和精力等级排序；每次最多安排 50 分钟专注块，连续工作后插入 10 分钟恢复；额外保留约 20% 空档作为突发与自由时间。完成任务、记录实际耗时或疲惫反馈后，点击「重新计算」更新后续时间。若固定事务互相重叠，会明确标红提示，不会假装它们都能执行。</div>';
+el.innerHTML=days.join('')+'<div class="info"><b>动态排期逻辑：</b>固定事务先锁定；任务按 DDL、硬截止、个人预测耗时和精力等级排序；每次最多安排 50 分钟专注块，连续工作后插入 10 分钟恢复；每天按清醒时间预算限制任务总量，并额外保留约 20% 空档给突发、疲惫和自由时间。任务开始时记录的精力会逐渐校准适合你的时段。完成任务、记录实际耗时或疲惫反馈后，点击「重新计算」更新后续时间；不会自动修改原 DDL。</div>';
 }
 function checkScheduledStarts(){var now=Date.now();state.tasks.filter(function(t){return !t.containerOnly&&!t.done&&t.plannedStart&&new Date(t.plannedStart).getTime()<=now}).forEach(function(t){var seen=state.scheduledPrompts.some(function(x){return x.taskId===t.id});if(!seen){state.scheduledPrompts.push({taskId:t.id,at:now});save();if(document.hidden&&'Notification'in window&&Notification.permission==='granted'){new Notification('上岸鸭 · 到计划开始时间了',{body:'现在开始「'+t.name+'」吗？'})}else if(!document.getElementById('urgentOverlay').classList.contains('show')){if(confirm('「'+t.name+'」到了计划开始时间。现在开始吗？'))begin(t.id)}}});}
 function checkMorningPrompt(){var now=new Date(),day=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0'),saved=localStorage.getItem(MORNING_KEY);if(now.getHours()>=8&&saved!==day&&!document.hidden){document.getElementById('morningOverlay').classList.add('show')}}
