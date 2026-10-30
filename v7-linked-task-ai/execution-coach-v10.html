@@ -78,8 +78,8 @@ var map={
 };return map[category]||map['待分类'];
 }
 function renderTaskWorkspace(t){
-var flow=workspaceFlow(t.category),siblings=state.tasks.filter(function(x){return !x.containerOnly&&!x.done&&(x.id===t.id||(t.parent&&x.parent===t.parent))}),materials=String(t.materials||'').split(/\\n+/).map(function(x){return x.trim()}).filter(Boolean),dueText=t.dueDate?(t.dueDate+' '+(t.deadlineTimeConfirmed===false?'时间待核对':(t.dueTime||'18:00'))):'尚未设置 DDL';
-var resourceHtml=materials.length?materials.map(function(m,i){var label=/https?:\\/\\//i.test(m)?'链接资料':/规则|通知|章程|要求/.test(m)?'官方要求':/简历|履历|实习|获奖|证书/.test(m)?'个人履历':/截图|图片|视频|录屏/.test(m)?'图片 / 视频证据':/代码|仓库|GitHub|Demo/i.test(m)?'代码 / Demo':'补充资料';return '<div class="review"><span class="review-dot"></span><div class="review-main"><b>第 '+(i+1)+' 层 · '+label+'</b><span>'+esc(m)+'</span></div></div>'}).join(''):'<div class="import-box"><b>尚未关联资料</b><p class="panel-sub">这里不会虚构已找到的资料。你可以自行收集后粘贴链接、文件名或笔记；系统再按官方要求、背景资料、个人履历、作品证据、交付文件分层整理。</p><button class="btn soft" data-edit="'+t.id+'">补充资料 / 编辑任务</button></div>';
+var flow=workspaceFlow(t.category),siblings=state.tasks.filter(function(x){return !x.containerOnly&&!x.done&&(x.id===t.id||(t.parent&&x.parent===t.parent))}),materials=String(t.materials||'').split(/\n+/).map(function(x){return x.trim()}).filter(Boolean),dueText=t.dueDate?(t.dueDate+' '+(t.deadlineTimeConfirmed===false?'时间待核对':(t.dueTime||'18:00'))):'尚未设置 DDL';
+var resourceHtml=materials.length?materials.map(function(m,i){var label=(m.indexOf('http://')===0||m.indexOf('https://')===0)?'链接资料':/规则|通知|章程|要求|评分/.test(m)?'官方要求':/简历|履历|实习|获奖|证书/.test(m)?'个人履历':/截图|图片|视频|录屏/.test(m)?'图片 / 视频证据':/代码|仓库|GitHub|Demo/i.test(m)?'代码 / Demo':'补充资料';return '<div class="review"><span class="review-dot"></span><div class="review-main"><b>第 '+(i+1)+' 层 · '+label+'</b><span>'+esc(m)+'</span></div></div>'}).join(''):'<div class="import-box"><b>尚未关联资料</b><p class="panel-sub">这里不会虚构已找到的资料。你可以自行收集后粘贴链接、文件名或笔记；系统再按官方要求、背景资料、个人履历、作品证据、交付文件分层整理。</p><button class="btn soft" data-edit="'+t.id+'">补充资料 / 编辑任务</button></div>';
 var subHtml=siblings.map(function(x){return '<div class="task"><div class="task-mark"></div><div><div class="task-title">'+esc(x.name)+'</div><div class="task-meta">'+esc(x.stage||'待执行')+' · 预计 '+estimate(x)+' 分钟 · '+esc(learningSummary(x))+'</div></div><div class="task-actions">'+(x.id===t.id?'<span class="tag">当前任务</span>':'<button data-start="'+x.id+'">进入</button>')+'</div></div>'}).join('');
 var stepHtml=flow.steps.map(function(s,i){return '<div class="phase"><b>第 '+(i+1)+' 层</b><small>'+esc(s)+'</small></div>'}).join('');
 document.getElementById('workspaceTitle').textContent=t.name;
@@ -112,8 +112,8 @@ function renderAutoPlan(){var el=document.getElementById('autoPlan');if(!el)retu
 function checkScheduledStarts(){var now=Date.now();state.tasks.filter(function(t){return !t.containerOnly&&!t.done&&t.plannedStart&&new Date(t.plannedStart).getTime()<=now}).forEach(function(t){var seen=state.scheduledPrompts.some(function(x){return x.taskId===t.id});if(!seen){state.scheduledPrompts.push({taskId:t.id,at:now});save();if(document.hidden&&'Notification'in window&&Notification.permission==='granted'){new Notification('上岸鸭 · 到计划开始时间了',{body:'现在开始「'+t.name+'」吗？'})}else if(!document.getElementById('urgentOverlay').classList.contains('show')){if(confirm('「'+t.name+'」到了计划开始时间。现在开始吗？'))begin(t.id)}}});}
 function checkMorningPrompt(){var now=new Date(),day=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0'),saved=localStorage.getItem(MORNING_KEY);if(now.getHours()>=8&&saved!==day&&!document.hidden){document.getElementById('morningOverlay').classList.add('show')}}
 function splitMorningEntries(raw){
-var chunks=raw.split(/[；;\\n]+/).map(function(x){return x.trim()}).filter(Boolean);if(chunks.length>1)return chunks;
-var re=/([^;；\\n]*?(?:\\d{1,2}\\s*[:：]\\s*\\d{2}\\s*(?:截止|前)?|\\d{1,2}\\s*点(?:半|\\d{1,2}\\s*分?)?\\s*(?:截止|前)?))/g,m,out=[];
+var chunks=raw.split(/[；;\n]+/).map(function(x){return x.trim()}).filter(Boolean);if(chunks.length>1)return chunks;
+var re=/([^;；\n]*?(?:\d{1,2}\s*[:：]\s*\d{2}\s*(?:截止|前)?|\d{1,2}\s*点(?:半|\d{1,2}\s*分?)?\s*(?:截止|前)?))/g,m,out=[];
 while((m=re.exec(raw))!==null){if(m[1].trim())out.push(m[1].trim())}return out.length>1?out:chunks;
 }
 function classifyMorningTask(line){
@@ -129,10 +129,10 @@ var raw=document.getElementById('morningTaskText').value.trim();if(!raw){toast('
 localStorage.setItem(MORNING_KEY,localDay(new Date()));document.getElementById('morningOverlay').classList.remove('show');
 var lines=splitMorningEntries(raw),today=new Date(),added=0,updated=0;
 lines.forEach(function(line){
-var date='',time='',hasTime=false,m=line.match(/(\\d{4}-\\d{1,2}-\\d{1,2})/);
+var date='',time='',hasTime=false,m=line.match(/(\d{4}-\d{1,2}-\d{1,2})/);
 if(m)date=m[1];else if(/后天/.test(line)){var d=new Date(today);d.setDate(d.getDate()+2);date=localDay(d)}else if(/明天/.test(line)){var d=new Date(today);d.setDate(d.getDate()+1);date=localDay(d)}else date=localDay(today);
-var tm=line.match(/(\\d{1,2})\\s*[:：]\\s*(\\d{2})/);if(tm){time=String(tm[1]).padStart(2,'0')+':'+tm[2];hasTime=true}else{var cn=line.match(/(\\d{1,2})\\s*点(?:\\s*(半|\\d{1,2}\\s*分?))?/);if(cn){time=String(cn[1]).padStart(2,'0')+':'+(cn[2]==='半'?'30':cn[2]?String(parseInt(cn[2],10)||0).padStart(2,'0'):'00');hasTime=true}}time=time||'18:00';
-var cat=classifyMorningTask(line),name=line.replace(/\\d{4}-\\d{1,2}-\\d{1,2}/g,' ').replace(/\\d{1,2}\\s*[:：]\\s*\\d{2}/g,' ').replace(/\\d{1,2}\\s*点(?:\\s*(?:半|\\d{1,2}\\s*分?))?/g,' ').replace(/(截止|到期|之前|前完成|提交|完成|今天|今日|明天|后天)/g,' ').replace(/[，,。]+/g,' ').trim()||line;
+var tm=line.match(/(\d{1,2})\s*[:：]\s*(\d{2})/);if(tm){time=String(tm[1]).padStart(2,'0')+':'+tm[2];hasTime=true}else{var cn=line.match(/(\d{1,2})\s*点(?:\s*(半|\d{1,2}\s*分?))?/);if(cn){time=String(cn[1]).padStart(2,'0')+':'+(cn[2]==='半'?'30':cn[2]?String(parseInt(cn[2],10)||0).padStart(2,'0'):'00');hasTime=true}}time=time||'18:00';
+var cat=classifyMorningTask(line),name=line.replace(/\d{4}-\d{1,2}-\d{1,2}/g,' ').replace(/\d{1,2}\s*[:：]\s*\d{2}/g,' ').replace(/\d{1,2}\s*点(?:\s*(?:半|\d{1,2}\s*分?))?/g,' ').replace(/(截止|到期|之前|前完成|提交|完成|今天|今日|明天|后天)/g,' ').replace(/[，,。]+/g,' ').trim()||line;
 var type=cat==='运营'?(/素材|资料|找/.test(name)?'选题与素材搜集':/剪辑|拍摄|视频/.test(name)?'视频制作与剪辑':'账号运营任务'):cat==='竞赛'?'竞赛交付与材料准备':cat==='学习 AI 产品经理'?'需求分析与产品实战':cat==='学校作业'?'课程作业与资料整理':cat==='考研督学'?'科目学习与督学':'待确认任务';
 var parent=cat==='运营'?'运营任务主线':cat==='竞赛'?'竞赛任务主线':cat==='学习 AI 产品经理'?'AI 产品经理学习主线':cat==='学校作业'?'学校作业主线':cat==='考研督学'?'考研督学主线':'待分类任务';
 var existing=state.tasks.find(function(t){return !t.containerOnly&&t.name===name&&t.dueDate===date&&String(t.dueTime||'18:00')===time&&!t.done});
