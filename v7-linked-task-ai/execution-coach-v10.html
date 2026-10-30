@@ -17,7 +17,7 @@
 </section>
 <section id="view-category" class="hidden"><div class="section-head"><div><h2 id="categoryPageTitle">类别专属工作区</h2><small id="categoryPageDesc">按类别拆解任务、资料和交付步骤。</small></div><div class="form-actions"><button class="btn" id="categoryBack">← 返回任务主线</button><button class="btn primary" data-cat-new>＋ 新建本类任务</button></div></div><div id="categoryPageBody"></div></section>
 <section id="view-workspace" class="hidden"><div class="section-head"><div><h2 id="workspaceTitle">任务执行工作区</h2><small id="workspaceSub">按当前任务类别展示对应流程、资料层级和验收标准。</small></div><button class="btn" id="workspaceBack">← 返回任务主线</button></div><div id="workspaceBody"></div></section>
-<section id="view-week" class="hidden"><div class="section-head"><div><h2>本周固定安排与可支配时间</h2><small>先锁定生活和固定事项，再把任务放进剩余时间。</small></div><button class="btn primary" id="addFixed">＋ 固定安排</button></div><div class="grid weekly"><section class="card panel"><h2>固定时间块</h2><p class="panel-sub">吃饭、通勤、课程、会议、睡眠等都要占用时间轴。</p><div class="fixed-list" id="fixedList"></div></section><section class="card panel"><h2>本周时间预算</h2><p class="panel-sub">按你设置的每日清醒可安排时间估算。</p><div class="field"><label>每天清醒时间（小时，不含睡眠）</label><input id="dailyHours" type="number" min="1" max="18" value="8"></div><div class="summary-metrics"><div class="metric"><b id="grossHours">56h</b><span>本周可安排上限</span></div><div class="metric"><b id="fixedHours">—</b><span>固定事项占用</span></div><div class="metric"><b id="freeHours">—</b><span>剩余自由时间</span></div></div><div class="info">睡眠已从清醒时长中排除，不重复扣除；再预留 20% 作为休息与突发缓冲。</div></section></div><section class="card panel"><div class="section-head"><div><h2>每日任务时间表 · 固定事务优先</h2><small>先避开固定事务，再根据 DDL、个人预测耗时和任务精力需求生成每天的具体时间段。</small></div><button class="btn soft" id="refreshPlan">重新计算</button></div><div id="autoPlan"></div></section><section class="card editor"><h2>大任务四阶段拆解</h2><p class="panel-sub">先选择主线和项目，再按实际交付内容生成阶段任务；每阶段可以继续细化成小任务。</p><div class="form-grid"><div class="field"><label>主线</label><select id="splitCategory"><option>运营</option><option>竞赛</option><option>学习 AI 产品经理</option></select></div><div class="field"><label>大任务名称</label><input id="splitName" placeholder="例如：完成 Agent 大赛参赛作品"></div></div><div class="phase-grid"><div class="phase"><b>阶段一 · 收集与理解</b><small>找资料、核对要求、整理输入</small></div><div class="phase"><b>阶段二 · 方案与产出</b><small>形成框架、内容或原型</small></div><div class="phase"><b>阶段三 · 制作与验证</b><small>实现、测试、修正问题</small></div><div class="phase"><b>阶段四 · 检查与交付</b><small>验收、排版、提交、复盘</small></div></div><div style="margin-top:13px"><button class="btn primary" id="createPhases">生成四阶段任务</button></div></section></section>
+<section id="view-week" class="hidden"><div class="section-head"><div><h2>本周固定安排与可支配时间</h2><small>先锁定生活和固定事项，再把任务放进剩余时间。</small></div><button class="btn primary" id="addFixed">＋ 固定安排</button></div><div class="grid weekly"><section class="card panel"><h2>固定时间块</h2><p class="panel-sub">吃饭、通勤、课程、会议、睡眠等都要占用时间轴。</p><div class="fixed-list" id="fixedList"></div></section><section class="card panel"><h2>本周时间预算</h2><p class="panel-sub">按你设置的每日清醒可安排时间估算。</p><div class="field"><label>每天清醒时间（小时，不含睡眠）</label><input id="dailyHours" type="number" min="1" max="18" value="8"></div><div class="summary-metrics"><div class="metric"><b id="grossHours">56h</b><span>本周可安排上限</span></div><div class="metric"><b id="fixedHours">—</b><span>固定事项占用</span></div><div class="metric"><b id="freeHours">—</b><span>剩余自由时间</span></div></div><div class="info">睡眠已从清醒时长中排除，不重复扣除；再预留 20% 作为休息与突发缓冲。</div></section></div><section class="card panel"><div class="section-head"><div><h2>今日执行时间表 · 每项任务几点开始几点结束</h2><small>把固定事务、任务、休息和突发缓冲放进同一条时间轴；显示每项任务的开始与结束时间。</small></div><button class="btn soft" id="refreshPlan">重新计算</button></div><div id="autoPlan"></div></section><section class="card editor"><h2>大任务四阶段拆解</h2><p class="panel-sub">先选择主线和项目，再按实际交付内容生成阶段任务；每阶段可以继续细化成小任务。</p><div class="form-grid"><div class="field"><label>主线</label><select id="splitCategory"><option>运营</option><option>竞赛</option><option>学习 AI 产品经理</option></select></div><div class="field"><label>大任务名称</label><input id="splitName" placeholder="例如：完成 Agent 大赛参赛作品"></div></div><div class="phase-grid"><div class="phase"><b>阶段一 · 收集与理解</b><small>找资料、核对要求、整理输入</small></div><div class="phase"><b>阶段二 · 方案与产出</b><small>形成框架、内容或原型</small></div><div class="phase"><b>阶段三 · 制作与验证</b><small>实现、测试、修正问题</small></div><div class="phase"><b>阶段四 · 检查与交付</b><small>验收、排版、提交、复盘</small></div></div><div style="margin-top:13px"><button class="btn primary" id="createPhases">生成四阶段任务</button></div></section></section>
 <section id="view-tasks" class="hidden"><div class="section-head"><div><h2>全部任务与截止日期</h2><small>任务编辑直接回填表单；截止提醒提前 48 小时启动。</small></div></div><section class="card panel"><div class="toolbar"><input id="searchTasks" placeholder="搜索任务名称、项目或资料"><select id="statusFilter"><option value="all">全部状态</option><option value="todo">待执行</option><option value="done">已完成</option></select></div><div class="task-list" id="allTaskList" style="margin-top:12px"></div></section><section class="card editor" id="taskEditor"><h2>任务与截止日期</h2><div class="hint">新增任务或编辑任务都在本列表下方完成；点击编辑会定位到对应任务表单并自动回填名称、所属大类和截止日期。</div><form id="taskForm"><input type="hidden" id="editId"><div class="form-grid"><div class="field"><label>所属大类</label><select id="taskCategory"><option>运营</option><option>竞赛</option><option>学习 AI 产品经理</option><option>学校作业</option><option>考研督学</option><option>待分类</option><option>个人事务</option></select></div><div class="field"><label>任务类型（独立耗时档案）</label><input id="taskType" placeholder="例如：找素材、写脚本、整理证明材料、需求分析" required></div><div class="field"><label>任务名称</label><input id="taskName" placeholder="例如：收集醒图调色教程素材" required></div><div class="field"><label>预计耗时（分钟）</label><input id="taskEstimate" type="number" min="5" step="5" value="30"></div><div class="field"><label>计划开始时间（可选）</label><input id="taskPlannedStart" type="datetime-local"></div><div class="field"><label>截止日期</label><input id="taskDueDate" type="date"></div><div class="field"><label>截止时间</label><input id="taskDueTime" type="time" value="18:00"></div><div class="field"><label>所属大任务 / 项目</label><input id="taskParent" placeholder="例如：醒图账号运营 / Agent 大赛"></div><div class="field"><label>验收标准</label><input id="taskAcceptance" placeholder="例如：整理出 5 条可用素材链接"></div></div><div class="field"><label>关联资料 / 链接</label><textarea id="taskMaterials" rows="2" placeholder="粘贴资料链接、文件说明或参考笔记"></textarea></div><div class="form-actions"><button type="button" class="btn" id="resetForm">清空</button><button class="btn primary" type="submit">保存任务</button></div></form></section>
 </section>
 <section id="view-learning" class="hidden"><div class="section-head"><div><h2>个人耗时学习档案</h2><small>每种任务类型独立记录第一次、第二次、第三次和后续表现。</small></div></div><section class="card panel"><h2>任务类型档案</h2><p class="panel-sub">样本不足时保留保守估时；至少两次真实记录后才计算缩短率。</p><div id="learningProfiles"></div></section></section>
@@ -251,81 +251,100 @@ return h>=8&&h<18?2:0;
 }
 function renderAutoPlan(){
 var el=document.getElementById('autoPlan');if(!el)return;
-var now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),days=[],energySamples={};
-state.logs.forEach(function(l){if(l.startHour!==undefined&&Number(l.startEnergy)>0){var k=Number(l.startHour);(energySamples[k]||(energySamples[k]=[])).push(Number(l.startEnergy))}});
-for(var i=0;i<7;i++){
-var d=new Date(today);d.setDate(d.getDate()+i);
-var data=plannerSlotsForDay(d,i,now);
-days.push({date:d,index:i,slots:data.slots,rests:data.rests,buffers:data.buffers,fixed:data.fixed,capacity:data.capacity,workBudget:data.workBudget,freeMinutes:data.freeMinutes,used:0,items:[]});
+var now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),remaining={},days=[];
+function tm(v){return String(Math.floor(v/60)).padStart(2,'0')+':'+String(v%60).padStart(2,'0')}
+function dayLabel(d){return d.toLocaleDateString('zh-CN',{month:'numeric',day:'numeric',weekday:'short'})}
+function dayKey(d){return localDay(d)}
+function overlaps(a,b,c,d){return a<d&&c<b}
+function fixedForDay(day,index){
+var out=[];
+state.fixed.forEach(function(f){
+if(!plannerDayApplies(f,day,index))return;
+var s=plannerMinutes(f.start),e=plannerMinutes(f.end);
+if(e>s)out.push({name:f.name,start:s,end:e,type:'fixed'});
+else{out.push({name:f.name,start:0,end:e,type:'fixed',overnight:true});out.push({name:f.name,start:s,end:1440,type:'fixed',overnight:true})}
+});
+return out.filter(function(x){return x.end>x.start}).sort(function(a,b){return a.start-b.start});
 }
-var tasks=state.tasks.filter(function(t){return !t.containerOnly&&!t.done}).map(function(t){
-var remain=Math.max(0,estimate(t)-(Number(t.accumulatedMinutes)||0));
-return {t:t,remain:remain,deadline:due(t),level:plannerEnergy(t)};
-}).filter(function(x){return x.remain>0});
-function deadlineValue(x){return x.deadline?x.deadline.getTime():Infinity}
-tasks.sort(function(a,b){
-var av=deadlineValue(a),bv=deadlineValue(b);
-if(av!==bv)return bv-av;
-if(!!a.t.hardDeadline!==!!b.t.hardDeadline)return a.t.hardDeadline?1:-1;
+function freeForDay(fixed,cut){
+var blocks=fixed.filter(function(x){return x.end>420&&x.start<1410}).map(function(x){return [Math.max(420,x.start),Math.min(1410,x.end)]}).sort(function(a,b){return a[0]-b[0]);
+var merged=[];blocks.forEach(function(x){var z=merged[merged.length-1];if(z&&x[0]<=z[1])z[1]=Math.max(z[1],x[1]);else merged.push(x.slice())});
+var gaps=[],p=Math.max(420,cut);merged.forEach(function(x){if(x[1]<=p)return;if(x[0]>p)gaps.push({start:p,end:x[0]});p=Math.max(p,x[1])});if(p<1410)gaps.push({start:p,end:1410});return gaps;
+}
+function urgency(x,day){
+var end=x.deadline?x.deadline.getTime():Infinity;
+var mins=x.remain;
+var slack=end===Infinity?Infinity:(end-(day.getTime()+86400000))/60000-mins;
+return {end:end,slack:slack};
+}
+function sortTasks(list,day){
+return list.sort(function(a,b){
+var ua=urgency(a,day),ub=urgency(b,day);
+if(ua.end!==ub.end)return ua.end-ub.end;
+if(!!a.t.hardDeadline!==!!b.t.hardDeadline)return a.t.hardDeadline?-1:1;
+if(ua.slack!==ub.slack)return ua.slack-ub.slack;
 return b.remain-a.remain;
 });
-var unplaced=[];
-tasks.forEach(function(task){
-var earliest=task.t.planDate?new Date(task.t.planDate+'T00:00:00'):today;
-if(earliest<today)earliest=today;
-var firstIndex=Math.max(0,Math.floor((earliest-today)/86400000));
-var lastIndex=task.deadline?Math.floor((new Date(task.deadline.getFullYear(),task.deadline.getMonth(),task.deadline.getDate())-today)/86400000):0;
-if(lastIndex<0){unplaced.push({t:task.t,remaining:task.remain,deadline:task.deadline,level:task.level,reason:'DDL 已经过期'});return}
-lastIndex=Math.min(6,lastIndex);
-if(firstIndex>lastIndex){unplaced.push({t:task.t,remaining:task.remain,deadline:task.deadline,level:task.level,reason:'计划开始日期晚于 DDL'});return}
-var remaining=task.remain;
-for(var di=lastIndex;di>=firstIndex&&remaining>0;di--){
-var day=days[di],limit=null;
-if(task.deadline&&localDay(day.date)===localDay(task.deadline))limit=plannerMinutes((task.t.dueTime||'23:59'));
-var candidates=day.slots.filter(function(s){return s.remaining>0&&(!limit||s.start<limit)&&(!limit||s.end<=limit)});
-candidates.sort(function(a,b){var fit=plannerFit(b,task.level,energySamples)-plannerFit(a,task.level,energySamples);return fit||b.end-a.end});
-candidates.forEach(function(slot){
-if(remaining<=0||slot.remaining<=0)return;
-var take=Math.min(remaining,slot.remaining),start=slot.end-take;
-if(limit&&slot.end>limit)return;
-day.items.push({t:task.t,mins:take,start:start,end:slot.end,level:task.level,deadline:task.deadline,hard:!!task.t.hardDeadline});
-day.used+=take;slot.end=start;slot.remaining-=take;remaining-=take;
-});
 }
-if(remaining>0)unplaced.push({t:task.t,remaining:remaining,deadline:task.deadline,level:task.level,reason:'DDL 前可用时间不足'});
+state.tasks.forEach(function(t){
+if(t.containerOnly||t.done)return;
+var r=Math.max(0,estimate(t)-(Number(t.accumulatedMinutes)||0));
+if(r<=0)return;
+var deadline=due(t),plan=t.planDate?new Date(t.planDate+'T00:00:00'):null;
+remaining[t.id]={t:t,remain:r,deadline:deadline,level:plannerEnergy(t),plan:plan};
 });
-function ddlLabel(t){return t.dueDate?(t.dueDate+' '+(t.dueTime||'23:59')):'未设置 DDL'}
-function rankLabel(x,now){
-if(!x.deadline)return '常规任务';
-var diff=x.deadline.getTime()-now.getTime();
-if(diff<0)return '已逾期';
-if(x.hard)return '硬截止';
-if(diff<=24*3600000)return '24小时内';
-if(diff<=72*3600000)return '72小时内';
-return '按DDL倒排';
+for(var di=0;di<7;di++){
+var day=new Date(today);day.setDate(day.getDate()+di);
+var fixed=fixedForDay(day,di),cut=di===0?now.getHours()*60+now.getMinutes():420;
+var gaps=freeForDay(fixed,cut),freeTotal=gaps.reduce(function(s,g){return s+g.end-g.start},0);
+var budget=Math.floor(freeTotal*.8),used=0,items=[];
+var eligible=Object.keys(remaining).map(function(k){return remaining[k]}).filter(function(x){
+if(x.remain<=0)return false;
+if(x.plan&&x.plan.getTime()>day.getTime()+86399999)return false;
+if(x.deadline&&x.deadline.getTime()<day.getTime()&&di>0)return false;
+return true;
+});
+sortTasks(eligible,day);
+gaps.forEach(function(gap){
+var p=gap.start,guard=0;
+while(p<gap.end-9&&budget>=15&&guard++<100){
+eligible=eligible.filter(function(x){return x.remain>0});
+if(!eligible.length)break;
+sortTasks(eligible,day);
+var task=eligible[0],room=gap.end-p;
+if(room<15)break;
+var work=Math.min(50,task.remain,room,budget);
+if(work<15&&task.remain>work)break;
+var item={type:'task',t:task.t,start:p,end:p+work,mins:work,level:task.level,deadline:task.deadline};
+items.push(item);p+=work;budget-=work;used+=work;task.remain-=work;
+if(task.remain>0&&p+10<=gap.end&&budget>=10){items.push({type:'rest',name:'眼睛休息 / 起身活动',start:p,end:p+10,mins:10});p+=10;budget-=10;used+=10}
+else if(task.remain<=0&&eligible.some(function(x){return x.remain>0})&&p+10<=gap.end&&budget>=10){items.push({type:'rest',name:'任务切换 / 恢复',start:p,end:p+10,mins:10});p+=10;budget-=10;used+=10}
 }
-el.innerHTML=days.map(function(d){
-var events=[];
-d.fixed.forEach(function(x){events.push({start:x.start,end:x.end,kind:'fixed',name:x.name})});
-d.rests.forEach(function(x){events.push({start:x.start,end:x.end,kind:'rest',name:'休息 10 分钟'})});
-d.buffers.forEach(function(x){events.push({start:x.start,end:x.end,kind:'buffer',name:'机动缓冲 / 发呆 / 突发事务'})});
-d.slots.forEach(function(x){if(x.remaining>0)events.push({start:x.start,end:x.start+x.remaining,kind:'buffer',name:'未分配时间'})});
-d.items.forEach(function(x){events.push({start:x.start,end:x.end,kind:'task',item:x})});
-events.sort(function(a,b){return a.start-b.start||a.end-b.end});
-var taskCount=d.items.length,dayLabel=d.index===0?'今天':d.index===1?'明天':'';
-var body=events.map(function(x){
-var range=plannerClock(x.start)+'–'+plannerClock(x.end);
-if(x.kind==='fixed')return '<div class="task" style="margin:7px 0;padding:10px 12px;border-left:4px solid #7b8790"><div><b>'+range+'　🔒 '+esc(x.name)+'</b><div class="task-meta">固定事务 · 不安排其他任务</div></div></div>';
-if(x.kind==='rest')return '<div class="task" style="margin:7px 0;padding:9px 12px;background:#f2f5f2"><b>'+range+'　☕ 休息 / 放空</b><div class="task-meta">任务间隔 · 恢复精力</div></div>';
-if(x.kind==='buffer')return '<div class="task" style="margin:7px 0;padding:9px 12px;background:#f5f4ef"><b>'+range+'　◇ '+esc(x.name)+'</b><div class="task-meta">不预先塞任务 · 留给疲惫、突发情况或自由时间</div></div>';
-var q=x.item,t=q.t,priority=rankLabel(q,now),risk=q.deadline&&q.deadline.getTime()<now.getTime()?' · 已逾期':q.hard?' · 硬截止':'';
-return '<div class="task" style="margin:7px 0;padding:11px 12px;border-left:4px solid '+(q.hard?'#c46d5d':'#397a67')+'"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>'+range+'　'+esc(t.name)+'</b><span class="status">'+priority+'</span></div><div class="task-meta">本段 '+q.mins+' 分钟 · 预计剩余 '+Math.max(0,estimate(t)-(Number(t.accumulatedMinutes)||0))+' 分钟 · '+q.level+'精力 · '+esc(ddlLabel(t))+risk+'</div><div class="task-meta">'+esc(learningSummary(t))+'</div><div style="margin-top:7px"><button class="btn soft" data-start="'+esc(t.id)+'">开始这项任务</button></div></div>';
+if(p<gap.end)items.push({type:'buffer',name:'机动缓冲 / 自由时间',start:p,end:gap.end,mins:gap.end-p});
+});
+fixed.forEach(function(f){items.push(f)});
+items.sort(function(a,b){return a.start-b.start||((a.type==='fixed')?-1:1)});
+var conflicts=[];
+for(var i=0;i<fixed.length;i++)for(var j=i+1;j<fixed.length;j++)if(overlaps(fixed[i].start,fixed[i].end,fixed[j].start,fixed[j].end))conflicts.push(fixed[i].name+' 与 '+fixed[j].name);
+var conflictText=Array.from(new Set(conflicts));
+var missed=eligible.filter(function(x){return x.remain>0});
+var htmlRows=items.map(function(x){
+var ended=di===0&&x.end<=cut,tag='',name='',meta='',color='#e7eee9';
+if(x.type==='fixed'){tag='固定事务';name=x.name;meta='已锁定，不安排任务';color='#dce6e1'}
+else if(x.type==='task'){tag='执行任务';name=x.t.name;meta=x.mins+' 分钟 · '+x.level+'精力 · DDL '+(x.deadline?dayKey(x.deadline)+' '+(x.t.dueTime||'18:00'):'未设置')+' · '+learningSummary(x.t);color='#cfe5da'}
+else if(x.type==='rest'){tag='恢复休息';name=x.name;meta=x.mins+' 分钟 · 不安排新任务';color='#f4e8cf'}
+else{tag='缓冲 / 自由';name=x.name;meta=x.mins+' 分钟 · 留给突发情况、发呆或自由安排';color='#e8e9ef'}
+var button=x.type==='task'?'<button class="btn soft" data-start="'+esc(x.t.id)+'">开始计时</button>':'';
+return '<div style="display:grid;grid-template-columns:92px 5px minmax(0,1fr);gap:9px;align-items:stretch;padding:9px 7px;border-bottom:1px solid var(--line);'+(ended?'opacity:.48;':'')+'"><div style="font-weight:750;font-size:13px;white-space:nowrap">'+tm(x.start)+'<br><span style="color:var(--muted);font-weight:500">至 '+tm(x.end)+'</span></div><div style="background:'+color+';border-radius:8px;min-height:48px"></div><div style="min-width:0"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><b style="font-size:14px">'+esc(name)+'</b><span class="tag">'+tag+'</span>'+button+'</div><div class="task-meta">'+esc(meta)+(ended?' · 已结束':'')+'</div></div></div>';
 }).join('');
-var pct=d.workBudget?Math.round(d.used/d.workBudget*100):0;
-return '<section class="card" style="margin:10px 0;padding:13px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><div><b style="font-size:16px">'+dayLabel+' '+d.date.toLocaleDateString('zh-CN',{month:'numeric',day:'numeric',weekday:'short'})+'</b><div class="task-meta">可安排工作 '+Math.floor(d.workBudget/60)+'小时'+(d.workBudget%60?' '+d.workBudget%60+'分钟':'')+' · 已排 '+d.used+' 分钟</div></div><span class="status">'+pct+'%</span></div>'+body+'</section>';
-}).join('')+
-'<div class="info"><b>排期依据：</b>固定事务先锁定；硬截止与较近 DDL 优先；每项任务按个人历史耗时预测并拆成不超过 50 分钟的专注段；高精力任务优先匹配个人精力较好的时段，低精力任务安排在较轻松时段。每个工作日预留 20% 机动时间，并在专注段之间安排短休息。完成、延迟或新增突发任务后，点击「重新计算」重排，不会擅自更改原 DDL。</div>'+
-(unplaced.length?'<section class="card" style="border-color:#d88b73;padding:12px;margin-top:10px"><b>⚠️ 这些任务目前排不进 DDL 前的可用时段</b>'+unplaced.map(function(x){return '<div class="task-meta" style="margin-top:7px"><b>'+esc(x.t.name)+'</b> · 还需 '+x.remaining+' 分钟 · '+esc(ddlLabel(x.t))+' · '+esc(x.reason)+'</div>'}).join('')+'<div class="task-meta">系统不会假装这些任务已经排好。需要提前拆小、调整其他任务或由你确认是否延期。</div></section>':'<div class="info">当前任务已按 DDL 倒推到具体时间段。完成任务后勾选完成，再重新计算，后续时间会自动释放。</div>');
+var totalWork=items.filter(function(x){return x.type==='task'}).reduce(function(s,x){return s+x.mins},0);
+var fixedMinutes=fixed.filter(function(x){return x.start>=420&&x.end<=1410}).reduce(function(s,x){return s+x.end-x.start},0);
+var heading='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><b style="font-size:16px">'+dayLabel(day)+(di===0?' · 今天':'')+'</b><span class="status">'+totalWork+' 分钟任务 · '+used+' 分钟已排</span></div>';
+var conflict=conflictText.length?'<div class="info" style="border-color:#d88b73;color:#a45140">固定时间冲突：'+conflictText.map(esc).join('；')+'。请调整其中一个时间，系统不会擅自覆盖。</div>':'';
+var miss=missed.length?'<div class="info" style="border-color:#d88b73;color:#a45140">DDL 前容量不足 / 尚未排入：'+missed.map(function(x){return esc(x.t.name)+'（还需 '+Math.ceil(x.remain)+' 分钟）'}).join('；')+'</div>':'';
+days.push('<section class="card" style="margin:10px 0;padding:12px">'+heading+'<div class="task-meta" style="margin:4px 0 8px">固定事务 '+fixedMinutes+' 分钟 · 可用空档 '+freeTotal+' 分钟 · 已预留约 20% 机动容量</div>'+conflict+htmlRows+miss+'</section>');
+}
+el.innerHTML=days.join('')+'<div class="info"><b>动态排期逻辑：</b>固定事务优先锁定；未完成任务按 DDL、硬截止、剩余预测耗时和精力等级排序；每次最多安排 50 分钟专注块，连续工作后插入 10 分钟恢复；额外保留约 20% 空档作为突发与自由时间。完成任务、记录实际耗时或疲惫反馈后，点击「重新计算」更新后续时间。若固定事务互相重叠，会明确标红提示，不会假装它们都能执行。</div>';
 }
 function checkScheduledStarts(){var now=Date.now();state.tasks.filter(function(t){return !t.containerOnly&&!t.done&&t.plannedStart&&new Date(t.plannedStart).getTime()<=now}).forEach(function(t){var seen=state.scheduledPrompts.some(function(x){return x.taskId===t.id});if(!seen){state.scheduledPrompts.push({taskId:t.id,at:now});save();if(document.hidden&&'Notification'in window&&Notification.permission==='granted'){new Notification('上岸鸭 · 到计划开始时间了',{body:'现在开始「'+t.name+'」吗？'})}else if(!document.getElementById('urgentOverlay').classList.contains('show')){if(confirm('「'+t.name+'」到了计划开始时间。现在开始吗？'))begin(t.id)}}});}
 function checkMorningPrompt(){var now=new Date(),day=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0'),saved=localStorage.getItem(MORNING_KEY);if(now.getHours()>=8&&saved!==day&&!document.hidden){document.getElementById('morningOverlay').classList.add('show')}}
