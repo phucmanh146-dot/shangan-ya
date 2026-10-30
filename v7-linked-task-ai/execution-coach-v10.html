@@ -439,24 +439,19 @@ for(var i=0;i<fixed.length;i++)for(var j=i+1;j<fixed.length;j++)if(overlaps(fixe
 var conflictText=Array.from(new Set(conflicts)),missed=eligible.filter(function(x){return x.remain>0});
 var risk=missed.filter(function(x){return x.deadline&&dayKey(x.deadline)<=dayKey(day)});
 risk.forEach(function(x){var old=deadlineRisks.find(function(r){return r.task.id===x.t.id});if(old)old.remain=x.remain;else deadlineRisks.push({task:x.t,remain:x.remain,deadline:x.deadline,day:dayKey(day)})});
-var htmlRows=items.sort(function(a,b){return a.start-b.start||(a.type==='fixed'?-1:1)}).map(function(x){
-var ended=di===0&&x.end<=cut,tag='',name='',meta='',color='#e7eee9';
+function renderScheduleRow(x){var ended=di===0&&x.end<=cut,tag='',name='',meta='',color='#e7eee9';
 if(x.type==='fixed'){tag='固定事务';name=x.name;meta='已锁定，不安排任务';color='#dce6e1'}
-else if(x.type==='task'){
-var overdue=isOverdue(x,day),dueLabel=x.deadline?dayKey(x.deadline)+' '+(x.t.dueTime||'23:59'):'未设置';
-tag=overdue?'已逾期 · 自动顺延':(x.t.hardDeadline?'硬截止任务':'DDL任务');name=x.t.name;
-var predicted=estimate(x.t),acc=Number(x.t.accumulatedMinutes)||0;
-meta='本段 '+x.mins+' 分钟 · 预计总耗时 '+predicted+' 分钟 · 已累计 '+acc+' 分钟 · 剩余约 '+Math.ceil(x.remain)+' 分钟 · '+x.level+'精力 · DDL '+dueLabel+' · '+learningSummary(x.t);
-color=overdue?'#f5d7d3':(x.t.hardDeadline?'#cfe0d8':'#dce9e3');
-}
+else if(x.type==='task'){var overdue=isOverdue(x,day),dueLabel=x.deadline?dayKey(x.deadline)+' '+(x.t.dueTime||'23:59'):'未设置';tag=overdue?'已逾期 · 自动顺延':(x.t.hardDeadline?'硬截止任务':'DDL任务');name=x.t.name;var predicted=estimate(x.t),acc=Number(x.t.accumulatedMinutes)||0;meta='本段 '+x.mins+' 分钟 · 预计总耗时 '+predicted+' 分钟 · 已累计 '+acc+' 分钟 · 剩余约 '+Math.ceil(x.remain)+' 分钟 · '+x.level+'精力 · DDL '+dueLabel+' · '+learningSummary(x.t);color=overdue?'#f5d7d3':(x.t.hardDeadline?'#cfe0d8':'#dce9e3')}
 else if(x.type==='actual'){tag=x.status==='running'?'正在执行':'实际执行';name=x.name;meta='实际用时 '+x.mins+' 分钟 · '+(x.status==='done'?'已完成':x.status==='running'?'计时中':'进度已保存');color='#cfe0d8'}
 else if(x.type==='current'){tag='当前任务 · 预计';name=x.name;meta='预计还需 '+x.mins+' 分钟；结束后自动重算';color='#b9d8c6'}
 else if(x.type==='loss'){tag='已扣除 · 非有效工作';name=x.name;meta=x.mins+' 分钟 · '+(x.note||'已从今日可用容量中扣除');color='#f0c9c2'}
 else if(x.type==='rest'){tag='恢复休息';name=x.name;meta=x.mins+' 分钟 · 不安排新任务';color='#f4e8cf'}
 else{tag='缓冲 / 自由';name=x.name;meta=x.mins+' 分钟 · 留给突发情况、疲惫或自由安排';color='#e8e9ef'}
 var button=x.type==='task'?'<button class="btn soft" data-start="'+esc(x.t.id)+'">开始计时</button><button class="btn soft" data-edit="'+esc(x.t.id)+'">编辑</button>':'';
-return '<div style="display:grid;grid-template-columns:92px 5px minmax(0,1fr);gap:9px;align-items:stretch;padding:9px 7px;border-bottom:1px solid var(--line);'+(ended?'opacity:.55;':'')+'"><div style="font-weight:750;font-size:13px;white-space:nowrap">'+plannerClock(x.start)+'<br><span style="color:var(--muted);font-weight:500">至 '+plannerClock(x.end)+'</span></div><div style="background:'+color+';border-radius:8px;min-height:48px"></div><div style="min-width:0"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><b style="font-size:14px">'+esc(name)+'</b><span class="tag">'+tag+'</span>'+button+'</div><div class="task-meta">'+esc(meta)+(ended?' · 已结束':'')+'</div></div></div>';
-}).join('');
+return '<div style="display:grid;grid-template-columns:92px 5px minmax(0,1fr);gap:9px;align-items:stretch;padding:9px 7px;border-bottom:1px solid var(--line);'+(ended?'opacity:.55;':'')+'"><div style="font-weight:750;font-size:13px;white-space:nowrap">'+plannerClock(x.start)+'<br><span style="color:var(--muted);font-weight:500">至 '+plannerClock(x.end)+'</span></div><div style="background:'+color+';border-radius:8px;min-height:48px"></div><div style="min-width:0"><div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><b style="font-size:14px">'+esc(name)+'</b><span class="tag">'+tag+'</span>'+button+'</div><div class="task-meta">'+esc(meta)+(ended?' · 已结束':'')+'</div></div></div>'}
+var sortedItems=items.sort(function(a,b){return a.start-b.start||(a.type==='fixed'?-1:1)}),planItems=sortedItems.filter(function(x){return x.type!=='actual'&&x.type!=='loss'}),actualItems=sortedItems.filter(function(x){return x.type==='actual'||x.type==='loss'});
+var planRows=planItems.length?planItems.map(renderScheduleRow).join(''):'<div class="info">当前没有安排任务；保留这段时间给休息或自由安排。</div>',actualRows=actualItems.length?actualItems.map(renderScheduleRow).join(''):'<div class="info">暂无实际记录。开始执行、语音汇报或记录走神后，会显示真实发生的时间。</div>';
+var htmlRows='<div class="weekly" style="grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;margin-top:10px"><section class="card panel" style="padding:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><b>计划（Plan）</b><span class="tag">'+planItems.length+' 项</span></div>'+planRows+'</section><section class="card panel" style="padding:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px"><b>实际（Actual）</b><span class="tag">'+actualItems.length+' 项</span></div>'+actualRows+'</section></div>';
 var taskMinutes=items.filter(function(x){return x.type==='task'||x.type==='current'}).reduce(function(s,x){return s+x.mins},0),actualMinutes=di===0?workConsumed:0,lossMinutes=di===0?wastedConsumed:0;
 var heading='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><b style="font-size:16px">'+day.toLocaleDateString('zh-CN',{month:'numeric',day:'numeric',weekday:'short'})+(di===0?' · 今天':'')+'</b><span class="status">'+taskMinutes+' 分钟待执行/当前任务 · 已执行 '+actualMinutes+' 分钟 · 偏离计划 '+lossMinutes+' 分钟</span></div>';
 var conflict=conflictText.length?'<div class="info" style="border-color:#d88b73;color:#a45140">固定时间冲突：'+conflictText.map(esc).join('；')+'。请调整其中一个时间，系统不会擅自覆盖。</div>':'';
