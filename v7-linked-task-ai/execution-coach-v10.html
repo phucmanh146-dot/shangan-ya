@@ -138,8 +138,18 @@ var map={
 '待分类':{title:'待分类任务工作区',steps:['确认任务所属领域与最终交付','补充任务背景和截止要求','收集必要资料','拆解可执行步骤','完成并检查交付物'],resources:['任务背景与提出来源','目标 / 截止要求 / 验收标准','用户自行收集的参考资料','执行过程记录与交付凭证'],deliver:'先确认类别，再建立专属耗时档案'}
 };return map[category]||map['待分类'];
 }
+function taskWorkspaceFlow(t){
+var base=workspaceFlow(t.category),key=[t.name,t.type,t.parent].join(' ');
+if(/公司战略|风险管理|蓝海战略/.test(key))return {title:'公司战略与风险管理 · 课程任务工作区',deliver:'围绕课程概念、案例证据和战略分析形成可提交答案',steps:['确认老师要求、题目范围与评分点','收集教材、课件、课堂笔记和指定案例','梳理公司战略、风险管理与蓝海战略概念','拆解案例：行业边界、竞争因素、价值创新与风险','形成分析框架、论证和答案初稿','核对概念、案例依据、格式并提交'],resources:['老师要求与题目范围','课程课件、教材与课堂笔记','战略 / 风险管理理论框架','案例资料、数据与分析证据','答案初稿与提交凭证']};
+if(/职规赛|职业生涯规划/.test(key))return {title:'职业生涯规划竞赛 · 专属交付工作区',deliver:'把个人经历、职业目标、行业依据和行动计划组织成可展示、可答辩的竞赛成果',steps:['核对职规赛赛道、评分标准和提交要求','明确职业目标、岗位方向与个人定位','收集实习、项目、获奖和能力证明','研究目标行业、岗位要求与发展路径','形成职业规划方案、阶段行动计划和 PPT','模拟答辩、检查证据链并完成提交'],resources:['官方赛道规则与评分标准','个人职业目标与岗位 JD','实习履历、项目经历与获奖证明','行业研究与岗位能力证据','职业规划书、PPT 与答辩材料']};
+if(/考研督学|考研英语|考研数学|真题|背单词/.test(key))return {title:'考研督学 · 科目学习工作区',deliver:'按科目和知识点完成学习、计时训练、错题订正与间隔复习',steps:['确认科目、章节、今日目标与考试范围','定位对应课程讲义、教材和知识点','先学习再合上资料主动回忆','完成例题 / 真题计时训练','整理错题、定位薄弱知识点并订正','按间隔复习计划回测掌握情况'],resources:['考试大纲与科目章节计划','对应课程讲义和教材','知识点清单与记忆卡片','真题、例题和计时训练记录','错题本、订正记录与复习结果']};
+if(/Agent 大赛 PPT|Agent大赛PPT/.test(key))return {title:'Agent 大赛 PPT · 竞赛演示工作区',deliver:'形成有问题、有方案、有证据、有结果的竞赛汇报材料',steps:['核对比赛要求、听众和评分维度','搭建故事线：背景、痛点、目标与方案','补齐 Agent 架构、关键流程和创新点','整理真实 Demo、代码、截图和验证数据','制作页面、图表、讲述备注和演示路径','逐页校对、计时演练并备份提交文件'],resources:['比赛通知与评分要求','项目定位、需求和方案文档','Agent 流程图、架构与关键代码','Demo 截图、测试记录和数据证据','PPT 源文件、讲稿与提交版本']};
+if(/Agent Demo|可验证功能/.test(key))return {title:'Agent Demo · 可验证功能开发工作区',deliver:'每轮只完成一个可运行、可测试、可复现的最小功能',steps:['明确本轮用户问题与验收场景','查阅相关 API、MCP 和技术文档','拆解输入、处理、输出与异常分支','实现最小可运行版本','用真实样例测试并记录 Bug','修复、复测并保存演示证据'],resources:['需求说明与验收标准','官方 API / MCP 文档','代码仓库与现有实现','测试样例、日志与 Bug 记录','可运行 Demo 和演示截图']};
+if(/视频|剪辑|拍摄|口播|抖音|醒图/.test(key))return {title:'短视频运营 · 单条内容生产工作区',deliver:'完成一条来源清楚、脚本完整、可发布并可复盘的视频',steps:['确认账号目标、受众和本条选题','收集参考作品与可用素材并记录来源','写 3 秒钩子、口播稿和镜头清单','录制 / 屏幕采集并完成剪辑字幕','检查封面、标题、字幕和平台规范','发布后记录播放、互动和转化数据'],resources:['账号运营要求与内容方向','参考作品、素材来源与竞品观察','选题、口播稿和镜头脚本','原始录屏、剪辑工程与成片','发布记录和数据复盘']};
+return base;
+}
 function renderTaskWorkspace(t){
-var flow=workspaceFlow(t.category),siblings=state.tasks.filter(function(x){return !x.containerOnly&&!x.done&&(x.id===t.id||(t.parent&&x.parent===t.parent))}),materials=String(t.materials||'').split(/\n+/).map(function(x){return x.trim()}).filter(Boolean),dueText=t.dueDate?(t.dueDate+' '+(t.deadlineTimeConfirmed===false?'时间待核对':(t.dueTime||'18:00'))):'尚未设置 DDL';
+var flow=taskWorkspaceFlow(t),siblings=state.tasks.filter(function(x){return !x.containerOnly&&!x.done&&(x.id===t.id||(t.parent&&x.parent===t.parent))}),materials=String(t.materials||'').split(/\n+/).map(function(x){return x.trim()}).filter(Boolean),dueText=t.dueDate?(t.dueDate+' '+(t.deadlineTimeConfirmed===false?'时间待核对':(t.dueTime||'18:00'))):'尚未设置 DDL';
 var tierHtml=flow.resources.map(function(x,i){return '<div class="review"><span class="review-dot"></span><div class="review-main"><b>层级 '+(i+1)+' · '+esc(x)+'</b><span>'+(materials.length?'关联资料见下方资料条目':'待收集 · 尚未关联资料')+'</span></div></div>'}).join('');
 var resourceHtml=renderResourceHierarchy(t);
 var subHtml=siblings.map(function(x){return '<div class="task"><div class="task-mark"></div><div><div class="task-title">'+esc(x.name)+'</div><div class="task-meta">'+esc(x.stage||'待执行')+' · 预计 '+estimate(x)+' 分钟 · '+esc(learningSummary(x))+'</div></div><div class="task-actions">'+(x.id===t.id?'<span class="tag">当前任务</span>':'<button data-start="'+x.id+'">进入</button>')+'</div></div>'}).join('');
