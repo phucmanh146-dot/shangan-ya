@@ -18,6 +18,7 @@ with db() as c:
  CREATE TABLE IF NOT EXISTS claims(token TEXT PRIMARY KEY,uid TEXT NOT NULL,expires REAL NOT NULL);
  CREATE TABLE IF NOT EXISTS jobs(id TEXT PRIMARY KEY,uid TEXT NOT NULL,agent TEXT NOT NULL,op TEXT NOT NULL,payload TEXT NOT NULL,state TEXT NOT NULL,result TEXT,created REAL NOT NULL);
  CREATE TABLE IF NOT EXISTS follows(uid TEXT NOT NULL,name TEXT NOT NULL,PRIMARY KEY(uid,name));
+ CREATE TABLE IF NOT EXISTS workbench_data(uid TEXT PRIMARY KEY,payload TEXT NOT NULL,updated REAL NOT NULL);
  CREATE TABLE IF NOT EXISTS messages(uid TEXT NOT NULL,id TEXT NOT NULL,grp TEXT NOT NULL,sender TEXT,body TEXT NOT NULL,date TEXT,PRIMARY KEY(uid,id));
  """)
 def digest(value):return hashlib.sha256(value.encode()).hexdigest()
@@ -160,6 +161,18 @@ def handle(handler):
     uid=row['id']
    set_session(handler,uid);handler.message({'authenticated':True,'name':name});return True
   if not user:handler.message({'error':'请先登录你的工作台账号。','code':'SIGN_IN_REQUIRED'},401);return True
+  if path=='/api/cloud-account/data':
+   if handler.command=='GET':
+    with db() as c:row=c.execute('SELECT payload,updated FROM workbench_data WHERE uid=?',(user['id'],)).fetchone()
+    handler.message({'data':json.loads(row['payload']) if row else None,'updated':row['updated'] if row else None});return True
+   if handler.command=='POST':
+    data=body(handler,4_000_000);payload=data.get('data')
+    if not isinstance(payload,dict):raise ValueError('工作台数据格式无效。')
+    encoded=json.dumps(payload,ensure_ascii=False,separators=(',',':'))
+    if len(encoded.encode('utf-8'))>4_000_000:handler.message({'error':'工作台数据超过4MB，请分批整理。'},413);return True
+    with db() as c:c.execute('INSERT INTO workbench_data(uid,payload,updated) VALUES (?,?,?) ON CONFLICT(uid) DO UPDATE SET payload=excluded.payload,updated=excluded.updated',(user['id'],encoded,time.time()))
+    handler.message({'ok':True,'updated':time.time()});return True
+   handler.message({'error':'请使用GET或POST。'},405);return True
   if path=='/api/cloud-account/logout':
    with db() as c:c.execute('DELETE FROM sessions WHERE token=?',(digest(cookie_token(handler)),))
    handler.account_cookie='sy_auth=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0';handler.message({'ok':True});return True
