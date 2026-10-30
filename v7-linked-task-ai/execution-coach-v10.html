@@ -188,7 +188,7 @@ document.getElementById('workspaceStart').onclick=function(){if(activeId===t.id&
 document.getElementById('workspaceEdit').onclick=function(){editTask(t.id)};
 }
 function openTaskWorkspace(id0,autoStart){var t=state.tasks.find(function(x){return x.id===id0});if(!t)return;view('workspace');renderTaskWorkspace(t);window.scrollTo({top:0,behavior:'smooth'});if(autoStart)begin(id0)}
-function begin(id0){var t=state.tasks.find(function(x){return x.id===id0});if(!t||t.done)return;if(interval){toast('请先结束或暂停当前任务。');return}activeId=id0;startAt=Date.now();sessionStartedAt=Date.now();sessionStartEnergy=energy;elapsed=0;paused=false;interval=setInterval(updateTimer,1000);document.getElementById('timerName').textContent=t.name;document.getElementById('timerStrip').classList.add('show');updateTimer();toast('开始计时：'+t.name)}
+function begin(id0){var t=state.tasks.find(function(x){return x.id===id0});if(!t||t.done||t.abandoned)return;if(interval){toast('请先结束或暂停当前任务。');return}activeId=id0;startAt=Date.now();sessionStartedAt=Date.now();sessionStartEnergy=energy;elapsed=0;paused=false;interval=setInterval(updateTimer,1000);document.getElementById('timerName').textContent=t.name;document.getElementById('timerStrip').classList.add('show');updateTimer();toast('开始计时：'+t.name)}
 function updateTimer(){
 if(!interval&&!paused)return;
 var ms=elapsed+(paused?0:Date.now()-startAt),s=Math.floor(ms/1000);
@@ -362,6 +362,8 @@ return list.sort(function(a,b){
 var ad=a.deadline?a.deadline.getTime():Infinity,bd=b.deadline?b.deadline.getTime():Infinity;
 if(ad!==bd)return ad-bd;
 if(!!a.t.hardDeadline!==!!b.t.hardDeadline)return a.t.hardDeadline?-1:1;
+function rank(t){var p=String(t.priority||t.importance||'').toLowerCase();return p==='urgent'||p==='high'||p==='高'||p==='重要'?3:p==='medium'||p==='normal'||p==='中'?2:p==='low'||p==='低'?1:0}
+var ap=rank(a.t),bp=rank(b.t);if(ap!==bp)return bp-ap;
 var af=energyFit(a,hour),bf=energyFit(b,hour);if(af!==bf)return bf-af;
 return b.remain-a.remain;
 });
@@ -370,7 +372,8 @@ state.tasks.forEach(function(t){
 if(t.containerOnly||t.done||t.abandoned)return;
 var total=estimate(t),acc=Number(t.accumulatedMinutes)||0,r=Math.max(0,total-acc);
 if(r<=0){var explicitRemaining=Number(t.remainingEstimate)||0;r=explicitRemaining>0?explicitRemaining:Math.max(15,Math.round(Math.max(15,Number(t.estimate)||30)*.5/5)*5);}
-remaining[t.id]={t:t,remain:r,deadline:due(t),level:plannerEnergy(t),plan:t.planDate?new Date(t.planDate+'T00:00:00'):null,startAt:t.plannedStart?new Date(t.plannedStart):null};
+var startAt=t.plannedStart?new Date(t.plannedStart):null;if(startAt&&isNaN(startAt.getTime()))startAt=null;
+remaining[t.id]={t:t,remain:r,deadline:due(t),level:plannerEnergy(t),plan:t.planDate?new Date(t.planDate+'T00:00:00'):null,startAt:startAt};
 });
 for(var di=0;di<horizonDays;di++){
 var day=new Date(today);day.setDate(day.getDate()+di);
@@ -378,8 +381,9 @@ var fixed=fixedForDay(day,di),cut=di===0?Math.max(dayStart,now.getHours()*60+now
 var activeTask=di===0&&activeId?state.tasks.find(function(t){return t.id===activeId}):null;
 var liveMs=activeTask?(elapsed+(interval?Date.now()-startAt:0)):0;
 var activeRemaining=activeTask?Math.max(0,estimate(activeTask)-(Number(activeTask.accumulatedMinutes)||0)-Math.ceil(liveMs/60000)):0;
-var projectedEnd=di===0&&interval?Math.min(dayEnd,cut+activeRemaining):cut;
-if(activeTask&&remaining[activeTask.id])remaining[activeTask.id].remain=activeRemaining;
+var openBeforeFixed=freeForDay(fixed,cut),activeBlock=di===0&&interval&&activeTask&&openBeforeFixed.length&&openBeforeFixed[0].start===cut?Math.min(activeRemaining,openBeforeFixed[0].end-cut):0;
+var projectedEnd=di===0&&interval?Math.min(dayEnd,cut+activeBlock):cut;
+if(activeTask&&remaining[activeTask.id])remaining[activeTask.id].remain=Math.max(0,activeRemaining-activeBlock);
 var gaps=freeForDay(fixed,projectedEnd),freeTotal=gaps.reduce(function(s,g){return s+g.end-g.start},0);
 var fixedMinutes=unionMinutes(fixed),awakeFixed=unionMinutes(fixed.filter(function(x){return x.name!=='睡眠'&&x.name.indexOf('睡眠（跨夜）')!==0})),workConsumed=di===0?loggedMinutesForDay(day):0,wastedConsumed=di===0?timeLossMinutesForDay(day):0;
 if(di===0&&activeTask&&sessionStartedAt&&dayKey(new Date(sessionStartedAt))===dayKey(day))workConsumed+=Math.ceil(liveMs/60000);
@@ -406,7 +410,7 @@ if(activeTask&&sessionStartedAt&&dayKey(new Date(sessionStartedAt))===dayKey(day
 var started=new Date(sessionStartedAt),st=started.getHours()*60+started.getMinutes(),en=Math.max(st+1,now.getHours()*60+now.getMinutes());
 st=Math.max(dayStart,st);en=Math.min(dayEnd,en);
 if(en>st)items.push({type:'actual',name:activeTask.name,start:st,end:en,mins:Math.ceil(liveMs/60000),status:'running'});
-if(interval&&activeRemaining>0&&projectedEnd>cut)items.push({type:'current',name:activeTask.name,start:cut,end:projectedEnd,mins:activeRemaining});
+if(interval&&activeBlock>0&&projectedEnd>cut)items.push({type:'current',name:activeTask.name,start:cut,end:projectedEnd,mins:activeBlock});
 }
 }
 gaps.forEach(function(gap){
