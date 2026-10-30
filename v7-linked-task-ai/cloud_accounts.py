@@ -95,7 +95,7 @@ def handle(handler):
  try:
   if handler.headers.get('Origin') and urlsplit(handler.headers['Origin']).netloc!=handler.headers.get('Host'):
    handler.message({'error':'请求来源无效。'},403);return True
-  if path.startswith('/api/cloud-account/') and path!='/api/cloud-account/me' and handler.command!='POST':
+  if path.startswith('/api/cloud-account/') and path not in ('/api/cloud-account/me','/api/cloud-account/data') and handler.command!='POST':
    handler.message({'error':'请使用POST。'},405);return True
   if path.startswith('/api/cloud-agent/'):
    if not agent_ok(handler):handler.message({'error':'授权无效。'},403);return True
