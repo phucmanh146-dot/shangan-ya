@@ -174,7 +174,7 @@ function addReview(t){if(state.reviews.some(function(r){return r.taskId===t.id&&
 function completeReview(rid,rating){var r=state.reviews.find(function(x){return x.id===rid});if(!r)return;if(rating==='forgot'){r.stage=Math.max(0,r.stage-1);r.dueAt=Date.now()+24*3600000}else{r.stage++;if(r.stage>=r.intervals.length)r.done=true;else r.dueAt=Date.now()+r.intervals[r.stage]*(rating==='easy'?1.5:1)}save();renderAll();toast(r.done?'已完成当前复习周期。':'复习结果已记录，下一次间隔已调整。')}
 function updateWeek(){var daily=Number((document.getElementById('dailyHours')||{}).value||state.dailyHours||8),gross=daily*7,fixed=state.fixed.reduce(function(s,x){if(x.name==='睡眠')return s;var a=x.start.split(':').map(Number),b=x.end.split(':').map(Number),h=(b[0]*60+b[1])-(a[0]*60+a[1]);if(h<0)h+=1440;return s+h*(Number(x.days)||1)/60},0);document.getElementById('grossHours').textContent=gross.toFixed(1)+'h';document.getElementById('fixedHours').textContent=fixed.toFixed(1)+'h';document.getElementById('freeHours').textContent=Math.max(0,gross-fixed).toFixed(1)+'h'}
 function renderFixed(){document.getElementById('fixedList').innerHTML=state.fixed.map(function(x,i){return '<div class="fixed-row"><input data-fname="'+i+'" value="'+esc(x.name)+'"><input type="time" data-fstart="'+i+'" value="'+x.start+'"><input type="time" data-fend="'+i+'" value="'+x.end+'"><button class="btn danger" data-fremove="'+i+'">×</button></div>'}).join('');document.getElementById('dailyHours').value=state.dailyHours;updateWeek()}
-function addFixed(){state.fixed.push({name:'新固定事项',start:'09:00',end:'10:00',days:1});save();renderFixed()}
+function addFixed(){state.fixed.push({name:'新固定事项',start:'09:00',end:'10:00',days:7});save();renderFixed();renderAutoPlan()}
 function createPhases(){var cat=document.getElementById('splitCategory').value,name=document.getElementById('splitName').value.trim();if(!name){toast('请先填写大任务名称。');return}var p=[['收集与理解','收集「'+name+'」的资料与要求',25,'列出资料来源、规则和交付清单'],['方案与产出','形成「'+name+'」的方案与初稿',30,'完成方案框架或可展示初稿'],['制作与验证','制作并验证「'+name+'」',35,'完成核心内容并记录问题'],['检查与交付','检查并提交「'+name+'」',25,'完成验收、格式检查和提交凭证']];p.forEach(function(x){state.tasks.push({id:id(),category:cat,type:x[0]+'-'+name,name:x[1],parent:name,estimate:x[2],acceptance:x[3],materials:'',dueDate:'',dueTime:'18:00',done:false,stage:x[0]})});save();renderAll();toast('已生成四阶段任务，请按实际工作内容继续细化。')}
 
 function localDay(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
@@ -189,29 +189,58 @@ return '中';
 }
 function plannerDayApplies(f,d,index){
 if(Array.isArray(f.weekdays))return f.weekdays.indexOf(d.getDay())>=0;
-var n=Number(f.days)||7;
-if(n>=7)return true;
+var n=Number(f.days);
+if(!n||n>=7)return true;
 if(n===5)return d.getDay()>=1&&d.getDay()<=5;
 if(n===1)return index===0;
 return d.getDay()>=1&&d.getDay()<=n;
 }
 function plannerMinutes(s){var a=String(s||'00:00').split(':').map(Number);return (a[0]||0)*60+(a[1]||0)}
-function plannerSlotsForDay(day,index,now){
-var lo=7*60,hi=23*60+30,blocked=[];
+function plannerClock(v){return String(Math.floor(v/60)).padStart(2,'0')+':'+String(v%60).padStart(2,'0')}
+function plannerFixedForDay(day,index){
+var rows=[];
 state.fixed.forEach(function(f){
-var a=plannerMinutes(f.start),b=plannerMinutes(f.end);
+var a=plannerMinutes(f.start),b=plannerMinutes(f.end),overnight=b<=a;
 if(plannerDayApplies(f,day,index)){
-if(b>a)blocked.push([a,b]);
-else{blocked.push([a,1440]);if(b>0&&index<6)blocked.push([0,b]);}
+if(!overnight)rows.push({name:f.name,start:a,end:b,type:'fixed'});
+else rows.push({name:f.name,start:a,end:1440,type:'fixed'});
 }
-if(index>0&&b<=a&&plannerDayApplies(f,new Date(day.getFullYear(),day.getMonth(),day.getDate()-1),index-1))blocked.push([0,b]);
+if(overnight&&index>0){
+var prev=new Date(day.getFullYear(),day.getMonth(),day.getDate()-1);
+if(plannerDayApplies(f,prev,index-1)&&b>0)rows.push({name:f.name+'（跨夜）',start:0,end:b,type:'fixed'});
+}
 });
-blocked=blocked.map(function(x){return [Math.max(lo,x[0]),Math.min(hi,x[1])]}).filter(function(x){return x[1]>x[0]}).sort(function(a,b){return a[0]-b[0]});
-var merged=[];blocked.forEach(function(x){var z=merged[merged.length-1];if(z&&x[0]<=z[1])z[1]=Math.max(z[1],x[1]);else merged.push(x.slice())});
-var free=[],cur=lo;merged.forEach(function(x){if(x[0]>cur)free.push([cur,x[0]]);cur=Math.max(cur,x[1])});if(cur<hi)free.push([cur,hi]);
-if(index===0){var n=new Date(now),cut=n.getHours()*60+n.getMinutes();free=free.map(function(x){return [Math.max(x[0],cut),x[1]]}).filter(function(x){return x[1]>x[0]})}
-var slots=[];free.forEach(function(x){var p=x[0];while(p<x[1]){var e=Math.min(x[1],p+60);if(e-p>=20)slots.push({day:day,index:index,start:p,end:e,remaining:e-p});p=e}});
-return slots;
+return rows.filter(function(x){return x.end>x.start&&x.end>420&&x.start<1410}).map(function(x){x.start=Math.max(420,x.start);x.end=Math.min(1410,x.end);return x}).filter(function(x){return x.end>x.start});
+}
+function plannerSlotsForDay(day,index,now){
+var lo=420,hi=1410,events=plannerFixedForDay(day,index),blocked=events.map(function(x){return [x.start,x.end]}).sort(function(a,b){return a[0]-b[0]}),merged=[];
+blocked.forEach(function(x){var z=merged[merged.length-1];if(z&&x[0]<=z[1])z[1]=Math.max(z[1],x[1]);else merged.push(x.slice())});
+var free=[],cur=lo;
+merged.forEach(function(x){if(x[0]>cur)free.push([cur,x[0]]);cur=Math.max(cur,x[1])});
+if(cur<hi)free.push([cur,hi]);
+if(index===0){var cut=now.getHours()*60+now.getMinutes();free=free.map(function(x){return [Math.max(x[0],cut),x[1]]}).filter(function(x){return x[1]>x[0]})}
+var freeMinutes=free.reduce(function(s,x){return s+x[1]-x[0]},0);
+var fixedMinutes=merged.reduce(function(s,x){return s+x[1]-x[0]},0);
+var awakeCap=Math.max(0,(Number(state.dailyHours)||8)*60-fixedMinutes);
+var usable=Math.min(freeMinutes,awakeCap),workBudget=Math.floor(usable*.8),slots=[],rests=[],buffers=[],left=workBudget;
+free.forEach(function(x){
+var p=x[0],end=x[1];
+while(p<end&&left>0){
+var take=Math.min(50,end-p,left);
+if(take<15)break;
+slots.push({start:p,end:p+take,remaining:take,dayIndex:index});
+p+=take;left-=take;
+if(left>0&&p+10<=end){rests.push({start:p,end:p+10,type:'rest',name:'短休息'});p+=10}
+}
+if(p<end)buffers.push({start:p,end:end,type:'buffer',name:'机动缓冲'});
+});
+return {slots:slots,rests:rests,buffers:buffers,fixed:events,capacity:usable,workBudget:workBudget,freeMinutes:freeMinutes,fixedMinutes:fixedMinutes};
+}
+function plannerEnergy(t){
+var s=(t.category||'')+' '+(t.type||'')+' '+(t.name||'');
+if(/分析|方案|撰写|开发|编程|PRD|设计|策略|建模|答辩|需求|架构|调试|推理/.test(s))return '高';
+if(/整理|核对|检查|归档|上传|发布|复盘|收集|分类|排版|录入|剪辑字幕/.test(s))return '低';
+return '中';
 }
 function plannerFit(slot,level,energySamples){
 var h=Math.floor(slot.start/60),samples=energySamples[h],observed=samples&&samples.length?samples.reduce(function(a,b){return a+b},0)/samples.length:null;
@@ -222,32 +251,81 @@ return h>=8&&h<18?2:0;
 }
 function renderAutoPlan(){
 var el=document.getElementById('autoPlan');if(!el)return;
-var now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),days=[],slots=[],energySamples={};
+var now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),days=[],energySamples={};
 state.logs.forEach(function(l){if(l.startHour!==undefined&&Number(l.startEnergy)>0){var k=Number(l.startHour);(energySamples[k]||(energySamples[k]=[])).push(Number(l.startEnergy))}});
-for(var i=0;i<7;i++){var d=new Date(today);d.setDate(d.getDate()+i);var daySlots=plannerSlotsForDay(d,i,now);var fixedNonSleep=state.fixed.reduce(function(sum,f){if(f.name==='睡眠'||!plannerDayApplies(f,d,i))return sum;var a=plannerMinutes(f.start),b=plannerMinutes(f.end),v=b-a;if(v<0)v+=1440;return sum+v},0);var raw=daySlots.reduce(function(sum,s){return sum+s.remaining},0);var dailyCap=Math.max(0,(Number(state.dailyHours)||8)*60-fixedNonSleep);var usable=Math.min(raw,dailyCap);var budget=Math.floor(usable*.8);var left=budget;daySlots.forEach(function(s){if(left<=0){s.remaining=0;return}var take=Math.min(s.remaining,left);s.remaining=take;left-=take;if(take>0)slots.push(s)});days.push({date:d,slots:daySlots,capacity:usable,budget:budget,items:[],used:0})}
-var tasks=state.tasks.filter(function(t){return !t.containerOnly&&!t.done}).map(function(t){var remain=Math.max(0,estimate(t)-(Number(t.accumulatedMinutes)||0));return {t:t,remain:remain,deadline:due(t),level:plannerEnergy(t)}}).filter(function(x){return x.remain>0});
-tasks.sort(function(a,b){var ad=a.deadline?a.deadline.getTime():Infinity,bd=b.deadline?b.deadline.getTime():Infinity;if(ad!==bd)return ad-bd;if(!!a.t.hardDeadline!==!!b.t.hardDeadline)return a.t.hardDeadline?-1:1;return b.remain-a.remain});
-var unplaced=[],allocations=[];
-tasks.forEach(function(task){
-var earliest=task.t.planDate?new Date(task.t.planDate+'T00:00:00'):today;if(earliest<today)earliest=today;
-var lastIndex=6;if(task.deadline){lastIndex=Math.floor((new Date(task.deadline.getFullYear(),task.deadline.getMonth(),task.deadline.getDate())-today)/86400000);lastIndex=Math.min(6,lastIndex)}
-var remaining=task.remain,assigned=0;
-for(var di=0;di<days.length&&remaining>0;di++){
-var day=days[di];if(di<Math.max(0,Math.round((earliest-today)/86400000))||di>lastIndex)continue;
-var candidates=day.slots.filter(function(s){return s.remaining>=20}).sort(function(a,b){var fa=plannerFit(a,task.level,energySamples),fb=plannerFit(b,task.level,energySamples);return fb-fa||a.start-b.start});
-candidates.forEach(function(slot){if(remaining<=0||slot.remaining<20)return;var take=Math.min(remaining,slot.remaining);if(take<20&&remaining>take)return;var item={t:task.t,mins:take,start:slot.start,end:slot.start+take,level:task.level,deadline:task.deadline};day.items.push(item);day.used+=take;slot.start+=take;slot.remaining-=take;remaining-=take;assigned+=take;allocations.push(item)});
+for(var i=0;i<7;i++){
+var d=new Date(today);d.setDate(d.getDate()+i);
+var data=plannerSlotsForDay(d,i,now);
+days.push({date:d,index:i,slots:data.slots,rests:data.rests,buffers:data.buffers,fixed:data.fixed,capacity:data.capacity,workBudget:data.workBudget,freeMinutes:data.freeMinutes,used:0,items:[]});
 }
-if(remaining>0)unplaced.push({t:task.t,remaining:remaining,deadline:task.deadline,level:task.level});
+var tasks=state.tasks.filter(function(t){return !t.containerOnly&&!t.done}).map(function(t){
+var remain=Math.max(0,estimate(t)-(Number(t.accumulatedMinutes)||0));
+return {t:t,remain:remain,deadline:due(t),level:plannerEnergy(t)};
+}).filter(function(x){return x.remain>0});
+function deadlineValue(x){return x.deadline?x.deadline.getTime():Infinity}
+tasks.sort(function(a,b){
+var av=deadlineValue(a),bv=deadlineValue(b);
+if(av!==bv)return bv-av;
+if(!!a.t.hardDeadline!==!!b.t.hardDeadline)return a.t.hardDeadline?1:-1;
+return b.remain-a.remain;
 });
-function tm(v){return String(Math.floor(v/60)).padStart(2,'0')+':'+String(v%60).padStart(2,'0')}
-function ddlLabel(t){return t.dueDate?(t.dueDate+' '+(t.dueTime||'18:00')):'未设置 DDL'}
+var unplaced=[];
+tasks.forEach(function(task){
+var earliest=task.t.planDate?new Date(task.t.planDate+'T00:00:00'):today;
+if(earliest<today)earliest=today;
+var firstIndex=Math.max(0,Math.floor((earliest-today)/86400000));
+var lastIndex=task.deadline?Math.floor((new Date(task.deadline.getFullYear(),task.deadline.getMonth(),task.deadline.getDate())-today)/86400000):0;
+if(lastIndex<0){unplaced.push({t:task.t,remaining:task.remain,deadline:task.deadline,level:task.level,reason:'DDL 已经过期'});return}
+lastIndex=Math.min(6,lastIndex);
+if(firstIndex>lastIndex){unplaced.push({t:task.t,remaining:task.remain,deadline:task.deadline,level:task.level,reason:'计划开始日期晚于 DDL'});return}
+var remaining=task.remain;
+for(var di=lastIndex;di>=firstIndex&&remaining>0;di--){
+var day=days[di],limit=null;
+if(task.deadline&&localDay(day.date)===localDay(task.deadline))limit=plannerMinutes((task.t.dueTime||'23:59'));
+var candidates=day.slots.filter(function(s){return s.remaining>0&&(!limit||s.start<limit)&&(!limit||s.end<=limit)});
+candidates.sort(function(a,b){var fit=plannerFit(b,task.level,energySamples)-plannerFit(a,task.level,energySamples);return fit||b.end-a.end});
+candidates.forEach(function(slot){
+if(remaining<=0||slot.remaining<=0)return;
+var take=Math.min(remaining,slot.remaining),start=slot.end-take;
+if(limit&&slot.end>limit)return;
+day.items.push({t:task.t,mins:take,start:start,end:slot.end,level:task.level,deadline:task.deadline,hard:!!task.t.hardDeadline});
+day.used+=take;slot.end=start;slot.remaining-=take;remaining-=take;
+});
+}
+if(remaining>0)unplaced.push({t:task.t,remaining:remaining,deadline:task.deadline,level:task.level,reason:'DDL 前可用时间不足'});
+});
+function ddlLabel(t){return t.dueDate?(t.dueDate+' '+(t.dueTime||'23:59')):'未设置 DDL'}
+function rankLabel(x,now){
+if(!x.deadline)return '常规任务';
+var diff=x.deadline.getTime()-now.getTime();
+if(diff<0)return '已逾期';
+if(x.hard)return '硬截止';
+if(diff<=24*3600000)return '24小时内';
+if(diff<=72*3600000)return '72小时内';
+return '按DDL倒排';
+}
 el.innerHTML=days.map(function(d){
-d.items.sort(function(a,b){return a.start-b.start});
-var body=d.items.length?d.items.map(function(x){var risk=x.deadline&&x.deadline.getTime()<now.getTime()?' · 已逾期':x.t.hardDeadline?' · 硬截止':'';return '<div class="task" style="margin:7px 0;padding:10px 12px;display:flex;gap:10px;align-items:center"><div class="task-mark"></div><div style="flex:1;min-width:0"><b>'+tm(x.start)+'–'+tm(x.end)+'　'+esc(x.t.name)+'</b><div class="task-meta">'+x.mins+' 分钟 · '+x.level+'精力 · '+esc(ddlLabel(x.t))+risk+'</div><div class="task-meta">'+esc(learningSummary(x.t))+'</div></div><button class="btn soft" data-start="'+esc(x.t.id)+'">开始</button></div>'}).join(''):'<div class="info">暂无排入任务；检查是否有可执行任务、可用时间或已设置 DDL。</div>';
-return '<section class="card" style="margin:10px 0;padding:12px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>'+d.date.toLocaleDateString('zh-CN',{month:'numeric',day:'numeric',weekday:'short'})+'</b><span class="status">'+d.used+' / '+d.budget+' 分钟</span></div><div class="task-meta">固定事务已避让 · 休息/突发缓冲 '+Math.max(0,d.capacity-d.budget)+' 分钟</div>'+body+'</section>'
+var events=[];
+d.fixed.forEach(function(x){events.push({start:x.start,end:x.end,kind:'fixed',name:x.name})});
+d.rests.forEach(function(x){events.push({start:x.start,end:x.end,kind:'rest',name:'休息 10 分钟'})});
+d.buffers.forEach(function(x){events.push({start:x.start,end:x.end,kind:'buffer',name:'机动缓冲 / 发呆 / 突发事务'})});
+d.slots.forEach(function(x){if(x.remaining>0)events.push({start:x.start,end:x.start+x.remaining,kind:'buffer',name:'未分配时间'})});
+d.items.forEach(function(x){events.push({start:x.start,end:x.end,kind:'task',item:x})});
+events.sort(function(a,b){return a.start-b.start||a.end-b.end});
+var taskCount=d.items.length,dayLabel=d.index===0?'今天':d.index===1?'明天':'';
+var body=events.map(function(x){
+var range=plannerClock(x.start)+'–'+plannerClock(x.end);
+if(x.kind==='fixed')return '<div class="task" style="margin:7px 0;padding:10px 12px;border-left:4px solid #7b8790"><div><b>'+range+'　🔒 '+esc(x.name)+'</b><div class="task-meta">固定事务 · 不安排其他任务</div></div></div>';
+if(x.kind==='rest')return '<div class="task" style="margin:7px 0;padding:9px 12px;background:#f2f5f2"><b>'+range+'　☕ 休息 / 放空</b><div class="task-meta">任务间隔 · 恢复精力</div></div>';
+if(x.kind==='buffer')return '<div class="task" style="margin:7px 0;padding:9px 12px;background:#f5f4ef"><b>'+range+'　◇ '+esc(x.name)+'</b><div class="task-meta">不预先塞任务 · 留给疲惫、突发情况或自由时间</div></div>';
+var q=x.item,t=q.t,priority=rankLabel(q,now),risk=q.deadline&&q.deadline.getTime()<now.getTime()?' · 已逾期':q.hard?' · 硬截止':'';
+return '<div class="task" style="margin:7px 0;padding:11px 12px;border-left:4px solid '+(q.hard?'#c46d5d':'#397a67')+'"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>'+range+'　'+esc(t.name)+'</b><span class="status">'+priority+'</span></div><div class="task-meta">本段 '+q.mins+' 分钟 · 预计剩余 '+Math.max(0,estimate(t)-(Number(t.accumulatedMinutes)||0))+' 分钟 · '+q.level+'精力 · '+esc(ddlLabel(t))+risk+'</div><div class="task-meta">'+esc(learningSummary(t))+'</div><div style="margin-top:7px"><button class="btn soft" data-start="'+esc(t.id)+'">开始这项任务</button></div></div>';
+}).join('');
+var pct=d.workBudget?Math.round(d.used/d.workBudget*100):0;
+return '<section class="card" style="margin:10px 0;padding:13px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><div><b style="font-size:16px">'+dayLabel+' '+d.date.toLocaleDateString('zh-CN',{month:'numeric',day:'numeric',weekday:'short'})+'</b><div class="task-meta">可安排工作 '+Math.floor(d.workBudget/60)+'小时'+(d.workBudget%60?' '+d.workBudget%60+'分钟':'')+' · 已排 '+d.used+' 分钟</div></div><span class="status">'+pct+'%</span></div>'+body+'</section>';
 }).join('')+
-'<div class="info"><b>排期规则：</b>先避开固定事务，再按 DDL（硬截止优先）、剩余预测耗时和任务精力要求分配时间；每项任务按最多 60 分钟工作块拆排，保留 20% 缓冲。任务耗时预测读取该任务/同类任务的真实记录；精力时段样本不足时使用保守时段偏好，后续随真实执行记录校准。</div>'+
-(unplaced.length?'<section class="card" style="border-color:#d88b73;padding:12px;margin-top:10px"><b>⚠️ 当前时间容量不足，以下任务无法完整排入 DDL 前</b>'+unplaced.map(function(x){return '<div class="task-meta" style="margin-top:6px">'+esc(x.t.name)+' · 还需 '+x.remaining+' 分钟 · '+esc(ddlLabel(x.t))+'</div>'}).join('')+'<div class="task-meta">建议提前拆分交付、调整低优先级任务或确认是否申请延期；不会自动覆盖原 DDL。</div></section>':'<div class="info">未来 7 天内的任务已完成初步排入；完成/修改任务后点击「重新计算」即可更新。</div>');
+'<div class="info"><b>排期依据：</b>固定事务先锁定；硬截止与较近 DDL 优先；每项任务按个人历史耗时预测并拆成不超过 50 分钟的专注段；高精力任务优先匹配个人精力较好的时段，低精力任务安排在较轻松时段。每个工作日预留 20% 机动时间，并在专注段之间安排短休息。完成、延迟或新增突发任务后，点击「重新计算」重排，不会擅自更改原 DDL。</div>'+
+(unplaced.length?'<section class="card" style="border-color:#d88b73;padding:12px;margin-top:10px"><b>⚠️ 这些任务目前排不进 DDL 前的可用时段</b>'+unplaced.map(function(x){return '<div class="task-meta" style="margin-top:7px"><b>'+esc(x.t.name)+'</b> · 还需 '+x.remaining+' 分钟 · '+esc(ddlLabel(x.t))+' · '+esc(x.reason)+'</div>'}).join('')+'<div class="task-meta">系统不会假装这些任务已经排好。需要提前拆小、调整其他任务或由你确认是否延期。</div></section>':'<div class="info">当前任务已按 DDL 倒推到具体时间段。完成任务后勾选完成，再重新计算，后续时间会自动释放。</div>');
 }
 function checkScheduledStarts(){var now=Date.now();state.tasks.filter(function(t){return !t.containerOnly&&!t.done&&t.plannedStart&&new Date(t.plannedStart).getTime()<=now}).forEach(function(t){var seen=state.scheduledPrompts.some(function(x){return x.taskId===t.id});if(!seen){state.scheduledPrompts.push({taskId:t.id,at:now});save();if(document.hidden&&'Notification'in window&&Notification.permission==='granted'){new Notification('上岸鸭 · 到计划开始时间了',{body:'现在开始「'+t.name+'」吗？'})}else if(!document.getElementById('urgentOverlay').classList.contains('show')){if(confirm('「'+t.name+'」到了计划开始时间。现在开始吗？'))begin(t.id)}}});}
 function checkMorningPrompt(){var now=new Date(),day=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0'),saved=localStorage.getItem(MORNING_KEY);if(now.getHours()>=8&&saved!==day&&!document.hidden){document.getElementById('morningOverlay').classList.add('show')}}
@@ -309,7 +387,7 @@ document.getElementById('nav').addEventListener('click',function(e){var b=e.targ
 document.getElementById('categoryGrid').addEventListener('click',function(e){var c=e.target.closest('[data-category]');if(c){renderCategoryPage(c.dataset.category)}});
 document.addEventListener('click',function(e){var s=e.target.closest('[data-start]'),ed=e.target.closest('[data-edit]'),cs=e.target.closest('[data-cat-start]'),ce=e.target.closest('[data-cat-edit]'),cn=e.target.closest('[data-cat-new]'),rv=e.target.closest('[data-review]'),fr=e.target.closest('[data-fremove]');if(s)openTaskWorkspace(s.dataset.start,true);if(ed)editTask(ed.dataset.edit);if(cs)openTaskWorkspace(cs.dataset.catStart,true);if(ce)editTask(ce.dataset.catEdit);if(cn){resetForm();document.getElementById('taskCategory').value=categoryPageCategory||'待分类';view('tasks');document.getElementById('taskEditor').scrollIntoView({behavior:'smooth',block:'start'})}if(rv){var r=state.reviews.find(function(x){return x.id===rv.dataset.review});if(r){var rating=prompt('回忆结果：输入 easy（很熟）、good（记得）、forgot（忘记）','good');if(['easy','good','forgot'].indexOf(rating)>=0)completeReview(r.id,rating)}}if(fr){state.fixed.splice(Number(fr.dataset.fremove),1);save();renderFixed()}});
 document.getElementById('taskForm').addEventListener('submit',saveTask);document.getElementById('resetForm').onclick=resetForm;document.getElementById('newTaskTop').onclick=function(){resetForm();view('tasks');document.getElementById('taskEditor').scrollIntoView({behavior:'smooth'})};document.getElementById('morningNone').onclick=function(){localStorage.setItem(MORNING_KEY,new Date().toISOString().slice(0,10));document.getElementById('morningOverlay').classList.remove('show');toast('已记录：今天没有新增硬截止事项。')};document.getElementById('morningYes').onclick=startMorningTask;document.getElementById('morningVoiceBtn').onclick=function(){voiceStartFor('morningTaskText')};document.getElementById('urgentTaskBtn').onclick=function(){document.getElementById('urgentOverlay').classList.add('show')};document.getElementById('urgentCancel').onclick=function(){document.getElementById('urgentOverlay').classList.remove('show')};document.getElementById('urgentSave').onclick=function(){createUrgent(false)};document.getElementById('urgentStartNow').onclick=function(){createUrgent(true)};document.getElementById('nightSave').onclick=saveNightReview;document.getElementById('nightLater').onclick=function(){document.getElementById('nightReviewOverlay').classList.remove('show')};document.getElementById('workspaceBack').onclick=function(){view('main')};document.getElementById('categoryBack').onclick=function(){view('main')};document.getElementById('nightEnergy').onclick=function(e){var b=e.target.closest('[data-energy]');if(b)document.querySelectorAll('#nightEnergy .choice').forEach(function(x){x.classList.toggle('active',x===b)})};document.getElementById('refreshPlan').onclick=renderAutoPlan;document.getElementById('categoryFilter').onchange=renderTasks;document.getElementById('searchTasks').oninput=renderTasks;document.getElementById('statusFilter').onchange=renderTasks;
-document.getElementById('generateBtn').onclick=function(){view('week');document.getElementById('splitName').focus()};document.getElementById('createPhases').onclick=createPhases;document.getElementById('addFixed').onclick=addFixed;document.getElementById('dailyHours').onchange=function(e){state.dailyHours=Number(e.target.value)||8;save();updateWeek()};document.getElementById('fixedList').addEventListener('change',function(e){var d=e.target.dataset;if(d.fname!==undefined)state.fixed[+d.fname].name=e.target.value;if(d.fstart!==undefined)state.fixed[+d.fstart].start=e.target.value;if(d.fend!==undefined)state.fixed[+d.fend].end=e.target.value;save();updateWeek()});
+document.getElementById('generateBtn').onclick=function(){view('week');document.getElementById('splitName').focus()};document.getElementById('createPhases').onclick=createPhases;document.getElementById('addFixed').onclick=addFixed;document.getElementById('dailyHours').onchange=function(e){state.dailyHours=Number(e.target.value)||8;save();updateWeek();renderAutoPlan()};document.getElementById('fixedList').addEventListener('change',function(e){var d=e.target.dataset;if(d.fname!==undefined)state.fixed[+d.fname].name=e.target.value;if(d.fstart!==undefined)state.fixed[+d.fstart].start=e.target.value;if(d.fend!==undefined)state.fixed[+d.fend].end=e.target.value;save();updateWeek();renderAutoPlan()});
 document.getElementById('pauseTimer').onclick=function(){if(interval)pause();else resume()};document.getElementById('finishTimer').onclick=function(){openCheckin('主动结束计时，请汇报当前进度、困难和精力。')};document.getElementById('closeCheckin').onclick=function(){document.getElementById('checkinOverlay').classList.remove('show')};document.getElementById('saveCheckin').onclick=saveCheckin;
 document.getElementById('progressChoices').onclick=function(e){var b=e.target.closest('[data-progress]');if(b){progress=b.dataset.progress;document.querySelectorAll('#progressChoices .choice').forEach(function(x){x.classList.toggle('active',x===b)})}};document.getElementById('energyChoices').onclick=function(e){var b=e.target.closest('[data-energy]');if(b){energy=Number(b.dataset.energy);document.querySelectorAll('#energyChoices .choice').forEach(function(x){x.classList.toggle('active',x===b)})}};document.getElementById('difficultyChoices').onclick=function(e){var b=e.target.closest('[data-difficulty]');if(b){difficulty=Number(b.dataset.difficulty);document.querySelectorAll('#difficultyChoices .choice').forEach(function(x){x.classList.toggle('active',x===b)})}};
 document.getElementById('deadlineCheck').onclick=function(){var t=state.tasks.find(function(x){return x.id===document.getElementById('deadlineBanner').dataset.task});if(t)openDeadline(t,due(t)-Date.now())};document.getElementById('saveDeadline').onclick=saveDeadline;document.getElementById('remindLater').onclick=function(){state.deadlineSnoozes[deadlineId]=Date.now()+2*3600000;state.deadlineLogs=state.deadlineLogs.filter(function(l){return l.taskId!==deadlineId});save();document.getElementById('deadlineOverlay').classList.remove('show');toast('两小时后重新检查。')};document.getElementById('deadlineEnergy').onclick=function(e){var b=e.target.closest('[data-energy]');if(b)document.querySelectorAll('#deadlineEnergy .choice').forEach(function(x){x.classList.toggle('active',x===b)})};
