@@ -368,7 +368,7 @@ return b.remain-a.remain;
 });
 }
 state.tasks.forEach(function(t){
-if(t.containerOnly||t.done)return;
+if(t.containerOnly||t.done||t.abandoned)return;
 var total=estimate(t),acc=Number(t.accumulatedMinutes)||0,r=Math.max(0,total-acc);
 if(r<=0){var explicitRemaining=Number(t.remainingEstimate)||0;r=explicitRemaining>0?explicitRemaining:Math.max(15,Math.round(Math.max(15,Number(t.estimate)||30)*.5/5)*5);}
 remaining[t.id]={t:t,remain:r,deadline:due(t),level:plannerEnergy(t),plan:t.planDate?new Date(t.planDate+'T00:00:00'):null};
