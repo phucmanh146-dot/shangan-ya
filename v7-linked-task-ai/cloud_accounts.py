@@ -143,7 +143,7 @@ def handle(handler):
   user=current(handler)
   if path=='/api/cloud-account/me':
    agent=agent_for(user['id']) if user else None
-   handler.message({'authenticated':bool(user),'name':user['name'] if user else '', 'hasPassword':bool(user and user['password']),'authorizedSession':bool(agent),'serviceOnline':bool(agent and time.time()-agent['seen']<45)});return True
+   handler.message({'authenticated':bool(user),'name':user['name'] if user else '', 'accountKey':user['storage'] if user else '', 'hasPassword':bool(user and user['password']),'authorizedSession':bool(agent),'serviceOnline':bool(agent and time.time()-agent['seen']<45)});return True
   if path in ('/api/cloud-account/login','/api/cloud-account/register'):
    data=body(handler);name=str(data.get('name','')).strip()
    if not 2<=len(name)<=40 or re.search(r'[\x00-\x1f]',name):raise ValueError('账号名需要2至40个字符。')
