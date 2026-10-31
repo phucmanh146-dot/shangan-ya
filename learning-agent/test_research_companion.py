@@ -4,12 +4,28 @@ from unittest.mock import patch
 import test_general_loop as fixtures
 import team_orchestrator as team
 import research_companion as rc
+import threading
+from urllib.request import urlopen
+from learning_agent_server import Handler, ThreadingHTTPServer
 
 
 class ResearchCompanionTests(unittest.TestCase):
     setUp = fixtures.GeneralLoopTests.setUp
     tearDown = fixtures.GeneralLoopTests.tearDown
     ctx = fixtures.GeneralLoopTests.ctx
+
+    def test_http_serves_the_script_referenced_by_workbench(self):
+        server=ThreadingHTTPServer(('127.0.0.1',0),Handler)
+        worker=threading.Thread(target=server.serve_forever,daemon=True);worker.start()
+        try:
+            base='http://127.0.0.1:'+str(server.server_port)
+            with urlopen(base+'/team.html',timeout=5) as response:
+                self.assertIn('research-companion.js',response.read().decode())
+            with urlopen(base+'/research-companion.js',timeout=5) as response:
+                self.assertEqual(response.status,200)
+                self.assertIn('rc-form',response.read().decode())
+        finally:
+            server.shutdown();server.server_close();worker.join(timeout=3)
 
     def save(self, deadline=None):
         self.p=rc.save({**self.ctx(),'outcome':'访谈对应产品','materials':'受控工程夹具，非真人材料',
