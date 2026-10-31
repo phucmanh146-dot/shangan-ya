@@ -58,6 +58,19 @@ def call_json(p, stage, payload, validator):
         '不加Markdown代码围栏、解释前缀或后缀。current_locator只填一个实际位置；多个引用放evidence_refs列表。'
         'gap_type选一个类别；capability_basis是字符串。action写具体软件/计算/编辑操作和哪些行，不只写修正/完善；'
         'self_check写可比较的字段或数字，failure_next写具体检查位置。保留未知项；不得自行确认能力或关闭差距。'+SYSTEM, **copy.deepcopy(payload)}
+    # Embedded page labels in derived text describe provenance, not storage
+    # locators. Make the actual citation coordinates explicit on every attempt.
+    request_payload['citation_locator_contract'] = {
+        'rule': 'current_locator与evidence_refs.locator必须逐字选择下列实际存储位置。'
+                '正文中的slide/page标签只描述原件出处，不是当前摘录文件的locator。'
+                'current_locator只选一个位置；跨页对照使用多条evidence_refs。'
+                'quote必须是该位置text中的连续原文；不得改写或跨位置拼接。',
+        'allowed_locations': [
+            {'artifact_id': d['artifact_id'], 'artifact_version': d['artifact_version'],
+             'locator': unit['locator']}
+            for d in payload.get('documents', []) for unit in d.get('units', [])
+        ]
+    }
     content = team.agent.dump(request_payload)
     cfg = rescue.config_snapshot()
     run = {'run_id':uuid.uuid4().hex,'stage':stage,'project_version':p['version'],'boot_id':BOOT_ID,

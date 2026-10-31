@@ -104,6 +104,14 @@ def prerequisites(gap, owner, member, diagnosis, context):
             locator = gap.get('current_locator', '待定位材料')
             steps = [f'在 {locator} 围绕「{gap["target_result"]}」制作一个最小片段，保存操作和产物',
                      '按当前验收条件核对，记录通过项、错误与未知；把实际产物登记为能力证据']
+            grounded = next((s for s in gap.get('micro_steps', [])
+                             if all(isinstance(s.get(k), str) and s[k].strip()
+                                    for k in ('target_locator', 'action', 'output', 'self_check'))), None)
+            if phase == 'trial' and grounded:
+                locator = grounded['target_locator']
+                steps = [f'打开 {locator}，先试做当前动作的一个最小单位：{grounded["action"]}',
+                         f'保存试做产物：{grounded["output"]}；按「{grounded["self_check"]}」核对并记录失败或未知。'
+                         '试做不自动认定能力或正式成果通过。']
             if phase == 'learn' and refs:
                 r = refs[0]
                 steps = [f'打开 {r["author"]} 的《{r["title"]}》，定位 {r["section"]}：{r["url"]}',
