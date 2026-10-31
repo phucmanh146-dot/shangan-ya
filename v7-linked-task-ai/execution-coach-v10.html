@@ -22,7 +22,7 @@
 <section id="view-category" class="hidden"><div class="section-head"><div><h2 id="categoryPageTitle">类别专属工作区</h2><small id="categoryPageDesc">按类别拆解任务、资料和交付步骤。</small></div><div class="form-actions"><button class="btn" id="categoryBack">← 返回任务主线</button><button class="btn primary" data-cat-new>＋ 新建本类任务</button></div></div><div id="categoryPageBody"></div></section>
 <section id="view-workspace" class="hidden"><div class="section-head"><div><h2 id="workspaceTitle">任务执行工作区</h2><small id="workspaceSub">按当前任务类别展示对应流程、资料层级和验收标准。</small></div><button class="btn" id="workspaceBack">← 返回任务主线</button></div><div id="workspaceBody"></div></section>
 <section id="view-week" class="hidden"><div class="section-head"><div><h2>本周固定安排与可支配时间</h2><small>先锁定生活和固定事项，再把任务放进剩余时间。</small></div><button class="btn primary" id="addFixed">＋ 固定安排</button></div><div class="grid weekly"><section class="card panel"><h2>固定时间块</h2><p class="panel-sub">吃饭、通勤、课程、会议、睡眠等都要占用时间轴。</p><div class="fixed-list" id="fixedList"></div></section><section class="card panel"><h2>本周时间预算</h2><p class="panel-sub">按你设置的每日清醒可安排时间估算。</p><div class="form-grid"><div class="field"><label>每天可用于安排任务的清醒时长（小时）</label><input id="dailyHours" type="number" min="1" max="24" value="16"></div><div class="field"><label>每日排期开始</label><input id="plannerStart" type="time" value="07:00"></div><div class="field"><label>每日排期结束</label><input id="plannerEnd" type="time" value="23:30"></div><div class="field"><label>休息 / 突发缓冲比例（%）</label><input id="bufferPercent" type="number" min="0" max="50" step="5" value="20"></div></div><div class="summary-metrics"><div class="metric"><b id="grossHours">56h</b><span>本周可安排上限</span></div><div class="metric"><b id="fixedHours">—</b><span>固定事务占用</span></div><div class="metric"><b id="freeHours">—</b><span>扣除执行与走神后的剩余</span></div></div><div class="info" id="weekUsageNote">有效执行和未计划时间会分别核算；未计划时间不计入有效产出。</div><div class="info">睡眠已从清醒时长中排除，不重复扣除；再预留 20% 作为休息与突发缓冲。</div></section></div><section class="card panel"><div class="section-head"><div><h2>今日执行时间表 · 每项任务几点开始几点结束</h2><small>把固定事务、任务、休息和突发缓冲放进同一条时间轴；显示每项任务的开始与结束时间。</small></div><div class="form-actions"><select id="planRange" aria-label="时间表范围"><option value="1">今日</option><option value="3">未来三天</option><option value="7" selected>本周</option><option value="14">未来两周</option></select><button class="btn soft" id="recordTimeLoss">记录走神 / 无效时间</button><button class="btn soft" id="refreshPlan">重新计算</button></div></div><div id="autoPlan"></div></section><section class="card editor"><h2>大任务四阶段拆解</h2><p class="panel-sub">先选择主线和项目，再按实际交付内容生成阶段任务；每阶段自动生成约 25–35 分钟的小任务；填写大任务 DDL 后，四个阶段继承同一截止时间。</p><div class="form-grid"><div class="field"><label>主线</label><select id="splitCategory"><option>运营</option><option>竞赛</option><option>学习 AI 产品经理</option></select></div><div class="field"><label>大任务名称</label><input id="splitName" placeholder="例如：完成 Agent 大赛参赛作品"></div><div class="field"><label>大任务截止日期</label><input id="splitDueDate" type="date"></div><div class="field"><label>截止时间</label><input id="splitDueTime" type="time" value="18:00"></div></div><div class="phase-grid"><div class="phase"><b>阶段一 · 收集与理解</b><small>找资料、核对要求、整理输入</small></div><div class="phase"><b>阶段二 · 方案与产出</b><small>形成框架、内容或原型</small></div><div class="phase"><b>阶段三 · 制作与验证</b><small>实现、测试、修正问题</small></div><div class="phase"><b>阶段四 · 检查与交付</b><small>验收、排版、提交、复盘</small></div></div><div style="margin-top:13px"><button class="btn primary" id="createPhases">生成四阶段任务</button></div></section></section>
-<section id="view-tasks" class="hidden"><div class="section-head"><div><h2>全部任务与截止日期</h2><small>任务编辑直接回填表单；截止提醒提前 48 小时启动。</small></div></div><section class="card panel"><div class="toolbar"><input id="searchTasks" placeholder="搜索任务名称、项目或资料"><select id="statusFilter"><option value="all">全部状态</option><option value="todo">待执行</option><option value="done">已完成</option><option value="abandoned">不做了</option></select></div><div class="task-list" id="allTaskList" style="margin-top:12px"></div></section><section class="card editor" id="taskEditor"><h2>任务与截止日期</h2><div class="hint">新增任务或编辑任务都在本列表下方完成；点击编辑会定位到对应任务表单并自动回填名称、所属大类和截止日期。</div><form id="taskForm"><input type="hidden" id="editId"><div class="form-grid"><div class="field"><label>所属大类</label><select id="taskCategory"><option>运营</option><option>竞赛</option><option>学习 AI 产品经理</option><option>学校作业</option><option>考研督学</option><option>待分类</option><option>个人事务</option></select></div><div class="field"><label>任务类型（独立耗时档案）</label><input id="taskType" placeholder="例如：找素材、写脚本、整理证明材料、需求分析" required></div><div class="field"><label>任务名称</label><input id="taskName" placeholder="例如：收集醒图调色教程素材" required></div><div class="field"><label>预计耗时（分钟）</label><input id="taskEstimate" type="number" min="5" step="5" value="30"></div><div class="field"><label>计划开始时间（可选；不设置则由系统按空档和精力安排）</label><input id="taskPlannedStart" type="datetime-local"></div><div class="field"><label>截止日期</label><input id="taskDueDate" type="date"></div><div class="field"><label>截止时间</label><input id="taskDueTime" type="time" value="18:00"></div><div class="field"><label>所属大任务 / 项目</label><input id="taskParent" placeholder="例如：醒图账号运营 / Agent 大赛"></div><div class="field"><label>验收标准</label><input id="taskAcceptance" placeholder="例如：整理出 5 条可用素材链接"></div></div><div class="field"><label>关联资料 / 链接</label><textarea id="taskMaterials" rows="2" placeholder="粘贴资料链接、文件说明或参考笔记"></textarea></div><div class="form-actions"><button type="button" class="btn" id="resetForm">清空</button><button class="btn primary" type="submit">保存任务</button></div></form></section>
+<section id="view-tasks" class="hidden"><div class="section-head"><div><h2>全部任务与截止日期</h2><small>任务编辑直接回填表单；截止提醒提前 48 小时启动。</small></div></div><section class="card panel"><div class="toolbar"><input id="searchTasks" placeholder="搜索任务名称、项目或资料"><select id="statusFilter"><option value="all">全部状态</option><option value="todo">待自动安排</option><option value="scheduled">已排期</option><option value="running">正在执行</option><option value="blocked">卡住待续</option><option value="parked">长期搁置</option><option value="overdue">逾期抢救</option><option value="done">已完成</option><option value="abandoned">不做了</option></select></div><div class="task-list" id="allTaskList" style="margin-top:12px"></div></section><section class="card editor" id="taskEditor"><h2>任务与截止日期</h2><div class="hint">新增任务或编辑任务都在本列表下方完成；点击编辑会定位到对应任务表单并自动回填名称、所属大类和截止日期。</div><form id="taskForm"><input type="hidden" id="editId"><div class="form-grid"><div class="field"><label>所属大类</label><select id="taskCategory"><option>运营</option><option>竞赛</option><option>学习 AI 产品经理</option><option>学校作业</option><option>考研督学</option><option>待分类</option><option>个人事务</option></select></div><div class="field"><label>任务类型（独立耗时档案）</label><input id="taskType" placeholder="例如：找素材、写脚本、整理证明材料、需求分析" required></div><div class="field"><label>执行方式</label><select id="taskMode"><option value="auto" selected>自动识别</option><option value="normal">普通任务</option><option value="deadline">硬截止交付</option><option value="daily">每日持续投入</option><option value="open">开放式探索（本轮最多90分钟）</option><option value="quick">临时消息 / 小事项</option></select></div><div class="field"><label>任务名称</label><input id="taskName" placeholder="例如：收集醒图调色教程素材" required></div><div class="field"><label>预计耗时（分钟）</label><input id="taskEstimate" type="number" min="5" step="5" value="30"></div><div class="field"><label>计划开始时间（可选；不设置则由系统按空档和精力安排）</label><input id="taskPlannedStart" type="datetime-local"></div><div class="field"><label>截止日期</label><input id="taskDueDate" type="date"></div><div class="field"><label>截止时间</label><input id="taskDueTime" type="time" value="18:00"></div><div class="field"><label>所属大任务 / 项目</label><input id="taskParent" placeholder="例如：醒图账号运营 / Agent 大赛"></div><div class="field"><label>验收标准</label><input id="taskAcceptance" placeholder="例如：整理出 5 条可用素材链接"></div></div><div class="field"><label>关联资料 / 链接</label><textarea id="taskMaterials" rows="2" placeholder="粘贴资料链接、文件说明或参考笔记"></textarea></div><div class="form-actions"><button type="button" class="btn" id="resetForm">清空</button><button class="btn primary" type="submit">保存任务</button></div></form></section>
 </section>
 <section id="view-learning" class="hidden"><div class="section-head"><div><h2>个人耗时学习档案</h2><small>每种任务类型独立记录第一次、第二次、第三次和后续表现。</small></div></div><section class="card panel"><h2>任务类型档案</h2><p class="panel-sub">样本不足时保留保守估时；至少两次真实记录后才计算缩短率。</p><div id="learningProfiles"></div></section></section>
 <section id="view-review" class="hidden"><div class="section-head"><div><h2>知识复习计划</h2><small>仅用于课程、教程、概念、方法等知识型任务。</small></div></div><section class="card panel"><div id="allReviews" class="review-list"></div></section></section>
@@ -51,7 +51,7 @@ var ledgerTasks=[{"id":"ledger-201","sourceId":"ledger-201","category":"竞赛",
 {id:'voice-20261030-career-contest',sourceId:'voice-20261030-career-contest',category:'竞赛',type:'职业生涯规划竞赛交付',name:'职规赛',parent:'职业生涯规划赛',estimate:45,dueDate:'2026-10-30',dueTime:'18:00',hardDeadline:true,deadlineTimeConfirmed:true,acceptance:'18:00 前完成当日职规赛交付并核对提交凭证',sourceLabel:'用户早晨 08:00 汇报；截止时间 18:00',done:false,stage:'待拆解',containerOnly:false,learningKey:'curve:竞赛::职业生涯规划竞赛交付::职规赛',materials:''},
 {id:'voice-20261030-exam-supervision',sourceId:'voice-20261030-exam-supervision',category:'考研督学',type:'考研督学任务',name:'考研督学',parent:'考研督学',estimate:45,dueDate:'2026-10-30',dueTime:'15:00',hardDeadline:true,deadlineTimeConfirmed:true,acceptance:'15:00 前完成今日督学任务并记录学习结果',sourceLabel:'用户早晨 08:00 汇报；截止时间 15:00',done:false,stage:'待拆解',containerOnly:false,learningKey:'curve:考研督学::考研督学任务::考研督学',materials:''}
 ];
-function mergeLedger(x){var s=x&&Array.isArray(x.tasks)?Object.assign(clone(defaults),x):clone(defaults);s.tasks=s.tasks||[];s.timeLosses=Array.isArray(s.timeLosses)?s.timeLosses:[];ledgerTasks.forEach(function(t){t.learningKey='curve:'+t.category+'::'+(t.parent||'')+'::'+t.name;var old=s.tasks.find(function(z){return z.sourceId===t.sourceId||z.id===t.id||z.name===t.name});if(old){Object.keys(t).forEach(function(k){if(old[k]===undefined||old[k]===null||old[k]==='')old[k]=t[k]});old.learningKey=t.learningKey}else s.tasks.push(clone(t))});s.fixed=s.fixed||[];[{name:'午餐 / 离开屏幕',type:'吃饭',start:'12:00',end:'13:00',days:7,locked:true},{name:'晚间放松缓冲',type:'休息 / 放松',start:'20:30',end:'21:00',days:7,locked:true}].forEach(function(v){if(!s.fixed.some(function(x){return x.name===v.name||(x.start===v.start&&x.end===v.end)}))s.fixed.push(v)});s.imports=s.imports||{};s.imports.taskLedgerV2='2026-10-30';return s}
+function mergeLedger(x){var s=x&&Array.isArray(x.tasks)?Object.assign(clone(defaults),x):clone(defaults);s.tasks=s.tasks||[];s.timeLosses=Array.isArray(s.timeLosses)?s.timeLosses:[];ledgerTasks.forEach(function(t){t.learningKey='curve:'+t.category+'::'+(t.parent||'')+'::'+t.name;var old=s.tasks.find(function(z){return z.sourceId===t.sourceId||z.id===t.id||z.name===t.name});if(old){Object.keys(t).forEach(function(k){if(old[k]===undefined||old[k]===null||old[k]==='')old[k]=t[k]});old.learningKey=t.learningKey}else s.tasks.push(clone(t))});s.fixed=s.fixed||[];[{name:'午餐 / 离开屏幕',type:'吃饭',start:'12:00',end:'13:00',days:7,locked:true},{name:'晚间放松缓冲',type:'休息 / 放松',start:'20:30',end:'21:00',days:7,locked:true},{name:'重要客户消息回复',type:'消息回复',start:'21:00',end:'22:30',days:7,locked:true},{name:'周末放松（可调整时间）',type:'休息 / 放松',start:'16:00',end:'18:00',weekdays:[0,6],locked:true}].forEach(function(v){if(!s.fixed.some(function(x){return x.name===v.name||(x.start===v.start&&x.end===v.end)}))s.fixed.push(v)});s.imports=s.imports||{};s.imports.taskLedgerV2='2026-10-30';return s}
 
 var state=load(),filter='all',categoryPageCategory=null,activeId=null,interval=null,startAt=0,elapsed=0,paused=false,progress='done',energy=3,difficulty=2,deadlineId=null,sessionStartedAt=0,sessionStartEnergy=3;
 function clone(x){return JSON.parse(JSON.stringify(x))}
@@ -67,7 +67,7 @@ async function cloudAuth(mode){var name=document.getElementById('authName').valu
 function id(){return 'task-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6)}
 function esc(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function toast(s){var n=document.createElement('div');n.className='toast';n.textContent=s;document.body.append(n);setTimeout(function(){n.remove()},3500)}
-function due(t){if(!t.dueDate)return null;var d=new Date(t.dueDate+'T'+(t.dueTime||'23:59')+':00');return isNaN(d)?null:d}
+function due(t){if(!t.dueDate)return null;var d=new Date(t.dueDate+'T'+(t.dueTime||'23:59')+':00');return isNaN(d)?null:d} function executionMode(t){if(t&&t.executionMode&&t.executionMode!=='auto')return t.executionMode;var s=((t&&t.name)||'')+' '+((t&&t.type)||'');if(t&&t.category==='考研督学')return 'daily';if(t&&t.hardDeadline)return 'deadline';if(/剪辑|调试|原型|PPT|路线规划|Agent学习|工具研究|反复优化/.test(s))return 'open';if(/回复|回消息|发送|发给|客户消息/.test(s))return 'quick';return 'normal'} function taskStatus(t){if(t.done)return 'done';if(t.abandoned)return 'abandoned';if(activeId===t.id)return 'running';var d=due(t);if(d&&d.getTime()<Date.now())return 'overdue';if(t.executionState==='blocked')return 'blocked';if(t.executionState==='parked')return 'parked';if(t.nextScheduledAt||t.plannedStart)return 'scheduled';return 'todo'} function taskStatusLabel(t){var s=taskStatus(t);if(s==='parked')return t.nextScheduledAt?'长期搁置 · 已预约启动':'长期搁置 · 72小时内启动';return ({done:'已完成',abandoned:'不做了',running:'正在执行',overdue:'逾期 · 待抢救',blocked:'卡住待续',scheduled:'已排期',todo:'待自动安排'})[s]||'待自动安排'}
 function logsFor(t){var rows=state.logs.filter(function(l){return l.actual>0&&(l.taskId===t.id||(t.learningKey&&l.learningKey===t.learningKey))&&(l.status==='done'||l.status==='progress')}),groups={};rows.forEach(function(l){var k=l.taskId||l.id;if(!groups[k])groups[k]={actual:0,at:l.at,energy:l.energy,difficulty:l.difficulty,done:false};groups[k].actual+=Number(l.actual)||0;groups[k].at=Math.max(groups[k].at,l.at||0);groups[k].energy=l.energy;groups[k].difficulty=l.difficulty;if(l.status==='done')groups[k].done=true});return Object.keys(groups).map(function(k){return groups[k]}).filter(function(g){return g.done}).sort(function(a,b){return a.at-b.at})}
 function estimate(t){
 var accumulated=Number(t.accumulatedMinutes)||0,remaining=Number(t.remainingEstimate)||0;
@@ -140,20 +140,20 @@ document.getElementById('categoryPageBody').innerHTML='<div class="category-over
 view('category');
 }
 
-function taskHtml(t){var d=due(t),dueText=d?'目标 '+t.dueDate+(t.hardDeadline?' · 硬截止':' · 计划日期')+(t.deadlineTimeConfirmed?' '+(t.dueTime||''):' · 时刻待核对'):'DDL 未记录',status=t.abandoned?'不做了':t.done?'已完成':'待执行';return '<article class="task '+(t.done?'done':'')+'"><div class="task-mark"></div><div><div class="task-meta"><span class="tag">'+esc(t.category)+'</span><span>'+esc(t.parent||'未归属项目')+'</span><span>'+esc(t.stage||'待拆解')+'</span></div><div class="task-title">'+esc(t.name)+'</div><div class="task-meta"><span>预测 '+estimate(t)+' 分钟</span><span>'+dueText+'</span><span>'+status+'</span></div><div class="task-meta">'+esc(learningSummary(t))+'</div></div><div class="task-actions">'+(t.abandoned?'<button class="restore-action" data-restore="'+t.id+'">恢复任务</button>':t.done?'<span>已完成</span>':'<button data-start="'+t.id+'">▶ 开始</button><button class="done-action" data-complete="'+t.id+'">✓ 完成</button><button class="abandon-action" data-abandon="'+t.id+'">不做了</button>')+'<button class="edit" data-edit="'+t.id+'">编辑</button></div></article>'}
-function renderTasks(){var f=document.getElementById('categoryFilter').value,list=state.tasks.filter(function(t){return !t.containerOnly&&!t.done&&!t.abandoned&&(f==='all'||t.category===f)&&(filter==='all'||filter===t.category)});document.getElementById('taskList').innerHTML=list.length?list.map(taskHtml).join(''):'<div class="info">当前分类没有待执行任务。可以新建任务或切换主线。</div>';var q=(document.getElementById('searchTasks')||{}).value||'',s=(document.getElementById('statusFilter')||{}).value||'all',all=state.tasks.filter(function(t){return !t.containerOnly&&(s==='all'||(s==='done'?t.done:s==='abandoned'?t.abandoned:!t.done&&!t.abandoned))&&(!q||[t.name,t.type,t.parent,t.materials].join(' ').toLowerCase().indexOf(q.toLowerCase())>=0)});var a=document.getElementById('allTaskList');if(a)a.innerHTML=all.map(taskHtml).join('')||'<div class="info">没有匹配任务。</div>'}
+function taskHtml(t){var d=due(t),dueText=d?'目标 '+t.dueDate+(t.hardDeadline?' · 硬截止':' · 计划日期')+(t.deadlineTimeConfirmed?' '+(t.dueTime||''):' · 时刻待核对'):'DDL 未记录',status=taskStatusLabel(t),next=t.nextScheduledAt?new Date(t.nextScheduledAt):null,scheduleText=next&&!isNaN(next)?'下次启动 '+next.toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):t.plannedStart?'手动计划 '+String(t.plannedStart).replace('T',' '):'尚未写入开始时间';var extra=t.executionState==='blocked'||t.executionState==='parked'?'<button data-resume-state="'+t.id+'">恢复安排</button>':'<button data-block="'+t.id+'">卡住待续</button><button data-park="'+t.id+'">长期搁置</button>';return '<article class="task '+(t.done?'done':'')+'"><div class="task-mark"></div><div><div class="task-meta"><span class="tag">'+esc(t.category)+'</span><span>'+esc(t.parent||'未归属项目')+'</span><span>'+esc(t.stage||'待拆解')+'</span><span class="tag">'+esc(status)+'</span></div><div class="task-title">'+esc(t.name)+'</div><div class="task-meta"><span>预测 '+estimate(t)+' 分钟</span><span>'+dueText+'</span><span>'+esc(scheduleText)+'</span></div><div class="task-meta">'+esc(learningSummary(t))+(t.scheduleConflict?' · '+esc(t.scheduleConflict):'')+'</div></div><div class="task-actions">'+(t.abandoned?'<button class="restore-action" data-restore="'+t.id+'">恢复任务</button>':t.done?'<span>已完成</span>':'<button data-start="'+t.id+'">▶ 开始</button><button class="done-action" data-complete="'+t.id+'">✓ 完成</button><button class="abandon-action" data-abandon="'+t.id+'">不做了</button>'+extra)+'<button class="edit" data-edit="'+t.id+'">编辑</button></div></article>'}
+function renderTasks(){var f=document.getElementById('categoryFilter').value,list=state.tasks.filter(function(t){return !t.containerOnly&&!t.done&&!t.abandoned&&(f==='all'||t.category===f)&&(filter==='all'||filter===t.category)});document.getElementById('taskList').innerHTML=list.length?list.map(taskHtml).join(''):'<div class="info">当前分类没有待执行任务。可以新建任务或切换主线。</div>';var q=(document.getElementById('searchTasks')||{}).value||'',s=(document.getElementById('statusFilter')||{}).value||'all',all=state.tasks.filter(function(t){return !t.containerOnly&&(s==='all'||taskStatus(t)===s)&&(!q||[t.name,t.type,t.parent,t.materials].join(' ').toLowerCase().indexOf(q.toLowerCase())>=0)});var a=document.getElementById('allTaskList');if(a)a.innerHTML=all.map(taskHtml).join('')||'<div class="info">没有匹配任务。</div>'}
 function renderChart(){var logs=state.logs.filter(function(l){return l.status==='done'&&l.actual>0}),type=logs.length?logs[logs.length-1].type:null,series=type?logs.filter(function(l){return l.type===type}).slice(-5):[],max=60;series.forEach(function(x){max=Math.max(max,x.actual)});document.getElementById('timeChart').innerHTML=series.length?'<div class="info">当前查看：'+esc(type)+'</div><div class="chart-wrap">'+series.map(function(l,i){return '<div class="bar-group"><span class="bar-value">'+l.actual+'m</span><div class="bar" style="height:'+Math.max(12,l.actual/max*100)+'px"></div><span class="bar-label">第'+(i+1)+'次</span></div>'}).join('')+'</div>':'<div class="chart-wrap" style="height:110px;align-items:center;justify-content:center;color:#87938d;font-size:11px">完成一次任务后，生成真实曲线</div>';var last=logs.length?logs[logs.length-1]:null,rate=last?shorten({category:last.category,type:last.type}):null,seq=last?logs.filter(function(l){return l.category===last.category&&l.type===last.type}):[];document.getElementById('lastSaving').textContent=rate===null?'—':(rate>=0?'+':'')+rate.toFixed(1)+'%';document.getElementById('avgSaving').textContent=seq.length>1?((seq[0].actual-seq[seq.length-1].actual)/seq[0].actual*100).toFixed(1)+'%':'—'}
 function renderReviews(){var list=state.reviews.filter(function(r){return !r.done}).sort(function(a,b){return a.dueAt-b.dueAt}),html=list.slice(0,5).map(function(r){return '<div class="review"><span class="review-dot"></span><div class="review-main"><b>'+esc(r.title)+'</b><span>'+esc(r.category)+' · 第 '+(r.stage+1)+' 次复习</span></div><span class="review-time">'+new Date(r.dueAt).toLocaleDateString('zh-CN',{month:'numeric',day:'numeric'})+'</span></div>'}).join('');document.getElementById('reviewPreview').innerHTML=html||'<div class="info">完成学习类任务后自动安排复习。</div>';var all=document.getElementById('allReviews');if(all)all.innerHTML=list.map(function(r){return '<div class="review"><span class="review-dot"></span><div class="review-main"><b>'+esc(r.title)+'</b><span>'+esc(r.category)+' · '+new Date(r.dueAt).toLocaleString('zh-CN')+'</span></div><button class="btn soft" data-review="'+r.id+'">开始复习</button></div>'}).join('')||'<div class="info">当前没有待复习内容。</div>'}
 function renderProfiles(){var groups={};state.logs.filter(function(l){return l.status==='done'}).forEach(function(l){var k=l.category+'｜'+l.type;(groups[k]||(groups[k]=[])).push(l)});var keys=Object.keys(groups),el=document.getElementById('learningProfiles');el.innerHTML=keys.length?keys.map(function(k){var a=groups[k].sort(function(x,y){return x.at-y.at}),first=a[0].actual,last=a[a.length-1].actual,rate=a.length>1?(a[a.length-2].actual-last)/a[a.length-2].actual*100:null;return '<div class="task" style="margin-bottom:9px"><div class="task-mark"></div><div><div class="task-title">'+esc(k)+'</div><div class="task-meta">第 '+a.length+' 次 · 首次 '+first+' 分钟 · 最近 '+last+' 分钟 · 历史平均 '+(a.reduce(function(s,x){return s+x.actual},0)/a.length).toFixed(1)+' 分钟</div></div><b style="color:var(--green);font-size:11px">'+(rate===null?'样本不足':(rate>=0?'缩短 ':'增加 ')+Math.abs(rate).toFixed(1)+'%')+'</b></div>'}).join(''):'<div class="info">还没有真实耗时样本。完成任务后按「主线 + 任务类型」建立档案。</div>'}
 function renderHistory(){var el=document.getElementById('historyList');el.innerHTML=state.logs.slice().reverse().map(function(l){return '<div class="task" style="margin-bottom:8px"><div class="task-mark"></div><div><div class="task-title">'+esc(l.name)+'</div><div class="task-meta">'+esc(l.category)+' · '+esc(l.type)+' · 预计 '+l.estimate+' 分钟 / 实际 '+l.actual+' 分钟 · 精力 '+l.energy+'/5 · 难度 '+l.difficulty+'/3</div><div class="task-meta">'+esc(l.note||'未填写复盘')+'</div></div><b class="status">'+(l.status==='done'?'已完成':'部分推进')+'</b></div>'}).join('')||'<div class="info">完成第一项任务后，自动生成执行复盘。</div>'}
 function renderAll(){renderCats();renderTasks();renderChart();renderReviews();renderProfiles();renderHistory();renderAutoPlan();document.getElementById('todayChip').textContent=new Intl.DateTimeFormat('zh-CN',{month:'long',day:'numeric',weekday:'short'}).format(new Date());updateWeek()}
 function view(v){document.querySelectorAll('[id^="view-"]').forEach(function(x){x.classList.add('hidden')});document.getElementById('view-'+v).classList.remove('hidden');document.querySelectorAll('.nav button').forEach(function(b){b.classList.toggle('active',b.dataset.view===v)});var m={main:['我的任务主线','运营、竞赛、AI 产品经理学习，各自拥有独立任务和耗时档案。'],category:[(categoryPageCategory||'任务类别')+' · 专属工作区','只展示本类别任务、专属执行流程和资料层级。'],week:['每周舒适排期','先锁定固定事项，再安排任务与休息缓冲。'],tasks:['任务与截止日期','所有任务统一管理，编辑后直接定位到任务表单。'],learning:['个人耗时学习','每一种任务类型都建立自己的熟练度档案。'],review:['知识复习计划','用间隔复习巩固学习内容。'],history:['执行复盘','用真实执行数据校准下一次计划。'],workspace:['任务执行工作区','根据任务类别展示专属流程、资料层级和交付要求。']};document.getElementById('viewTitle').textContent=m[v][0];document.getElementById('viewSub').textContent=m[v][1]}
-function resetForm(){document.getElementById('taskForm').reset();document.getElementById('editId').value='';document.getElementById('taskEstimate').value=30;document.getElementById('taskPlannedStart').value='';document.getElementById('taskDueTime').value='18:00'}
-function editTask(id){var t=state.tasks.find(function(x){return x.id===id});if(!t)return;view('tasks');document.getElementById('editId').value=t.id;document.getElementById('taskCategory').value=t.category;document.getElementById('taskType').value=t.type;document.getElementById('taskName').value=t.name;document.getElementById('taskEstimate').value=t.estimate;document.getElementById('taskPlannedStart').value=t.plannedStart||'';document.getElementById('taskDueDate').value=t.dueDate||'';document.getElementById('taskDueTime').value=t.dueTime||'18:00';document.getElementById('taskParent').value=t.parent||'';document.getElementById('taskAcceptance').value=t.acceptance||'';document.getElementById('taskMaterials').value=t.materials||'';document.getElementById('taskEditor').scrollIntoView({behavior:'smooth',block:'start'});document.getElementById('taskName').focus();toast('已跳转到任务列表下方的编辑区，名称和截止日期已自动回填。')}
-function markTaskComplete(id0){var t=state.tasks.find(function(x){return x.id===id0});if(!t||t.done||t.abandoned)return;if(activeId===id0&&(interval||paused)){progress='done';openCheckin('你选择完成任务。请提交本轮真实耗时、完成情况和精力，提交后进入完成收集箱。');return}t.done=true;t.abandoned=false;t.completedAt=Date.now();t.completionMode='manual';t.remainingEstimate=0;if(t.category==='学习 AI 产品经理'||/学习|教程|知识|需求分析|API|复习/.test(t.type+' '+t.name))addReview(t);save();renderAll();toast('已完成并归档。历史任务、DDL和学习记录均保留。')}
-function markTaskAbandoned(id0){var t=state.tasks.find(function(x){return x.id===id0});if(!t||t.done||t.abandoned)return;if(activeId===id0&&(interval||paused)){toast('这项任务正在计时。请先结束计时并保存本轮耗时，再选择「不做了」。');return}if(!confirm('确定将「'+t.name+'」标记为「不做了」？任务不会删除，会从排期中移出并保留历史记录，可随时恢复。'))return;t.abandoned=true;t.abandonedAt=Date.now();t.abandonReason='用户选择不再执行';save();renderAll();toast('已移入「不做了」，记录保留且不再占用排期。')}
-function restoreTask(id0){var t=state.tasks.find(function(x){return x.id===id0});if(!t||!t.abandoned)return;t.abandoned=false;t.abandonedAt=null;t.abandonReason='';save();renderAll();toast('任务已恢复，将重新参与 DDL 排期。')}
-function saveTask(e){e.preventDefault();var id0=document.getElementById('editId').value,existing=state.tasks.find(function(t){return t.id===id0}),d={category:document.getElementById('taskCategory').value,type:document.getElementById('taskType').value.trim(),name:document.getElementById('taskName').value.trim(),learningKey:existing&&existing.learningKey?existing.learningKey:('curve:'+document.getElementById('taskCategory').value+'::'+document.getElementById('taskParent').value.trim()+'::'+document.getElementById('taskName').value.trim()),estimate:Math.max(5,Number(document.getElementById('taskEstimate').value)||30),plannedStart:document.getElementById('taskPlannedStart').value,dueDate:document.getElementById('taskDueDate').value,dueTime:document.getElementById('taskDueTime').value||'18:00',parent:document.getElementById('taskParent').value.trim(),acceptance:document.getElementById('taskAcceptance').value.trim(),materials:document.getElementById('taskMaterials').value.trim()};if(id0){Object.assign(existing,d);toast('原任务已更新，没有重复创建。')}else state.tasks.unshift(Object.assign({id:id(),done:false,stage:'收集与理解'},d));save();resetForm();renderAll();view('tasks');document.getElementById('allTaskList').scrollIntoView({behavior:'smooth',block:'start'});toast('已保存，任务名称和截止日期已同步显示在任务列表。')}
+function resetForm(){document.getElementById('taskForm').reset();document.getElementById('editId').value='';document.getElementById('taskEstimate').value=30;document.getElementById('taskPlannedStart').value='';document.getElementById('taskDueTime').value='18:00';document.getElementById('taskMode').value='auto'}
+function editTask(id){var t=state.tasks.find(function(x){return x.id===id});if(!t)return;view('tasks');document.getElementById('editId').value=t.id;document.getElementById('taskCategory').value=t.category;document.getElementById('taskType').value=t.type;document.getElementById('taskMode').value=executionMode(t);document.getElementById('taskName').value=t.name;document.getElementById('taskEstimate').value=t.estimate;document.getElementById('taskPlannedStart').value=t.plannedStart||'';document.getElementById('taskDueDate').value=t.dueDate||'';document.getElementById('taskDueTime').value=t.dueTime||'18:00';document.getElementById('taskParent').value=t.parent||'';document.getElementById('taskAcceptance').value=t.acceptance||'';document.getElementById('taskMaterials').value=t.materials||'';document.getElementById('taskEditor').scrollIntoView({behavior:'smooth',block:'start'});document.getElementById('taskName').focus();toast('已跳转到任务列表下方的编辑区，名称和截止日期已自动回填。')}
+function markTaskComplete(id0){var t=state.tasks.find(function(x){return x.id===id0});if(!t||t.done||t.abandoned)return;if(activeId===id0&&(interval||paused)){progress='done';openCheckin('你选择完成任务。请提交本轮真实耗时、完成情况和精力，提交后进入完成收集箱。');return}t.done=true;t.abandoned=false;t.executionState='done';t.completedAt=Date.now();t.completionMode='manual';t.remainingEstimate=0;if(t.category==='学习 AI 产品经理'||/学习|教程|知识|需求分析|API|复习/.test(t.type+' '+t.name))addReview(t);save();renderAll();toast('已完成并归档。历史任务、DDL和学习记录均保留。')}
+function markTaskAbandoned(id0){var t=state.tasks.find(function(x){return x.id===id0});if(!t||t.done||t.abandoned)return;if(activeId===id0&&(interval||paused)){toast('这项任务正在计时。请先结束计时并保存本轮耗时，再选择「不做了」。');return}if(!confirm('确定将「'+t.name+'」标记为「不做了」？任务不会删除，会从排期中移出并保留历史记录，可随时恢复。'))return;t.abandoned=true;t.executionState='abandoned';t.abandonedAt=Date.now();t.abandonReason='用户选择不再执行';save();renderAll();toast('已移入「不做了」，记录保留且不再占用排期。')}
+function restoreTask(id0){var t=state.tasks.find(function(x){return x.id===id0});if(!t||!t.abandoned)return;t.abandoned=false;t.abandonedAt=null;t.abandonReason='';t.executionState='unscheduled';t.nextScheduledAt='';save();renderAll();toast('任务已恢复，将重新参与 DDL 排期。')} function markTaskBlocked(id0){var t=state.tasks.find(function(x){return x.id===id0});if(!t||t.done||t.abandoned)return;var reason=prompt('卡在哪里？记录一句原因，系统会保存断点并安排其他任务。',t.blockerReason||t.lastBlocker||'');t.executionState='blocked';t.blockedAt=Date.now();t.blockerReason=String(reason||'待补充').trim();t.lastBlocker=t.blockerReason;t.nextScheduledAt='';save();renderAll();renderAutoPlan();toast('已保存卡点；当前任务不再无限占用执行时间。')} function markTaskParked(id0){var t=state.tasks.find(function(x){return x.id===id0});if(!t||t.done||t.abandoned)return;var reason=prompt('为什么暂时搁置？系统会在未来72小时内安排一个启动时段。',t.parkReason||'');t.executionState='parked';t.parkedAt=Date.now();t.kickoffDueAt=Date.now()+72*3600000;t.parkReason=String(reason||'待补充').trim();t.nextScheduledAt='';save();renderAll();renderAutoPlan();toast('已加入长期搁置保护：系统会优先寻找未来72小时内的启动时段。')} function resumeTaskState(id0){var t=state.tasks.find(function(x){return x.id===id0});if(!t||t.done||t.abandoned)return;t.executionState='unscheduled';t.blockedAt=null;t.blockerReason='';t.parkedAt=null;t.kickoffDueAt=null;t.parkReason='';t.nextScheduledAt='';save();renderAll();renderAutoPlan();toast('已恢复任务，重新参与自动排期。')}
+function saveTask(e){e.preventDefault();var id0=document.getElementById('editId').value,existing=state.tasks.find(function(t){return t.id===id0}),d={category:document.getElementById('taskCategory').value,type:document.getElementById('taskType').value.trim(),executionMode:document.getElementById('taskMode').value,name:document.getElementById('taskName').value.trim(),learningKey:existing&&existing.learningKey?existing.learningKey:('curve:'+document.getElementById('taskCategory').value+'::'+document.getElementById('taskParent').value.trim()+'::'+document.getElementById('taskName').value.trim()),estimate:Math.max(5,Number(document.getElementById('taskEstimate').value)||30),plannedStart:document.getElementById('taskPlannedStart').value,dueDate:document.getElementById('taskDueDate').value,dueTime:document.getElementById('taskDueTime').value||'18:00',parent:document.getElementById('taskParent').value.trim(),acceptance:document.getElementById('taskAcceptance').value.trim(),materials:document.getElementById('taskMaterials').value.trim()};if(id0){Object.assign(existing,d);toast('原任务已更新，没有重复创建。')}else state.tasks.unshift(Object.assign({id:id(),done:false,stage:'收集与理解'},d));save();resetForm();renderAll();view('tasks');document.getElementById('allTaskList').scrollIntoView({behavior:'smooth',block:'start'});toast('已保存，任务名称和截止日期已同步显示在任务列表。')}
 function workspaceFlow(category){
 var map={
 '运营':{title:'运营内容生产工作流',steps:['账号目标与本次内容主题','找资料 / 找素材 / 竞品参考','选题与脚本：钩子、结构、口播','拍摄 / 屏幕录制 / 剪辑 / 字幕','发布检查：封面、标题、标签、合规','数据复盘：播放、互动、转化与下一轮优化'],resources:['账号定位与运营要求','同类账号 / 竞品案例','选题素材与脚本','拍摄剪辑工程与成片','发布链接与数据复盘'],deliver:'产出可发布内容、素材来源和数据复盘'},
@@ -188,13 +188,13 @@ document.getElementById('workspaceStart').onclick=function(){if(activeId===t.id&
 document.getElementById('workspaceEdit').onclick=function(){editTask(t.id)};
 }
 function openTaskWorkspace(id0,autoStart){var t=state.tasks.find(function(x){return x.id===id0});if(!t)return;view('workspace');renderTaskWorkspace(t);window.scrollTo({top:0,behavior:'smooth'});if(autoStart)begin(id0)}
-function begin(id0){var t=state.tasks.find(function(x){return x.id===id0});if(!t||t.done||t.abandoned)return;if(interval){toast('请先结束或暂停当前任务。');return}activeId=id0;startAt=Date.now();sessionStartedAt=Date.now();sessionStartEnergy=energy;elapsed=0;paused=false;interval=setInterval(updateTimer,1000);document.getElementById('timerName').textContent=t.name;document.getElementById('timerStrip').classList.add('show');updateTimer();toast('开始计时：'+t.name)}
+function begin(id0){var t=state.tasks.find(function(x){return x.id===id0});if(!t||t.done||t.abandoned)return;if(interval){toast('请先结束或暂停当前任务。');return}activeId=id0;startAt=Date.now();sessionStartedAt=Date.now();sessionStartEnergy=energy;elapsed=0;paused=false;t.executionState='running';t.nextScheduledAt='';t.actualStartedAt=sessionStartedAt;save();interval=setInterval(updateTimer,1000);document.getElementById('timerName').textContent=t.name;document.getElementById('timerStrip').classList.add('show');updateTimer();toast('开始计时：'+t.name)}
 function updateTimer(){
 if(!interval&&!paused)return;
 var ms=elapsed+(paused?0:Date.now()-startAt),s=Math.floor(ms/1000);
 document.getElementById('timerClock').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
 var t=state.tasks.find(function(x){return x.id===activeId}),remaining=t?Math.max(5,estimate(t)-(Number(t.accumulatedMinutes)||0)):0;
-if(t&&ms>=remaining*60000&&!document.getElementById('checkinOverlay').classList.contains('show'))openCheckin('本轮预计时间已到。请汇报完成进度、遇到的困难和当前精力；未完成会累计本轮耗时并重新预测剩余时间。');
+if(t&&executionMode(t)==='open'&&ms>=90*60000){if(interval){elapsed+=Date.now()-startAt;clearInterval(interval);interval=null;paused=true;document.getElementById('pauseTimer').textContent='继续'}if(!document.getElementById('checkinOverlay').classList.contains('show'))openCheckin('开放式任务本轮已达到90分钟止损上限。系统已暂停计时，请保存当前成果、记录卡点和下一步；休息或切换任务后再决定是否开启下一轮。');else document.getElementById('checkinDesc').textContent='已达到90分钟连续投入上限，计时已暂停。请先保存断点、记录卡点和下一步，再切换任务或休息。'}else if(t&&ms>=remaining*60000&&!document.getElementById('checkinOverlay').classList.contains('show'))openCheckin('本轮预计时间已到。请汇报完成进度、遇到的困难和当前精力；未完成会累计本轮耗时并重新预测剩余时间。');
 if(s%60===0)renderAutoPlan();
 }
 function pause(){if(!interval)return;elapsed+=Date.now()-startAt;clearInterval(interval);interval=null;paused=true;updateTimer();document.getElementById('pauseTimer').textContent='继续';toast('计时已暂停。')}
@@ -206,7 +206,7 @@ var t=state.tasks.find(function(x){return x.id===activeId});if(!t)return;
 var actual=Math.max(1,Math.round((elapsed+(interval?Date.now()-startAt:0))/60000)),note=document.getElementById('checkinNote').value.trim(),oldAccum=Number(t.accumulatedMinutes)||0,priorTotal=estimate(t),remainingBefore=Math.max(15,priorTotal-oldAccum);
 state.logs.push({id:id(),taskId:t.id,learningKey:t.learningKey||('task:'+t.id),name:t.name,category:t.category,type:t.type,estimate:remainingBefore,actual:actual,energy:energy,difficulty:difficulty,note:note,status:progress,startedAt:sessionStartedAt||Date.now(),endedAt:Date.now(),startHour:new Date(sessionStartedAt||Date.now()).getHours(),startEnergy:sessionStartEnergy,endEnergy:energy,at:Date.now()});
 t.accumulatedMinutes=oldAccum+actual;
-if(progress==='done'){t.done=true;t.completedAt=Date.now();t.remainingEstimate=0;if(t.category==='学习 AI 产品经理'||/学习|教程|知识|需求分析|API|复习/.test(t.type+' '+t.name))addReview(t)}
+if(progress==='done'){t.done=true;t.executionState='done';t.completedAt=Date.now();t.remainingEstimate=0;if(t.category==='学习 AI 产品经理'||/学习|教程|知识|需求分析|API|复习/.test(t.type+' '+t.name))addReview(t)}
 else{var nextRemaining=Math.max(15,Math.round(Math.max(15,remainingBefore-actual*.65,actual*.45)/5)*5);t.remainingEstimate=nextRemaining;t.estimate=t.accumulatedMinutes+nextRemaining;t.lastBlocker=note}
 stopTimer();document.getElementById('checkinOverlay').classList.remove('show');document.getElementById('checkinNote').value='';save();renderAll();toast(progress==='done'?'已记录真实耗时，个人估时模型已更新。':'已保存进度和卡点，任务保留待继续，并按剩余工作量重新估时。');if(energy<=2)toast('当前精力偏低：建议休息或切换低精力任务。')
 }
@@ -334,7 +334,7 @@ save();closeTimeLoss();updateWeek();renderAutoPlan();toast('已记录 '+minutes+
 }
 function renderAutoPlan(){
 var el=document.getElementById('autoPlan');if(!el)return;
-var now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),bounds=plannerBounds(),dayStart=bounds.start,dayEnd=bounds.end,remaining={},days=[],energySamples={},energyByType={},deadlineRisks=[],horizonDays=14,displayDays=Math.max(1,Math.min(14,Number((document.getElementById('planRange')||{}).value)||7));
+var now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate()),bounds=plannerBounds(),dayStart=bounds.start,dayEnd=bounds.end,remaining={},days=[],firstSchedule={},energySamples={},energyByType={},deadlineRisks=[],horizonDays=14,displayDays=Math.max(1,Math.min(14,Number((document.getElementById('planRange')||{}).value)||7));
 state.tasks.forEach(function(t){var d=due(t),ps=t.plannedStart?new Date(t.plannedStart):null,edge=d&&(!ps||d>ps)?d:ps;if(edge&&!isNaN(edge)){var edgeDay=new Date(edge.getFullYear(),edge.getMonth(),edge.getDate()),span=Math.ceil((edgeDay.getTime()-today.getTime())/86400000)+1;horizonDays=Math.max(horizonDays,Math.min(90,span))}});
 var reserveValue=Number(state.bufferPercent),reserveRate=Number.isFinite(reserveValue)?Math.max(0,Math.min(50,reserveValue))/100:.2;
 state.logs.forEach(function(l){if(l.startHour!==undefined&&Number(l.startEnergy)>0){var k=Number(l.startHour);(energySamples[k]||(energySamples[k]=[])).push(Number(l.startEnergy));var tk=(l.category||'')+'::'+(l.type||'');if(tk!=='::'){(energyByType[tk]||(energyByType[tk]={}))[k]=(energyByType[tk][k]||[]).concat([Number(l.startEnergy)])}}});
@@ -363,6 +363,7 @@ return list.sort(function(a,b){
 var ad=a.deadline?a.deadline.getTime():Infinity,bd=b.deadline?b.deadline.getTime():Infinity;
 if(ad!==bd)return ad-bd;
 if(!!a.t.hardDeadline!==!!b.t.hardDeadline)return a.t.hardDeadline?-1:1;
+if((a.t.executionState==='parked')!==(b.t.executionState==='parked'))return a.t.executionState==='parked'?-1:1;
 function rank(t){var p=String(t.priority||t.importance||'').toLowerCase();return p==='urgent'||p==='high'||p==='高'||p==='重要'?3:p==='medium'||p==='normal'||p==='中'?2:p==='low'||p==='低'?1:0}
 var ap=rank(a.t),bp=rank(b.t);if(ap!==bp)return bp-ap;
 var af=energyFit(a,hour),bf=energyFit(b,hour);if(af!==bf)return bf-af;
@@ -370,7 +371,7 @@ return b.remain-a.remain;
 });
 }
 state.tasks.forEach(function(t){
-if(t.containerOnly||t.done||t.abandoned)return;
+if(t.containerOnly||t.done||t.abandoned||t.executionState==='blocked')return;
 var total=estimate(t),acc=Number(t.accumulatedMinutes)||0,r=Math.max(0,total-acc);
 if(r<=0){var explicitRemaining=Number(t.remainingEstimate)||0;r=explicitRemaining>0?explicitRemaining:Math.max(15,Math.round(Math.max(15,Number(t.estimate)||30)*.5/5)*5);}
 var startAt=t.plannedStart?new Date(t.plannedStart):null;if(startAt&&isNaN(startAt.getTime()))startAt=null;
@@ -425,7 +426,7 @@ if(sameDay(task.deadline,day))room=Math.min(room,deadlineMinute(task)-p);
 if(room<15)break;
 var work=Math.min(50,task.remain,room,budget);
 if(work<15)break;
-items.push({type:'task',t:task.t,start:p,end:p+work,mins:work,level:task.level,deadline:task.deadline});
+var slotStart=new Date(day.getFullYear(),day.getMonth(),day.getDate(),Math.floor(p/60),p%60,0,0);if(!firstSchedule[task.t.id])firstSchedule[task.t.id]=slotStart;items.push({type:'task',t:task.t,start:p,end:p+work,mins:work,level:task.level,deadline:task.deadline});
 p+=work;budget-=work;used+=work;task.remain-=work;
 if(p+10<=gap.end&&budget>=10&&(task.remain>0||current.some(function(x){return x!==task&&x.remain>0}))){
 items.push({type:'rest',name:'恢复休息 / 起身活动',start:p,end:p+10,mins:10});p+=10;budget-=10;used+=10;
@@ -459,12 +460,12 @@ var miss=missed.length?'<div class="info" style="border-color:'+(risk.length?'#d
 var capacity='固定事务 '+fixedMinutes+' 分钟（清醒时长预算只扣除非睡眠固定事务 '+awakeFixed+' 分钟） · 当前已执行 '+actualMinutes+' 分钟 · 走神/无效时间 '+lossMinutes+' 分钟 · 未来可用空档 '+freeTotal+' 分钟 · 剩余可用预算 '+Math.floor(usable)+' 分钟 · 预留 '+Math.round(reserveRate*100)+'% 机动缓冲';
 days.push('<section class="card" style="margin:10px 0;padding:12px">'+heading+'<div class="task-meta" style="margin:4px 0 8px">'+capacity+'</div>'+conflict+htmlRows+miss+'</section>');
 }
-var left=Object.keys(remaining).map(function(k){return remaining[k]}).filter(function(x){return x.remain>0});
+var scheduleChanged=false,kickoffRisks=[];state.tasks.forEach(function(t){if(t.containerOnly||t.done||t.abandoned)return;if(t.executionState==='blocked'){if(t.nextScheduledAt){t.nextScheduledAt='';scheduleChanged=true}t.scheduleConflict='卡点已保存，等待恢复';return}var manual=t.plannedStart?new Date(t.plannedStart):null,first=firstSchedule[t.id]||null,next=first||(manual&&!isNaN(manual.getTime())?manual:null);if(next){var iso=next.toISOString();if(t.nextScheduledAt!==iso){t.nextScheduledAt=iso;scheduleChanged=true}if(t.executionState!=='blocked'&&t.executionState!=='parked'&&t.executionState!=='overdue')t.executionState='scheduled';t.scheduleConflict='';}else{if(t.nextScheduledAt){t.nextScheduledAt='';scheduleChanged=true}if(t.executionState==='scheduled')t.executionState='unscheduled';t.scheduleConflict='当前排期范围内没有可用启动时段'}if(t.executionState==='parked'&&t.kickoffDueAt&&(!next||next.getTime()>Number(t.kickoffDueAt))){t.scheduleConflict='未来72小时内没有可用启动时段';kickoffRisks.push(t.name)}});if(scheduleChanged)save();var left=Object.keys(remaining).map(function(k){return remaining[k]}).filter(function(x){return x.remain>0});
 var riskHtml=deadlineRisks.length?'<div class="info" style="border-color:#d88b73;color:#a45140"><b>DDL 风险：</b>'+deadlineRisks.map(function(x){return esc(x.task.name)+' · 原截止 '+dayKey(x.deadline)+' '+(x.task.dueTime||'23:59')+' · 预计还差 '+Math.ceil(x.remain)+' 分钟；已保留原 DDL，并排入后续可用日。'}).join('<br>')+'</div>':'';
 var overflow=left.length?'<div class="info"><b>7 天之后仍有剩余：</b>'+left.map(function(x){return esc(x.t.name)+'（剩余 '+Math.ceil(x.remain)+' 分钟'+(x.deadline?' · DDL '+dayKey(x.deadline):'')+'）'}).join('；')+'。请检查任务拆分、估时或未来固定安排。</div>':'';
-el.innerHTML=days.slice(0,displayDays).join('')+(horizonDays>displayDays?'<div class="info">当前显示 '+displayDays+' 天；系统仍会在后台计算完整 '+horizonDays+' 天的任务容量与 DDL 风险，切换「未来两周」可查看后续时间轴。</div>':'')+riskHtml+overflow+'<div class="info"><b>动态排期逻辑：</b>先锁定固定事务，再扣除今天已经执行的真实耗时和走神/无效时间；按原始 DDL、硬截止、剩余工作量、个人耗时学习曲线和精力适配安排任务。每次最多安排 50 分钟专注块，之后插入恢复休息，并按你设置的比例预留机动缓冲；默认展示未来 14 天，若 DDL 更远则自动延展，最多展示 90 天。当天容量不足时，未完成部分会自动进入下一天，与下一天原有任务、固定事务重新计算；原 DDL 不会被悄悄改掉。完成、疲惫反馈、计时或记录未计划时间后都会重新生成时间轴。</div>';
+el.innerHTML=days.slice(0,displayDays).join('')+(horizonDays>displayDays?'<div class="info">当前显示 '+displayDays+' 天；系统仍会在后台计算完整 '+horizonDays+' 天的任务容量与 DDL 风险，切换「未来两周」可查看后续时间轴。</div>':'')+riskHtml+overflow+'<div class="info"><b>动态排期逻辑：</b>先锁定固定事务，再扣除今天已经执行的真实耗时和走神/无效时间；按原始 DDL、硬截止、剩余工作量、个人耗时学习曲线和精力适配安排任务。每次最多安排 50 分钟专注块，之后插入恢复休息，并按你设置的比例预留机动缓冲；默认展示未来 14 天，若 DDL 更远则自动延展，最多展示 90 天。当天容量不足时，未完成部分会进入下一天重新计算；原 DDL 不会被悄悄改掉。系统会把每项任务的最近启动时段写回 nextScheduledAt，开始提醒直接读取这个真实排期；无法排入时明确显示容量冲突。完成、疲惫反馈、计时或记录未计划时间后都会重新生成时间轴。'+(kickoffRisks.length?'<div class="info" style="border-color:#d88b73;color:#a45140"><b>长期搁置启动风险：</b>'+kickoffRisks.map(esc).join('、')+'；未来72小时内没有可用空档，请先移出普通弹性任务或调整可用时间。</div>':'')+'</div>';
 }
-function checkScheduledStarts(){var now=Date.now();state.tasks.filter(function(t){return !t.containerOnly&&!t.done&&!t.abandoned&&t.plannedStart&&new Date(t.plannedStart).getTime()<=now}).forEach(function(t){var seen=state.scheduledPrompts.some(function(x){return x.taskId===t.id});if(!seen){state.scheduledPrompts.push({taskId:t.id,at:now});save();if(document.hidden&&'Notification'in window&&Notification.permission==='granted'){new Notification('上岸鸭 · 到计划开始时间了',{body:'现在开始「'+t.name+'」吗？'})}else if(!document.getElementById('urgentOverlay').classList.contains('show')){if(confirm('「'+t.name+'」到了计划开始时间。现在开始吗？'))begin(t.id)}}});}
+function checkScheduledStarts(){var now=Date.now(),changed=false;state.tasks.filter(function(t){return !t.containerOnly&&!t.done&&!t.abandoned&&t.executionState!=='blocked'&&activeId!==t.id}).forEach(function(t){var planned=t.nextScheduledAt?new Date(t.nextScheduledAt):(t.plannedStart?new Date(t.plannedStart):null);if(!planned||isNaN(planned.getTime())||planned.getTime()>now||Number(t.scheduleSnoozeUntil||0)>now)return;var key=t.id+'|'+planned.getTime(),seen=state.scheduledPrompts.some(function(x){return x.taskId===t.id&&(x.key===key||false)});if(seen)return;state.scheduledPrompts.push({taskId:t.id,key:key,plannedAt:planned.getTime(),at:now});changed=true;if(document.hidden&&'Notification'in window&&Notification.permission==='granted'){new Notification('上岸鸭 · 任务启动提醒',{body:'现在开始「'+t.name+'」吗？'})}else if(!document.getElementById('urgentOverlay').classList.contains('show')){if(confirm('「'+t.name+'」到了系统分配的开始时间。现在开始吗？'))begin(t.id);else{t.delayCount=(Number(t.delayCount)||0)+1;t.lastDelayAt=now;t.lastDelayReason='到计划开始时间仍未启动';t.scheduleSnoozeUntil=now+30*60000;t.nextScheduledAt='';t.executionState='unscheduled'}}});if(changed)save();if(changed)renderAutoPlan();}
 function checkMorningPrompt(){var now=new Date(),day=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0'),saved=localStorage.getItem(MORNING_KEY);if(now.getHours()>=8&&saved!==day&&!document.hidden){document.getElementById('morningOverlay').classList.add('show')}}
 function splitMorningEntries(raw){
 /* 用户明确说分号代表一项；先严格按中英文分号和换行拆分。 */
@@ -512,17 +513,549 @@ added++;
 save();renderAll();view('tasks');document.getElementById('allTaskList').scrollIntoView({behavior:'smooth',block:'start'});
 toast('按分号识别 '+lines.length+' 项：新增 '+added+' 项，更新 '+updated+' 项。'+(unclassified.length?'另有 '+unclassified.length+' 项待分类。':''));
 }
-function checkDeadlines(){var now=Date.now(),list=state.tasks.filter(function(t){return !t.containerOnly&&!t.done&&!t.abandoned&&due(t)}).map(function(t){return {t:t,d:due(t),left:due(t).getTime()-now}}).filter(function(x){return x.left>0&&x.left<=48*3600000}).sort(function(a,b){return a.left-b.left}),banner=document.getElementById('deadlineBanner');if(!list.length){banner.classList.add('hidden');return}var x=list[0],stage=x.left<=24*3600000?24:48;document.getElementById('deadlineName').textContent=x.t.name;document.getElementById('deadlineText').textContent=(x.t.hardDeadline?'硬截止 ':'计划目标日 ')+x.d.toLocaleString('zh-CN')+' · 剩余约 '+Math.max(1,Math.ceil(x.left/3600000))+' 小时';banner.classList.remove('hidden');banner.dataset.task=x.t.id;var snooze=state.deadlineSnoozes[x.t.id]||0,already=state.deadlineLogs.some(function(l){return l.taskId===x.t.id&&l.stage===stage});if(Date.now()>snooze&&!already){if(document.hidden){if('Notification'in window&&Notification.permission==='granted'){new Notification((x.t.hardDeadline?'上岸鸭 · ':'上岸鸭 · 计划目标 · ')+(stage===24?'DDL 前一天红线':'DDL 提前两天提醒'),{body:x.t.name+' · 剩余约 '+Math.max(1,Math.ceil(x.left/3600000))+' 小时'});state.deadlineLogs.push({taskId:x.t.id,stage:stage,at:Date.now()});save()}}else openDeadline(x.t,x.left)}}
-function openDeadline(t,left){deadlineId=t.id;var when=t.dueTime?(t.deadlineTimeConfirmed?t.dueTime:t.dueTime+'（待官方核对）'):'当天时刻待确认';document.getElementById('deadlineDialogText').textContent='「'+t.name+'」的'+(t.hardDeadline?'硬截止':'计划目标日')+'为 '+t.dueDate+' '+when+'。剩余约 '+Math.max(1,Math.ceil(left/3600000))+' 小时。请确认完成进度、遇到的困难和当前精力。';document.querySelector('#deadlineOverlay h2').textContent=(t.hardDeadline?'🔴 硬截止':'🟠 计划目标')+(left<=24*3600000?' · 前一天进度确认':' · 提前两天风险检查');document.getElementById('deadlineOverlay').classList.add('show');var stage=left<=24*3600000?24:48;if(!state.deadlineLogs.some(function(l){return l.taskId===t.id&&l.stage===stage})){state.deadlineLogs.push({taskId:t.id,stage:stage,at:Date.now()});save()}}
-function saveDeadline(){var t=state.tasks.find(function(x){return x.id===deadlineId});if(!t)return;var p=document.getElementById('deadlineProgress').value,d=document.getElementById('deadlineDifficulty').value,en=Number(document.querySelector('#deadlineEnergy .choice.active').dataset.energy||3);state.logs.push({id:id(),taskId:t.id,name:t.name,category:t.category,type:t.type,estimate:estimate(t),actual:0,energy:en,difficulty:2,note:'截止检查：'+p+'；困难：'+d,status:'checkin',at:Date.now()});t.lastBlocker=d;document.getElementById('deadlineOverlay').classList.remove('show');save();toast('已记录截止进度。请优先完成可提交版本并重新检查剩余工作量。');renderAll()}
+function checkDeadlines(){var now=Date.now(),todayKey=localDay(new Date()),list=state.tasks.filter(function(t){return !t.containerOnly&&!t.done&&!t.abandoned&&due(t)}).map(function(t){return {t:t,d:due(t),left:due(t).getTime()-now}}).filter(function(x){return x.left<=72*3600000}).sort(function(a,b){return a.left-b.left}),banner=document.getElementById('deadlineBanner');if(!list.length){banner.classList.add('hidden');return}var x=list[0],stage=x.left<=0?'overdue':x.left<=24*3600000?24:x.left<=48*3600000?48:72;if(stage==='overdue'&&x.t.executionState!=='overdue'){x.t.executionState='overdue';x.t.overdueAt=x.t.overdueAt||now;save();renderTasks()}document.getElementById('deadlineName').textContent=x.t.name;document.getElementById('deadlineText').textContent=(x.t.hardDeadline?'硬截止 ':'计划目标日 ')+x.d.toLocaleString('zh-CN')+' · '+(stage==='overdue'?'已逾期 '+Math.max(1,Math.ceil(-x.left/3600000))+' 小时，进入抢救':('剩余约 '+Math.max(1,Math.ceil(x.left/3600000))+' 小时 · '+(stage===72?'前三天强制排期':stage===48?'前两天启动核验':'前一天红线')));banner.classList.remove('hidden');banner.dataset.task=x.t.id;var snooze=state.deadlineSnoozes[x.t.id]||0,already=state.deadlineLogs.some(function(l){return l.taskId===x.t.id&&l.stage===stage&&(stage!=='overdue'||localDay(new Date(l.at))===todayKey)});if(now>snooze&&!already){if(document.hidden){if('Notification'in window&&Notification.permission==='granted'){new Notification('上岸鸭 · '+(stage==='overdue'?'DDL逾期抢救':stage===72?'DDL前三天强制排期':stage===48?'DDL前两天启动核验':'DDL前一天红线'),{body:x.t.name+' · '+(stage==='overdue'?'已逾期，请立即确认交付状态':'剩余约 '+Math.max(1,Math.ceil(x.left/3600000))+' 小时')});state.deadlineLogs.push({taskId:x.t.id,stage:stage,at:now});save()}}else openDeadline(x.t,x.left,stage)}}
+function openDeadline(t,left,stage){deadlineId=t.id;stage=stage||(left<=0?'overdue':left<=24*3600000?24:left<=48*3600000?48:72);var when=t.dueTime?(t.deadlineTimeConfirmed?t.dueTime:t.dueTime+'（待官方核对）'):'当天时刻待确认',phase=stage==='overdue'?'逾期抢救':stage===72?'DDL前三天强制排期':stage===48?'DDL前两天启动核验':'DDL前一天红线';document.getElementById('deadlineDialogText').textContent='「'+t.name+'」的'+(t.hardDeadline?'硬截止':'计划目标日')+'为 '+t.dueDate+' '+when+'。'+(stage==='overdue'?'已经逾期约 '+Math.max(1,Math.ceil(-left/3600000))+' 小时。请确认剩余工作量、延期原因和可提交版本。':'剩余约 '+Math.max(1,Math.ceil(left/3600000))+' 小时。当前阶段：'+phase+'。请确认真实进度、遇到的困难和当前精力。');document.querySelector('#deadlineOverlay h2').textContent=(t.hardDeadline?'🔴 硬截止':'🟠 计划目标')+' · '+phase;document.getElementById('deadlineOverlay').classList.add('show');var todayKey=localDay(new Date());if(!state.deadlineLogs.some(function(l){return l.taskId===t.id&&l.stage===stage&&(stage!=='overdue'||localDay(new Date(l.at))===todayKey)})){state.deadlineLogs.push({taskId:t.id,stage:stage,at:Date.now()});save()}}
+function saveDeadline(){var t=state.tasks.find(function(x){return x.id===deadlineId});if(!t)return;var p=document.getElementById('deadlineProgress').value,d=document.getElementById('deadlineDifficulty').value,en=Number(document.querySelector('#deadlineEnergy .choice.active').dataset.energy||3);state.logs.push({id:id(),taskId:t.id,name:t.name,category:t.category,type:t.type,estimate:estimate(t),actual:0,energy:en,difficulty:2,note:'截止检查：'+p+'；困难：'+d,status:'checkin',at:Date.now()});t.lastBlocker=d;if(d)t.delayReason=d;if(due(t)&&due(t).getTime()<Date.now()){t.executionState='overdue';t.delayCount=(Number(t.delayCount)||0)+1}document.getElementById('deadlineOverlay').classList.remove('show');save();toast('已记录截止进度。请优先完成可提交版本并重新检查剩余工作量。');renderAll()}
 function parseVoice(s){var m=s.match(/(\d{1,2})\s*点(?:\s*(\d{1,2})\s*分)?\s*(?:到|至)\s*(\d{1,2})\s*点(?:\s*(\d{1,2})\s*分)?/),duration=null,startMinute=null,endMinute=null;if(m){startMinute=Number(m[1])*60+Number(m[2]||0);endMinute=Number(m[3])*60+Number(m[4]||0);if(endMinute<startMinute)endMinute+=1440;duration=endMinute-startMinute}var task=state.tasks.find(function(t){return s.indexOf(t.name)>=0})||state.tasks.find(function(t){var parts=t.type.split(/[与和、/ ]/).filter(function(x){return x.length>=2});return parts.some(function(p){return s.indexOf(p)>=0})});return {duration:duration,startMinute:startMinute,endMinute:endMinute,task:task}}
 function applyVoice(){var s=document.getElementById('voiceText').value.trim(),r=parseVoice(s),el=document.getElementById('voiceResult');if(!s){el.textContent='请先输入或识别语音内容。';return}if(r.task&&r.duration){var start=new Date();start.setHours(Math.floor(r.startMinute/60)%24,r.startMinute%60,0,0);var end=new Date(start.getTime()+r.duration*60000),complete=/(?:完成|做完|搞定|提交)/.test(s)&&!/(?:没完成|未完成|还没完成|完成一部分|部分完成)/.test(s),oldAccum=Number(r.task.accumulatedMinutes)||0,remainingBefore=Math.max(15,estimate(r.task)-oldAccum),stamp=Date.now(),actualEnergy=Math.max(1,Math.min(5,Number(energy)||3));state.logs.push({id:id(),taskId:r.task.id,learningKey:r.task.learningKey||('task:'+r.task.id),name:r.task.name,category:r.task.category,type:r.task.type,estimate:remainingBefore,actual:r.duration,startAt:start.getTime(),endAt:end.getTime(),startedAt:start.getTime(),endedAt:end.getTime(),startHour:start.getHours(),startEnergy:actualEnergy,endEnergy:actualEnergy,energy:actualEnergy,difficulty:2,note:'语音补录：'+s,status:complete?'done':'progress',at:stamp});r.task.accumulatedMinutes=oldAccum+r.duration;if(complete){r.task.done=true;r.task.completedAt=stamp;r.task.remainingEstimate=0}else{var nextRemaining=Math.max(15,Math.round(Math.max(15,remainingBefore-r.duration*.65,r.duration*.45)/5)*5);r.task.remainingEstimate=nextRemaining;r.task.estimate=r.task.accumulatedMinutes+nextRemaining;r.task.lastBlocker='语音汇报已记录进度，剩余部分重新排期'}el.textContent='匹配到「'+r.task.name+'」，'+(complete?'已标记完成':'已保存阶段进度')+'，记录 '+r.duration+' 分钟（'+start.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})+'—'+end.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})+'）。'+(complete?'已归档并更新耗时曲线。':'剩余工作量会进入新的时间表。')}else el.textContent='识别到文本，但没有可靠匹配任务或时间段。'+(r.duration?'识别耗时 '+r.duration+' 分钟。':'未识别到完整时间段。')+' 请补充任务名称。';save();renderAll()}
 function addImported(arr){arr.forEach(function(x){var n=x.name||x.title||x.task;if(!n)return;state.tasks.push({id:id(),category:['运营','竞赛','学习 AI 产品经理'].indexOf(x.category)>=0?x.category:'个人事务',type:x.type||'资料整理',name:String(n),parent:x.parent||'',estimate:Number(x.estimate)||30,acceptance:x.acceptance||'',materials:x.materials||'',dueDate:/^\d{4}-\d{2}-\d{2}$/.test(x.dueDate||'')?x.dueDate:'',dueTime:x.dueTime||'18:00',done:false,stage:'待确认'})});save();renderAll()}
 async function importFile(f){var el=document.getElementById('importResult');if(!f)return;var ext=f.name.split('.').pop().toLowerCase();try{if(ext==='json'){var d=JSON.parse(await f.text()),a=Array.isArray(d)?d:(d.tasks||[]);addImported(a);el.textContent='已读取 JSON：'+a.length+' 条候选任务，请检查分类和日期。'}else if(ext==='csv'||ext==='txt'){var text=await f.text(),rows=text.split(/\r?\n/).filter(Boolean).slice(1).map(function(line){return line.split(',')}).filter(function(x){return x[0]});addImported(rows.map(function(x){return {name:x[0],category:x[1]||'个人事务',type:x[2]||'资料整理',dueDate:x[3]||'',estimate:Number(x[4])||30}}));el.textContent='已读取 '+rows.length+' 行候选任务，请核对字段映射。'}else if(ext==='pdf'&&window.pdfjsLib){var pdf=await pdfjsLib.getDocument({data:await f.arrayBuffer()}).promise,txt='';for(var i=1;i<=pdf.numPages;i++){var pg=await pdf.getPage(i),ct=await pg.getTextContent();txt+=ct.items.map(function(x){return x.str}).join(' ')+' '}el.textContent='PDF 已提取 '+pdf.numPages+' 页文本。请复制检查后再创建任务。';document.getElementById('voiceText').value=txt.slice(0,4000)}else if(ext==='docx'&&window.mammoth){var out=await mammoth.extractRawText({arrayBuffer:await f.arrayBuffer()});el.textContent='DOCX 已提取文本，请检查后再创建任务。';document.getElementById('voiceText').value=out.value.slice(0,4000)}else if(f.type.indexOf('image/')===0&&window.Tesseract){el.textContent='正在进行图片 OCR…';var o=await Tesseract.recognize(f,'chi_sim+eng');el.textContent='图片文字已识别，请核对后再创建任务。';document.getElementById('voiceText').value=o.data.text.slice(0,4000)}else el.textContent='解析组件不可用，文件未导入。请使用 JSON / CSV / TXT 或重试。'}catch(e){el.textContent='解析失败：'+e.message+'。文件未导入任务池。'}}
 function voiceStartFor(targetId){var SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){toast('浏览器不支持语音识别，请使用系统语音输入或手动填写。');return}var r=new SR();r.lang='zh-CN';r.interimResults=false;r.onresult=function(e){var el=document.getElementById(targetId);if(el)el.value+=(el.value?'；':'')+e.results[0][0].transcript;toast('语音识别完成，请核对分隔和截止时间。')};r.onerror=function(e){toast('语音识别失败：'+e.error)};r.start()}function voiceStart(){voiceStartFor('voiceText')}
+
+/* ===== Task Policy Engine · Daily Routines / Goals / Scope Guard ===== */
+(function installTaskPolicyEngine(){
+  var POLICY_GOALS=[
+    {id:'g-exam',title:'考研阶段性备考',desc:'每天保持有效学习与复习，不把两小时写死；按精力安排 60–120 分钟。'},
+    {id:'g-ops',title:'运营岗位稳定产出',desc:'每天约 60 分钟，拆成选题、素材、文案、制作和数据复盘。'},
+    {id:'g-agent',title:'Agent 大赛交付',desc:'按真实截止倒排，先形成可提交版本，再做必要校对。'},
+    {id:'g-pm',title:'AI 产品经理能力与作品集',desc:'每天形成一个可验证的小成果，持续积累需求分析、PRD 和 Agent 实战。'},
+    {id:'g-camp',title:'TRAE / 训练营交付',desc:'固定上课时间优先，课后任务拆小并保存验收凭证。'},
+    {id:'g-school',title:'学校课程与作业',desc:'按课程真实截止推进，不让单项作业挤掉其他主线。'}
+  ];
+  function policyGoalForCategory(category,parent){
+    var p=String(parent||'');
+    if(/TRAE|训练营|Work Buddy/i.test(p))return 'g-camp';
+    if(category==='考研督学')return 'g-exam';
+    if(category==='运营'||category==='运营账号')return 'g-ops';
+    if(category==='竞赛')return 'g-agent';
+    if(category==='学习 AI 产品经理')return 'g-pm';
+    if(category==='学校作业')return 'g-school';
+    return 'g-pm';
+  }
+  function ensurePolicyState(){
+    if(!Array.isArray(state.goals)||!state.goals.length)state.goals=POLICY_GOALS.map(function(x){return clone(x)});
+    else POLICY_GOALS.forEach(function(g){if(!state.goals.some(function(x){return x.id===g.id}))state.goals.push(clone(g))});
+    if(!Array.isArray(state.ideas))state.ideas=[];
+    if(!state.dailyChecks||typeof state.dailyChecks!=='object')state.dailyChecks={};
+    if(!Array.isArray(state.recoveryQueue))state.recoveryQueue=[];
+    state.tasks.forEach(function(t){
+      if(!t.needStatus)t.needStatus=t.hardDeadline?'required':'pending';
+      if(!t.goalId)t.goalId=policyGoalForCategory(t.category,t.parent);
+      if(!t.theme)t.theme=t.name||'';
+      if(!t.minimumDeliverable)t.minimumDeliverable=t.acceptance||'先形成可验收的最小版本';
+    });
+  }
+  var _mergeAccountData=mergeAccountData;
+  mergeAccountData=function(remote,local){
+    var out=_mergeAccountData(remote,local);
+    if(!Array.isArray(out.goals)||!out.goals.length)out.goals=(local&&local.goals)||POLICY_GOALS.map(function(x){return clone(x)});
+    if(!Array.isArray(out.ideas))out.ideas=(local&&local.ideas)||[];
+    if(!out.dailyChecks)out.dailyChecks=(local&&local.dailyChecks)||{};
+    if(!Array.isArray(out.recoveryQueue))out.recoveryQueue=(local&&local.recoveryQueue)||[];
+    if(!out.dailyRoutineSettings)out.dailyRoutineSettings=(local&&local.dailyRoutineSettings)||{};
+    return out;
+  };
+  function dailyTargetForExam(){
+    var e=Number(energy)||3;
+    return e>=4?120:(e<=2?60:90);
+  }
+  function ensureDailyRoutineTasks(){
+    ensurePolicyState();
+    var day=localDay(new Date()),defs=[
+      {id:'exam',category:'考研督学',type:'考研每日学习',name:'考研每日学习',parent:'考研每日学习',goalId:'g-exam',target:dailyTargetForExam(),priority:'high',importance:3,load:'高',acceptance:'完成一个知识点或章节：理解 → 主动回忆 / 练习 → 记录错题或复习点。',minimum:'今天只攻一个科目 / 章节，留下可复习的学习记录。'},
+      {id:'ops',category:'运营',type:'运营岗位每日执行',name:'运营岗位每日执行',parent:'运营岗位日常工作',goalId:'g-ops',target:60,priority:'medium',importance:2,load:'中',acceptance:'完成一项可留存产出：选题、素材、文案、剪辑、发布准备或数据复盘；发布动作由本人确认。',minimum:'今天至少留下一个能继续使用的运营产出。'}
+    ],changed=false;
+    defs.forEach(function(d){
+      var old=state.tasks.find(function(t){return t.dailyRoutineId===d.id&&t.routineDate===day});
+      if(old)return;
+      var t={
+        id:id(),sourceId:'daily-'+d.id+'-'+day,dailyRoutine:true,dailyRoutineId:d.id,routineDate:day,
+        category:d.category,type:d.type,name:d.name,parent:d.parent,goalId:d.goalId,
+        estimate:d.target,remainingEstimate:d.target,accumulatedMinutes:0,dailyTargetMinutes:d.target,
+        minBlockMinutes:d.id==='ops'?15:25,executionMode:'daily',priority:d.priority,importance:d.importance,
+        level:d.load,load:d.load,plannedStart:'',dueDate:'',dueTime:'',hardDeadline:false,deadlineTimeConfirmed:false,
+        planDate:day,acceptance:d.acceptance,minimumDeliverable:d.minimum,theme:d.name,
+        materials:'',done:false,abandoned:false,stage:'每日循环任务',needStatus:'required',
+        sourceLabel:'用户设定的每日循环任务；按精力动态估时',learningKey:'daily-routine:'+d.id
+      };
+      state.tasks.push(t);changed=true;
+    });
+    if(changed)save();
+    return changed;
+  }
+  function needStatusOf(t){
+    if(t.needStatus)return t.needStatus;
+    return t.hardDeadline?'required':'pending';
+  }
+  function needStatusLabel(v){
+    return ({required:'必须做',useful:'值得做',optional:'可选做',pending:'待判断',deferred:'暂缓',not_needed:'不需要做'})[v]||'待判断';
+  }
+  function goalName(id0){
+    var g=(state.goals||[]).find(function(x){return x.id===id0});
+    return g?g.title:'未关联近期目标';
+  }
+  function taskDueLeft(t){
+    var d=due(t);return d?d.getTime()-Date.now():null;
+  }
+  function ensureDeadlinePriority(){
+    var now=Date.now(),today=localDay(new Date()),changed=false;
+    state.tasks.forEach(function(t){
+      if(t.containerOnly||t.done||t.abandoned||needStatusOf(t)==='not_needed')return;
+      var d=due(t);if(!d)return;
+      var left=d.getTime()-now;
+      if(left<=72*3600000){
+        if(needStatusOf(t)!=='required'){t.needStatus='required';changed=true}
+        if(!t.forceToday){t.forceToday=true;changed=true}
+        if(t.forceNextDay&&t.planDate&&t.planDate<=today){t.forceNextDay=false;changed=true}
+        if(!t.forceNextDay&&(!t.planDate||t.planDate>today)){t.planDate=today;changed=true}
+        if(t.priority!=='urgent'){t.priority='urgent';changed=true}
+        if(t.executionState==='parked'){t.executionState='unscheduled';t.parkedAt=null;t.kickoffDueAt=null;changed=true}
+      }
+    });
+    if(changed)save();
+    return changed;
+  }
+
+  /* Add the policy controls to the existing task form without replacing its layout. */
+  var acceptance=document.getElementById('taskAcceptance');
+  if(acceptance&&!document.getElementById('taskNeedStatus')){
+    acceptance.closest('.field').insertAdjacentHTML('afterend',
+      '<div class="form-grid policy-form-grid">'+
+      '<div class="field"><label>是否需要做</label><select id="taskNeedStatus"><option value="required">必须做</option><option value="useful">值得做</option><option value="optional">可选做</option><option value="pending" selected>待判断</option><option value="deferred">暂缓</option><option value="not_needed">不需要做</option></select></div>'+
+      '<div class="field"><label>关联近期总体目标</label><select id="taskGoalId"></select></div>'+
+      '</div>'+
+      '<div class="field"><label>本次唯一主题（开始后锁定，避免反复换方向）</label><input id="taskTheme" placeholder="例如：只完成 Agent PPT 的故事线，不同时改产品方向"></div>'+
+      '<div class="field"><label>最小可交付版本（先完成，再考虑润色）</label><input id="taskMinimum" placeholder="例如：一版结构完整、符合提交要求、能讲清楚的 PPT 初稿"></div>'
+    );
+  }
+  function fillGoalSelect(){
+    var el=document.getElementById('taskGoalId');if(!el)return;
+    var current=el.value;
+    el.innerHTML=(state.goals||POLICY_GOALS).map(function(g){return '<option value="'+esc(g.id)+'">'+esc(g.title)+'</option>'}).join('');
+    if(current)el.value=current;
+  }
+
+  /* Goal + routine + MCP capability dashboard. */
+  var categoryGrid=document.getElementById('categoryGrid');
+  if(categoryGrid&&!document.getElementById('taskPolicyDashboard')){
+    categoryGrid.insertAdjacentHTML('afterend',
+      '<section class="policy-dashboard" id="taskPolicyDashboard">'+
+        '<div class="policy-card"><div class="policy-head"><div><h2>近期总体目标</h2><p>先看近期要抵达哪里，再决定今天哪些任务值得占用时间。</p></div><button class="btn soft" id="policyAddGoal">＋ 新增目标</button></div><div id="policyGoalCards" class="policy-goals"></div></div>'+
+        '<div class="policy-card"><div class="policy-head"><div><h2>每日循环任务</h2><p>考研按精力安排 60–120 分钟；运营每日约 60 分钟，可拆成零碎时间累计。</p></div><span class="tag">每日自动生成</span></div><div id="policyRoutineCards" class="policy-routines"></div></div>'+
+        '<div class="policy-card"><div class="policy-head"><div><h2>完成比完美重要 · 本轮主题锁定</h2><span class="policy-quote">一轮只做一个主题；先做出可交付版本，再做必要优化。</span></div></div><div class="policy-rules"><div><b>① 定一个主题</b><span>明确受众、目的和本轮唯一交付，不临时另起方向。</span></div><div><b>② 做最小版本</b><span>先达到验收标准，不把“再润色一下”无限延长。</span></div><div><b>③ 通过质量闸门就收工</b><span>事实准确、满足要求、能交付；三项通过就进入下一任务。</span></div><div><b>④ 新想法先停车</b><span>临时想到的新主题先保存，不立即打断当前任务。</span></div></div></div>'+
+        '<div class="policy-card"><div class="policy-head"><div><h2>想法停车场</h2><p>想到新主题先收纳，当前任务做完后再判断是否值得做。</p></div></div><div class="policy-idea-entry"><input id="policyIdeaInput" placeholder="把突然想到的新主题 / 新功能写在这里"><button class="btn" id="policyAddIdea">先收纳想法</button></div><div id="policyIdeaList"></div></div>'+
+        '<div class="policy-card"><div class="policy-head"><div><h2>MCP 与资料读取能力状态</h2><p>当前 ChatGPT 会话的 MCP 能力，不等于网页后台已经接通；未验证的来源不会显示“已连接”。</p></div></div><div id="policyMcpCards" class="policy-mcp"></div><div class="policy-links"><b>任务资料链接</b><div id="policySourceLinks"></div></div></div>'+
+      '</section>'
+    );
+  }
+  if(!document.getElementById('dailyNeedCheckOverlay')){
+    document.body.insertAdjacentHTML('beforeend',
+      '<div class="overlay policy-daily-overlay" id="dailyNeedCheckOverlay"><div class="dialog policy-daily-dialog"><h2>今天先确认：近期截止任务与是否需要做</h2><p>72 小时内到期的任务自动进入强制优先队列。今天排不下的，明天放到最前面；原始 DDL 不会被偷偷改掉。</p><div id="dailyNeedCheckList"></div><div class="form-actions"><button class="btn primary" id="dailyNeedCheckDone">确认并生成今日排期</button></div></div></div>'+
+      '<div class="overlay policy-stop-overlay" id="hardStopOverlay"><div class="dialog policy-stop-dialog"><h2>⛔ 90 分钟到了，先停止死磕</h2><p id="hardStopTaskName"></p><p>未完成不等于失败。先保存已经完成的内容、尝试过的方法、卡点和下一步，再切换任务；当前任务不会被标记完成。</p><div class="field"><label>断点 / 已尝试 / 下一步（至少写下一步）</label><textarea id="hardStopNote" rows="4" placeholder="已完成：……；尝试过：……；卡点：……；下一步：……"></textarea></div><div class="form-actions"><button class="btn" id="hardStopRest">保存断点并休息 15 分钟</button><button class="btn primary" id="hardStopSwitch">保存断点并切换下一任务</button></div></div></div>'
+    );
+  }
+  var checkinActions=document.querySelector('#checkinOverlay .form-actions');
+  if(checkinActions&&!document.getElementById('dailyEarlyFinish')){
+    checkinActions.insertAdjacentHTML('beforebegin','<label class="policy-early-finish"><input type="checkbox" id="dailyEarlyFinish"> 每日循环任务今天提前收尾（按实际投入记录，不补造时长）</label>');
+  }
+  document.head.insertAdjacentHTML('beforeend',
+    '<style id="task-policy-style">'+
+    '.policy-dashboard{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:14px 0 18px}'+
+    '.policy-card{background:var(--card,#fff);border:1px solid var(--line,#e5e0da);border-radius:18px;padding:18px;min-width:0}'+
+    '.policy-card h2{margin:0 0 5px;font-size:17px}.policy-card p{margin:0;color:var(--muted,#8b8178);font-size:12px;line-height:1.65}'+
+    '.policy-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}'+
+    '.policy-goals,.policy-routines,.policy-mcp{display:grid;gap:9px}'+
+    '.policy-goal,.policy-routine,.policy-mcp-row{border:1px solid var(--line,#e5e0da);border-radius:12px;padding:11px;background:rgba(255,255,255,.58)}'+
+    '.policy-goal-head,.policy-routine-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.policy-goal small,.policy-routine small{display:block;color:var(--muted,#8b8178);margin-top:4px;line-height:1.5}'+
+    '.policy-quote{font-weight:800;color:#9c5e45;font-size:13px}.policy-rules{display:grid;gap:9px}.policy-rules>div{display:grid;grid-template-columns:145px 1fr;gap:10px;font-size:12px}.policy-rules span{color:var(--muted,#8b8178)}'+
+    '.policy-idea-entry{display:flex;gap:8px;margin-bottom:10px}.policy-idea-entry input{flex:1;min-width:0}.policy-idea{display:flex;justify-content:space-between;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line,#e5e0da);font-size:12px}'+
+    '.policy-mcp-row{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.policy-mcp-row small{display:block;color:var(--muted,#8b8178);margin-top:3px}.policy-mcp-status{font-size:11px;font-weight:800;white-space:nowrap;color:#8d674d}'+
+    '.policy-links{margin-top:12px;font-size:12px}.policy-links a{display:inline-block;margin:6px 10px 0 0;overflow-wrap:anywhere}'+
+    '.policy-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0}.policy-meta select{max-width:140px;font-size:11px;padding:5px}.policy-early-finish{display:flex;gap:8px;align-items:center;margin:10px 0;font-size:12px;color:var(--muted,#8b8178)}'+
+    '.policy-daily-overlay{z-index:10020}.policy-daily-dialog{max-width:860px;max-height:86vh;overflow:auto}.policy-daily-row{display:grid;grid-template-columns:minmax(0,1fr) 170px;gap:10px;align-items:center;padding:10px;border:1px solid #e7d6c9;border-radius:12px;margin:8px 0}.policy-daily-row small{display:block;color:#8d8177;margin-top:3px}'+
+    '#deadlineOverlay{z-index:10050!important;background:rgba(115,0,15,.94)!important}#deadlineOverlay .dialog{max-width:820px!important;border:4px solid #e00024!important;box-shadow:0 0 0 10px rgba(255,0,35,.2),0 22px 90px rgba(0,0,0,.45)!important}#deadlineOverlay .dialog h2{font-size:clamp(25px,4vw,40px)!important;color:#bd001d!important;font-weight:950!important}#deadlineOverlay .dialog p{font-size:16px!important;line-height:1.8!important}#deadlineOverlay .dialog .btn.primary{background:#c90020!important;border-color:#c90020!important}'+
+    '.policy-stop-overlay{z-index:10060;background:rgba(80,0,8,.94)}.policy-stop-dialog{max-width:760px;border:4px solid #c90020;box-shadow:0 0 0 10px rgba(255,0,35,.18),0 22px 90px rgba(0,0,0,.5)}.policy-stop-dialog h2{font-size:clamp(25px,4vw,38px);color:#c90020}.policy-stop-dialog p{line-height:1.8}'+
+    '@media(max-width:850px){.policy-dashboard{grid-template-columns:1fr}.policy-rules>div{grid-template-columns:1fr;gap:3px}.policy-daily-row{grid-template-columns:1fr}.policy-idea-entry{flex-direction:column}}'+
+    '</style>'
+  );
+
+  ensurePolicyState();
+  fillGoalSelect();
+
+  function renderPolicyDashboard(){
+    var goalsEl=document.getElementById('policyGoalCards');
+    if(!goalsEl)return;
+    var now=Date.now(),weekAgo=now-7*86400000;
+    goalsEl.innerHTML=(state.goals||[]).map(function(g){
+      var list=state.tasks.filter(function(t){return !t.containerOnly&&t.goalId===g.id});
+      var done=list.filter(function(t){return t.done}).length;
+      var open=list.filter(function(t){return !t.done&&!t.abandoned}).length;
+      var ids={};list.forEach(function(t){ids[t.id]=1});
+      var minutes=(state.logs||[]).filter(function(l){return ids[l.taskId]&&Number(l.at||l.endedAt||0)>=weekAgo}).reduce(function(sum,l){return sum+Number(l.actual||0)},0);
+      var urgent=list.filter(function(t){var d=due(t);return d&&!t.done&&!t.abandoned&&d.getTime()-now<=72*3600000}).length;
+      return '<div class="policy-goal"><div class="policy-goal-head"><b>'+esc(g.title)+'</b><button class="btn soft" data-policy-edit-goal="'+esc(g.id)+'">编辑目标</button></div><small>'+esc(g.desc||'')+'</small><small>关联任务 '+list.length+' 项 · 已完成 '+done+' · 待推进 '+open+' · 72 小时内截止 '+urgent+' 项 · 近 7 天实测 '+minutes+' 分钟</small></div>';
+    }).join('');
+    var today=localDay(new Date());
+    var routines=state.tasks.filter(function(t){return t.dailyRoutine&&t.routineDate===today});
+    var routinesEl=document.getElementById('policyRoutineCards');
+    if(routinesEl)routinesEl.innerHTML=routines.map(function(t){
+      var target=Number(t.dailyTargetMinutes)||Number(t.estimate)||0,actual=Number(t.accumulatedMinutes)||0,left=Math.max(0,target-actual);
+      return '<div class="policy-routine"><div class="policy-routine-head"><b>'+esc(t.name)+'</b><span class="tag">'+(t.done?'今日完成':('还差 '+left+' 分钟'))+'</span></div><small>今日目标 '+target+' 分钟 · 已累计 '+actual+' 分钟 · 可拆成 '+(t.dailyRoutineId==='ops'?'15–20 分钟':'25–40 分钟')+' 小段</small><small>最小产出：'+esc(t.minimumDeliverable||t.acceptance||'完成一小步')+'</small><div class="policy-actions"><button class="btn soft" data-start="'+esc(t.id)+'">开始 / 继续</button></div></div>';
+    }).join('')||'<div class="policy-routine">今日循环任务将在每日启动时自动生成。</div>';
+    var ideasEl=document.getElementById('policyIdeaList');
+    if(ideasEl)ideasEl.innerHTML=(state.ideas||[]).slice(-5).reverse().map(function(x){
+      return '<div class="policy-idea"><span>'+esc(x.content)+'</span><small>'+esc(x.taskName||'临时想法')+'</small></div>';
+    }).join('')||'<p>停车场暂时为空。新想法先记下来，不必马上改变当前主题。</p>';
+    var mcp=[
+      ['GitHub MCP','当前会话已验证','可读取仓库、分支和文件，也可提交代码；尚未接入网页后台。'],
+      ['Remote Desktop Commander','当前会话设备已验证','可在授权电脑读取 / 操作文件；网页端不能直接调用该 MCP。'],
+      ['TinyFish 网页读取','公开网页读取可用','可尝试读取公开文章；登录、验证码、私有消息需要授权或导出。'],
+      ['Figma MCP','工具可用，待本次授权验证','可用于设计文件工作流；当前网页尚未直连。'],
+      ['微信公众号 / 学习通','尚未验证真实读取','需要用户登录授权、可用官方接口或聊天 / 课程导出；仅有链接不代表能读私有消息。'],
+      ['飞书 / 微信 / Obsidian','网页后台未验证','需要真实连接器或本机桥接服务返回正文后，才显示已连接。']
+    ];
+    var mcpEl=document.getElementById('policyMcpCards');
+    if(mcpEl)mcpEl.innerHTML=mcp.map(function(x){return '<div class="policy-mcp-row"><div><b>'+esc(x[0])+'</b><small>'+esc(x[2])+'</small></div><span class="policy-mcp-status">'+esc(x[1])+'</span></div>'}).join('');
+    var linkEl=document.getElementById('policySourceLinks'),links=[];
+    state.tasks.forEach(function(t){
+      var raw=Array.isArray(t.materials)?t.materials.join('\n'):String(t.materials||'');
+      (raw.match(/https?:\/\/[^\s<>"']+/g)||[]).forEach(function(u){if(links.indexOf(u)<0)links.push(u)});
+    });
+    if(linkEl)linkEl.innerHTML=links.slice(0,12).map(function(u){return '<a href="'+esc(u)+'" target="_blank" rel="noopener">'+esc(u)+'</a>'}).join('')||'<span>当前任务还没有录入可核验的资料链接。</span>';
+  }
+
+  function dailyCandidates(){
+    var now=Date.now();
+    return state.tasks.filter(function(t){
+      if(t.containerOnly||t.done||t.abandoned||t.dailyRoutine||needStatusOf(t)==='not_needed')return false;
+      var d=due(t),left=d?d.getTime()-now:null;
+      return (left!==null&&left<=72*3600000)||needStatusOf(t)==='pending';
+    }).sort(function(a,b){
+      var ad=due(a),bd=due(b);return (ad?ad.getTime():Infinity)-(bd?bd.getTime():Infinity);
+    }).slice(0,12);
+  }
+  function renderDailyNeedCheck(){
+    var el=document.getElementById('dailyNeedCheckList');if(!el)return;
+    var rows=dailyCandidates();
+    if(!rows.length){el.innerHTML='<div class="info">目前没有 72 小时内的截止任务，也没有待判断的任务。考研和运营每日任务仍会照常排入今天。</div>';return}
+    el.innerHTML=rows.map(function(t){
+      var d=due(t),left=d?d.getTime()-Date.now():null;
+      var label=d?(left<0?'已逾期 '+Math.ceil(-left/3600000)+' 小时':'剩余约 '+Math.max(1,Math.ceil(left/3600000))+' 小时'):'截止日期待确认';
+      return '<div class="policy-daily-row"><div><b>'+esc(t.name)+'</b><small>'+esc(t.category||'未分类')+' · '+label+' · '+needStatusLabel(needStatusOf(t))+'</small></div><select data-policy-need="'+esc(t.id)+'"><option value="required" '+(needStatusOf(t)==='required'?'selected':'')+'>必须做</option><option value="useful" '+(needStatusOf(t)==='useful'?'selected':'')+'>值得做</option><option value="optional" '+(needStatusOf(t)==='optional'?'selected':'')+'>可选做</option><option value="pending" '+(needStatusOf(t)==='pending'?'selected':'')+'>待判断</option><option value="not_needed">不需要做</option></select></div>';
+    }).join('');
+  }
+  function showDailyNeedCheck(){
+    var day=localDay(new Date()),el=document.getElementById('dailyNeedCheckOverlay');
+    if(!el||Number(new Date().getHours())<8||state.dailyChecks[day]||document.getElementById('morningOverlay')?.classList.contains('show')||document.getElementById('deadlineOverlay')?.classList.contains('show')||document.getElementById('hardStopOverlay')?.classList.contains('show'))return;
+    renderDailyNeedCheck();el.classList.add('show');
+  }
+  function finishDailyNeedCheck(){
+    var day=localDay(new Date());state.dailyChecks[day]=Date.now();save();
+    document.getElementById('dailyNeedCheckOverlay').classList.remove('show');
+    renderAutoPlan();renderAll();toast('已确认今日任务；72 小时内截止的任务会优先排入，排不下的自动推到明天最前面。');
+  }
+  function setTaskNeedStatus(id0,status){
+    var t=state.tasks.find(function(x){return String(x.id)===String(id0)});if(!t)return;
+    var d=due(t),within=d&&d.getTime()-Date.now()<=72*3600000;
+    if(status==='not_needed'){
+      if(!confirm('确定「'+t.name+'」已经不需要做了吗？它会移入“不做了”，历史记录保留。'))return;
+      t.needStatus='not_needed';t.abandoned=true;t.executionState='abandoned';t.abandonedAt=Date.now();t.abandonReason=prompt('不需要做的原因（可选）','不再符合近期目标')||'不再符合近期目标';t.nextScheduledAt='';save();renderAll();renderPolicyDashboard();return;
+    }
+    if(status==='deferred'&&within){toast('这项任务 72 小时内到期，不能继续往后拖。请标记为必须做，或确认它确实不再需要。');return}
+    t.needStatus=status;t.abandoned=false;t.abandonReason='';
+    if(within){t.needStatus='required';t.forceToday=true;t.priority='urgent';t.planDate=localDay(new Date());t.forceNextDay=false;toast('这项任务 72 小时内到期，已锁定为必须做并优先排期。')}
+    else if(status==='deferred'){t.executionState='parked';t.parkedAt=Date.now();t.kickoffDueAt=Date.now()+24*3600000;t.planDate=localDay(new Date(Date.now()+86400000));}
+    else if(status==='required'){t.executionState='unscheduled';t.planDate=localDay(new Date());}
+    save();renderAll();renderPolicyDashboard();
+  }
+
+  var _baseEstimate=estimate;
+  estimate=function(t){
+    if(t&&t.dailyRoutine){
+      var acc=Number(t.accumulatedMinutes)||0,rem=Number(t.remainingEstimate);
+      if(rem>0)return acc+rem;
+      return Number(t.dailyTargetMinutes)||Number(t.estimate)||30;
+    }
+    return _baseEstimate(t);
+  };
+  var _baseTaskHtml=taskHtml;
+  taskHtml=function(t){
+    var html=_baseTaskHtml(t),v=needStatusOf(t),goal=goalName(t.goalId);
+    var dueLabel=t.forceNextDay?' · 明日第一优先':t.forceToday?' · 72小时强制优先':'';
+    var select='<select data-policy-need="'+esc(t.id)+'" aria-label="是否需要做">'+
+      '<option value="required" '+(v==='required'?'selected':'')+'>必须做</option>'+
+      '<option value="useful" '+(v==='useful'?'selected':'')+'>值得做</option>'+
+      '<option value="optional" '+(v==='optional'?'selected':'')+'>可选做</option>'+
+      '<option value="pending" '+(v==='pending'?'selected':'')+'>待判断</option>'+
+      '<option value="deferred" '+(v==='deferred'?'selected':'')+'>暂缓</option>'+
+      '<option value="not_needed" '+(v==='not_needed'?'selected':'')+'>不需要做</option></select>';
+    var extra='<div class="task-meta policy-meta"><span>目标：'+esc(goal)+'</span><span>'+esc(needStatusLabel(v))+dueLabel+'</span>'+select+'</div>'+
+      (t.minimumDeliverable?'<div class="task-meta"><span>最小交付：'+esc(t.minimumDeliverable)+'</span></div>':'');
+    html=html.replace('<div class="task-actions">',extra+'<div class="task-actions">');
+    html=html.replace('<button class="edit" data-edit="'+t.id+'">编辑</button>',
+      '<button data-idea-task="'+esc(t.id)+'">收纳新想法</button>'+
+      (t.themeLocked?'<button data-unlock-theme="'+esc(t.id)+'">调整主题</button>':'')+
+      '<button data-copy-brief="'+esc(t.id)+'">复制 AI 任务指令</button>'+
+      '<button class="edit" data-edit="'+t.id+'">编辑</button>');
+    return html;
+  };
+
+  var _baseSaveTask=saveTask;
+  saveTask=function(e){
+    var id0=document.getElementById('editId').value,existing=state.tasks.find(function(t){return String(t.id)===String(id0)}),before=existing?clone(existing):null;
+    var values={
+      need:document.getElementById('taskNeedStatus')?.value||'pending',
+      goal:document.getElementById('taskGoalId')?.value||'',
+      theme:document.getElementById('taskTheme')?.value.trim()||document.getElementById('taskName').value.trim(),
+      minimum:document.getElementById('taskMinimum')?.value.trim()||document.getElementById('taskAcceptance').value.trim()
+    };
+    _baseSaveTask(e);
+    var t=before?state.tasks.find(function(x){return String(x.id)===String(id0)}):state.tasks.find(function(x){return x.name===document.getElementById('taskName').value.trim()})||state.tasks[0];
+    if(!t)return;
+    if(before&&before.themeLocked){
+      t.name=before.name;t.category=before.category;t.type=before.type;t.parent=before.parent;t.theme=before.theme;t.learningKey=before.learningKey;
+    }else{
+      t.theme=values.theme;t.minimumDeliverable=values.minimum;t.needStatus=values.need;
+      t.goalId=values.goal||policyGoalForCategory(t.category,t.parent);
+    }
+    if(t.hardDeadline||t.executionMode==='deadline'||t.dueDate)t.needStatus='required';
+    save();renderAll();renderPolicyDashboard();
+  };
+  var _baseResetForm=resetForm;
+  resetForm=function(){
+    _baseResetForm();
+    if(document.getElementById('taskNeedStatus'))document.getElementById('taskNeedStatus').value='pending';
+    if(document.getElementById('taskGoalId'))document.getElementById('taskGoalId').value='g-pm';
+    if(document.getElementById('taskTheme'))document.getElementById('taskTheme').value='';
+    if(document.getElementById('taskMinimum'))document.getElementById('taskMinimum').value='';
+    fillGoalSelect();
+  };
+  var _baseEditTask=editTask;
+  editTask=function(id0){
+    _baseEditTask(id0);
+    var t=state.tasks.find(function(x){return String(x.id)===String(id0)});if(!t)return;
+    fillGoalSelect();
+    document.getElementById('taskNeedStatus').value=needStatusOf(t);
+    document.getElementById('taskGoalId').value=t.goalId||policyGoalForCategory(t.category,t.parent);
+    document.getElementById('taskTheme').value=t.theme||t.name||'';
+    document.getElementById('taskMinimum').value=t.minimumDeliverable||t.acceptance||'';
+    document.getElementById('taskTheme').readOnly=!!t.themeLocked;
+    document.getElementById('taskName').readOnly=!!t.themeLocked;
+    document.getElementById('taskParent').readOnly=!!t.themeLocked;
+    document.getElementById('taskType').readOnly=!!t.themeLocked;
+    document.getElementById('taskCategory').disabled=!!t.themeLocked;
+    if(t.themeLocked)toast('本任务主题已锁定；如需换方向，先把新想法放进停车场。');
+  };
+  var _baseBegin=begin;
+  begin=function(id0){
+    var t=state.tasks.find(function(x){return String(x.id)===String(id0)});
+    if(paused&&activeId&&String(activeId)!==String(id0)){openCheckin('切换任务前，先保存当前任务的断点和下一步；不要直接丢掉上下文。');return}
+    _baseBegin(id0);
+    if(t){t.themeLocked=true;t.themeLockedAt=t.themeLockedAt||Date.now();t.theme=t.theme||t.name;save();renderTasks()}
+  };
+  function unlockTaskTheme(id0){
+    var t=state.tasks.find(function(x){return String(x.id)===String(id0)});if(!t)return;
+    if(!confirm('确定要解除「'+t.name+'」的主题锁定吗？建议先完成当前最小交付。'))return;
+    t.themeLocked=false;save();editTask(id0);toast('主题已解锁；修改后请重新确认最小交付。');
+  }
+  function addIdeaForTask(id0){
+    var t=state.tasks.find(function(x){return String(x.id)===String(id0)});if(!t)return;
+    var idea=prompt('新想法先放停车场，不立即切换当前主题：','');if(!idea||!idea.trim())return;
+    state.ideas.push({id:id(),taskId:t.id,taskName:t.name,goalId:t.goalId,content:idea.trim(),at:Date.now()});
+    save();renderPolicyDashboard();toast('新想法已收纳。先把当前任务做出可交付版本，再回来判断。');
+  }
+  function addGeneralIdea(){
+    var el=document.getElementById('policyIdeaInput'),v=el.value.trim();if(!v)return;
+    state.ideas.push({id:id(),content:v,taskName:'临时想法',at:Date.now()});el.value='';save();renderPolicyDashboard();toast('已放入想法停车场，不需要现在切换主题。');
+  }
+  function copyTaskBrief(id0){
+    var t=state.tasks.find(function(x){return String(x.id)===String(id0)});if(!t)return;
+    var brief='你是我的执行教练。请围绕一个主题，不要另起主题或给多个互相冲突的方向。\\n当前主题：'+(t.theme||t.name)+'\\n目标：'+goalName(t.goalId)+'\\n任务：'+t.name+'\\n最小可交付版本：'+(t.minimumDeliverable||t.acceptance||'先完成一版可用成果')+'\\n验收标准：'+(t.acceptance||'符合明确要求、事实准确、可以交付')+'\\n已投入：'+(t.accumulatedMinutes||0)+' 分钟\\n剩余估时：'+Math.max(0,estimate(t)-(Number(t.accumulatedMinutes)||0))+' 分钟\\n请只给我：1）一个最稳妥方案；2）15–30分钟内可执行的下一步；3）达到验收标准后明确告诉我停止润色。原则：完成比完美重要。';
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(brief).then(function(){toast('已复制单主题 AI 指令。')}).catch(function(){prompt('复制以下任务指令：',brief)});
+    else prompt('复制以下任务指令：',brief);
+  }
+
+  function renderDailyNeedCheck(){
+    var el=document.getElementById('dailyNeedCheckList');if(!el)return;
+    var now=Date.now(),rows=state.tasks.filter(function(t){
+      if(t.containerOnly||t.done||t.abandoned||t.dailyRoutine)return false;
+      var d=due(t),left=d?d.getTime()-now:null;
+      return (left!==null&&left<=72*3600000)||needStatusOf(t)==='pending';
+    }).sort(function(a,b){
+      var ad=due(a),bd=due(b);return (ad?ad.getTime():Infinity)-(bd?bd.getTime():Infinity);
+    }).slice(0,12);
+    if(!rows.length){el.innerHTML='<div class="info">目前没有 72 小时内的截止任务，也没有待判断的任务。考研和运营每日任务仍会照常排入今天。</div>';return}
+    el.innerHTML=rows.map(function(t){
+      var d=due(t),left=d?d.getTime()-now:null,label=d?(left<0?'已逾期 '+Math.ceil(-left/3600000)+' 小时':'剩余约 '+Math.max(1,Math.ceil(left/3600000))+' 小时'):'截止日期待确认';
+      return '<div class="policy-daily-row"><div><b>'+esc(t.name)+'</b><small>'+esc(t.category||'未分类')+' · '+label+' · '+needStatusLabel(needStatusOf(t))+'</small></div><select data-policy-need="'+esc(t.id)+'"><option value="required" '+(needStatusOf(t)==='required'?'selected':'')+'>必须做</option><option value="useful" '+(needStatusOf(t)==='useful'?'selected':'')+'>值得做</option><option value="optional" '+(needStatusOf(t)==='optional'?'selected':'')+'>可选做</option><option value="pending" '+(needStatusOf(t)==='pending'?'selected':'')+'>待判断</option><option value="not_needed">不需要做</option></select></div>';
+    }).join('');
+  }
+  function showDailyNeedCheck(){
+    var day=localDay(new Date()),el=document.getElementById('dailyNeedCheckOverlay');
+    if(!el||new Date().getHours()<8||state.dailyChecks[day]||document.getElementById('morningOverlay')?.classList.contains('show')||document.getElementById('deadlineOverlay')?.classList.contains('show')||document.getElementById('hardStopOverlay')?.classList.contains('show'))return;
+    renderDailyNeedCheck();el.classList.add('show');
+  }
+  function finishDailyNeedCheck(){
+    var day=localDay(new Date());state.dailyChecks[day]=Date.now();save();
+    document.getElementById('dailyNeedCheckOverlay').classList.remove('show');
+    renderAutoPlan();renderAll();toast('已确认今日任务；72 小时内截止的任务会优先排入，排不下的自动推到明天最前面。');
+  }
+
+  var _baseMarkTaskComplete=markTaskComplete;
+  markTaskComplete=function(id0){
+    var t=state.tasks.find(function(x){return String(x.id)===String(id0)});
+    if(t&&t.dailyRoutine&&!t.done){
+      var actual=Number(t.accumulatedMinutes)||0,target=Number(t.dailyTargetMinutes)||0;
+      if(actual<target&&!((interval||paused)&&String(activeId)===String(id0))){
+        if(!confirm('今日已累计 '+actual+'/'+target+' 分钟。是否按今天的实际状态提前收尾？不会补造学习时长。'))return;
+        t.dailyEarlyFinishReason='用户确认按实际状态提前收尾';t.done=true;t.executionState='done';t.completedAt=Date.now();t.remainingEstimate=0;save();renderAll();toast('今日循环任务已按真实投入提前收尾。');return;
+      }
+    }
+    _baseMarkTaskComplete(id0);
+  };
+
+  var _baseSaveCheckin=saveCheckin;
+  saveCheckin=function(){
+    var t=state.tasks.find(function(x){return String(x.id)===String(activeId)}),isDaily=!!(t&&t.dailyRoutine),target=isDaily?Number(t.dailyTargetMinutes)||0:0;
+    var current=Math.max(1,Math.round((elapsed+(interval?Date.now()-startAt:0))/60000));
+    var total=(t?Number(t.accumulatedMinutes)||0:0)+current;
+    var early=!!document.getElementById('dailyEarlyFinish')?.checked;
+    if(isDaily&&progress==='done'&&!early&&total<target){
+      var oldProgress=progress;progress='progress';_baseSaveCheckin();progress=oldProgress;
+      t.done=false;t.executionState='unscheduled';t.remainingEstimate=Math.max(0,target-(Number(t.accumulatedMinutes)||0));t.estimate=target;t.planDate=localDay(new Date());
+      save();renderAll();renderAutoPlan();toast('本段已完成，今天还差 '+t.remainingEstimate+' 分钟；可以在其他空档继续累计。');
+      return;
+    }
+    _baseSaveCheckin();
+    if(isDaily&&early){t.dailyEarlyFinishReason=document.getElementById('checkinNote').value.trim()||'按今天的精力提前收尾';save();renderAll()}
+    if(document.getElementById('dailyEarlyFinish'))document.getElementById('dailyEarlyFinish').checked=false;
+  };
+
+  function nextTaskAfterStop(excludeId){
+    var list=state.tasks.filter(function(t){
+      return !t.containerOnly&&!t.done&&!t.abandoned&&needStatusOf(t)!=='not_needed'&&String(t.id)!==String(excludeId)&&t.executionState!=='blocked';
+    });
+    list.sort(function(a,b){
+      var ad=due(a),bd=due(b),av=ad?ad.getTime():Infinity,bv=bd?bd.getTime():Infinity;
+      if(av!==bv)return av-bv;
+      var ap=a.priority==='urgent'?3:(a.priority==='high'?2:1),bp=b.priority==='urgent'?3:(b.priority==='high'?2:1);
+      if(ap!==bp)return bp-ap;
+      return (Number(b.importance)||0)-(Number(a.importance)||0);
+    });
+    return list[0]||null;
+  }
+  function triggerHardStop(){
+    var t=state.tasks.find(function(x){return String(x.id)===String(activeId)});if(!t||state.hardStopActive)return;
+    var ms=elapsed+(interval?Date.now()-startAt:0);if(ms<90*60000)return;
+    if(interval){elapsed+=Date.now()-startAt;clearInterval(interval);interval=null;paused=true;document.getElementById('pauseTimer').textContent='继续'}
+    state.hardStopActive=true;state.hardStopTaskId=t.id;
+    document.getElementById('checkinOverlay').classList.remove('show');
+    document.getElementById('hardStopTaskName').textContent='当前任务：「'+t.name+'」 · 已连续投入 90 分钟。';
+    document.getElementById('hardStopOverlay').classList.add('show');
+  }
+  var _baseUpdateTimer=updateTimer;
+  updateTimer=function(){_baseUpdateTimer();triggerHardStop()};
+  function commitHardStop(mode){
+    var taskId=state.hardStopTaskId,t=state.tasks.find(function(x){return String(x.id)===String(taskId)});if(!t)return;
+    var note=document.getElementById('hardStopNote').value.trim()||'90 分钟止损：未完成部分保留；下一步待补充。';
+    document.getElementById('checkinNote').value=note;progress='progress';
+    if(document.getElementById('dailyEarlyFinish'))document.getElementById('dailyEarlyFinish').checked=false;
+    _baseSaveCheckin();
+    t.done=false;t.executionState='blocked';t.blockedAt=Date.now();t.blockerReason=note;t.lastBlocker=note;t.nextScheduledAt='';t.themeLocked=true;
+    state.recoveryQueue.push({id:id(),taskId:t.id,taskName:t.name,note:note,createdAt:Date.now(),suggestedResumeAt:Date.now()+86400000});
+    state.hardStopActive=false;state.hardStopTaskId=null;document.getElementById('hardStopOverlay').classList.remove('show');
+    save();renderAll();renderAutoPlan();
+    if(mode==='switch'){
+      var next=nextTaskAfterStop(t.id);
+      if(next){begin(next.id);toast('已保存「'+t.name+'」的断点，自动切换到下一项：'+next.name)}
+      else toast('已保存断点。当前没有其他可执行任务，先休息 15 分钟。');
+    }else{
+      state.recoveryBreakUntil=Date.now()+15*60000;save();toast('已保存断点，建议离屏休息 15 分钟。');
+    }
+  }
+
+  var _baseCheckDeadlines=checkDeadlines;
+  checkDeadlines=function(){ensureDeadlinePriority();_baseCheckDeadlines()};
+  var _baseRenderAutoPlan=renderAutoPlan;
+  renderAutoPlan=function(){
+    ensurePolicyState();ensureDailyRoutineTasks();ensureDeadlinePriority();
+    _baseRenderAutoPlan();
+    var now=Date.now(),today=localDay(new Date()),tomorrow=localDay(new Date(Date.now()+86400000)),endToday=new Date();endToday.setHours(23,59,59,999);
+    var changed=false;
+    state.tasks.forEach(function(t){
+      if(t.containerOnly||t.done||t.abandoned||t.executionState==='blocked'||!due(t))return;
+      if(due(t).getTime()-now>72*3600000)return;
+      var next=t.nextScheduledAt?new Date(t.nextScheduledAt):null;
+      if(!next||next.getTime()>endToday.getTime()){
+        if(!t.forceNextDay||t.planDate!==tomorrow||t.priority!=='urgent'){
+          t.forceNextDay=true;t.planDate=tomorrow;t.priority='urgent';t.needStatus='required';
+          t.scheduleConflict='今日容量不足，明日第一优先；原始 DDL 不变';changed=true;
+        }
+      }else if(t.forceNextDay){
+        t.forceNextDay=false;changed=true;
+      }
+    });
+    if(changed){save();_baseRenderAutoPlan()}
+    renderPolicyDashboard();
+  };
+
+  var _baseCheckMorningPrompt=checkMorningPrompt;
+  checkMorningPrompt=function(){_baseCheckMorningPrompt();showDailyNeedCheck()};
+  var _baseCloudLoadAccount=cloudLoadAccount;
+  cloudLoadAccount=async function(accountKey){
+    await _baseCloudLoadAccount(accountKey);
+    ensurePolicyState();ensureDailyRoutineTasks();ensureDeadlinePriority();save();renderAll();renderPolicyDashboard();
+  };
+
+  /* Install task-form and dashboard actions before the original listeners are attached. */
+  document.getElementById('policyAddGoal').onclick=function(){
+    var title=prompt('近期总体目标名称：','');if(!title||!title.trim())return;
+    var desc=prompt('这个目标最重要的结果是什么？','');state.goals.push({id:'g-'+Date.now(),title:title.trim(),desc:String(desc||'').trim()});save();fillGoalSelect();renderPolicyDashboard();
+  };
+  document.getElementById('policyAddIdea').onclick=addGeneralIdea;
+  document.getElementById('dailyNeedCheckDone').onclick=finishDailyNeedCheck;
+  document.getElementById('hardStopSwitch').onclick=function(){commitHardStop('switch')};
+  document.getElementById('hardStopRest').onclick=function(){commitHardStop('rest')};
+  document.getElementById('morningNone').addEventListener('click',function(){setTimeout(showDailyNeedCheck,80)});
+  document.getElementById('morningYes').addEventListener('click',function(){setTimeout(showDailyNeedCheck,120)});
+  document.getElementById('saveCheckin').onclick=saveCheckin;
+  document.getElementById('taskForm').removeEventListener('submit',saveTask);
+  document.getElementById('taskForm').addEventListener('submit',saveTask);
+  document.getElementById('taskForm').addEventListener('change',function(e){
+    if(e.target.id==='taskCategory'){var g=document.getElementById('taskGoalId');if(g)g.value=policyGoalForCategory(e.target.value,document.getElementById('taskParent').value)}
+  });
+  document.addEventListener('change',function(e){
+    var id0=e.target&&e.target.getAttribute('data-policy-need');
+    if(id0){setTaskNeedStatus(id0,e.target.value);renderDailyNeedCheck();renderPolicyDashboard()}
+  });
+  document.addEventListener('click',function(e){
+    var idea=e.target.closest('[data-idea-task]'),unlock=e.target.closest('[data-unlock-theme]'),copy=e.target.closest('[data-copy-brief]'),editGoal=e.target.closest('[data-policy-edit-goal]');
+    if(idea)addIdeaForTask(idea.getAttribute('data-idea-task'));
+    if(unlock)unlockTaskTheme(unlock.getAttribute('data-unlock-theme'));
+    if(copy)copyTaskBrief(copy.getAttribute('data-copy-brief'));
+    if(editGoal){
+      var g=state.goals.find(function(x){return x.id===editGoal.getAttribute('data-policy-edit-goal')});if(g){var title=prompt('修改目标名称：',g.title);if(title&&title.trim())g.title=title.trim();var desc=prompt('修改目标描述：',g.desc||'');if(desc!==null)g.desc=desc;save();fillGoalSelect();renderPolicyDashboard()}
+    }
+  });
+  document.getElementById('refreshPlan').addEventListener('click',function(){setTimeout(renderAutoPlan,0)});
+  document.getElementById('planRange').addEventListener('change',function(){setTimeout(renderAutoPlan,0)});
+  ensureDailyRoutineTasks();ensureDeadlinePriority();fillGoalSelect();renderPolicyDashboard();
+  setInterval(function(){ensureDailyRoutineTasks();ensureDeadlinePriority();showDailyNeedCheck()},30000);
+})();
+
 document.getElementById('nav').addEventListener('click',function(e){var b=e.target.closest('[data-view]');if(b)view(b.dataset.view)});
 document.getElementById('categoryGrid').addEventListener('click',function(e){var c=e.target.closest('[data-category]');if(c){renderCategoryPage(c.dataset.category)}});
-document.addEventListener('click',function(e){var s=e.target.closest('[data-start]'),ed=e.target.closest('[data-edit]'),done=e.target.closest('[data-complete]'),ab=e.target.closest('[data-abandon]'),rs=e.target.closest('[data-restore]'),cs=e.target.closest('[data-cat-start]'),ce=e.target.closest('[data-cat-edit]'),cn=e.target.closest('[data-cat-new]'),rv=e.target.closest('[data-review]'),fr=e.target.closest('[data-fremove]');if(s)openTaskWorkspace(s.dataset.start,true);if(done)markTaskComplete(done.dataset.complete);if(ab)markTaskAbandoned(ab.dataset.abandon);if(rs)restoreTask(rs.dataset.restore);if(ed)editTask(ed.dataset.edit);if(cs)openTaskWorkspace(cs.dataset.catStart,true);if(ce)editTask(ce.dataset.catEdit);if(cn){resetForm();document.getElementById('taskCategory').value=categoryPageCategory||'待分类';view('tasks');document.getElementById('taskEditor').scrollIntoView({behavior:'smooth',block:'start'})}if(rv){var r=state.reviews.find(function(x){return x.id===rv.dataset.review});if(r){var rating=prompt('回忆结果：输入 easy（很熟）、good（记得）、forgot（忘记）','good');if(['easy','good','forgot'].indexOf(rating)>=0)completeReview(r.id,rating)}}if(fr){state.fixed.splice(Number(fr.dataset.fremove),1);save();renderFixed()}});
+document.addEventListener('click',function(e){var s=e.target.closest('[data-start]'),ed=e.target.closest('[data-edit]'),done=e.target.closest('[data-complete]'),ab=e.target.closest('[data-abandon]'),rs=e.target.closest('[data-restore]'),bl=e.target.closest('[data-block]'),pk=e.target.closest('[data-park]'),unpark=e.target.closest('[data-resume-state]'),cs=e.target.closest('[data-cat-start]'),ce=e.target.closest('[data-cat-edit]'),cn=e.target.closest('[data-cat-new]'),rv=e.target.closest('[data-review]'),fr=e.target.closest('[data-fremove]');if(s)openTaskWorkspace(s.dataset.start,true);if(done)markTaskComplete(done.dataset.complete);if(ab)markTaskAbandoned(ab.dataset.abandon);if(rs)restoreTask(rs.dataset.restore);if(bl)markTaskBlocked(bl.dataset.block);if(pk)markTaskParked(pk.dataset.park);if(unpark)resumeTaskState(unpark.dataset.resumeState);if(ed)editTask(ed.dataset.edit);if(cs)openTaskWorkspace(cs.dataset.catStart,true);if(ce)editTask(ce.dataset.catEdit);if(cn){resetForm();document.getElementById('taskCategory').value=categoryPageCategory||'待分类';view('tasks');document.getElementById('taskEditor').scrollIntoView({behavior:'smooth',block:'start'})}if(rv){var r=state.reviews.find(function(x){return x.id===rv.dataset.review});if(r){var rating=prompt('回忆结果：输入 easy（很熟）、good（记得）、forgot（忘记）','good');if(['easy','good','forgot'].indexOf(rating)>=0)completeReview(r.id,rating)}}if(fr){state.fixed.splice(Number(fr.dataset.fremove),1);save();renderFixed()}});
 document.getElementById('authSubmit').onclick=function(){cloudAuth(document.getElementById('authSubmit').dataset.mode||'login')};document.getElementById('registerMode').onclick=function(){var b=document.getElementById('authSubmit'),reg=b.dataset.mode==='register';b.dataset.mode=reg?'login':'register';b.textContent=reg?'登录':'创建账号';document.getElementById('registerMode').textContent=reg?'创建账号':'返回登录';document.getElementById('authPassword').setAttribute('autocomplete',reg?'current-password':'new-password');document.getElementById('authHint').textContent=reg?'已有账号可直接登录。':'设置10—128位密码；账号可使用手机号。密码使用安全哈希保存。'};document.getElementById('logoutBtn').onclick=async function(){if(!confirm('退出当前账号？未同步数据会先尝试保存。'))return;try{await flushCloudSave();await cloudRequest('/api/cloud-account/logout','POST',{});cloudReady=false;location.reload()}catch(e){toast('退出失败：'+e.message)}};document.getElementById('taskForm').addEventListener('submit',saveTask);document.getElementById('resetForm').onclick=resetForm;document.getElementById('newTaskTop').onclick=function(){resetForm();view('tasks');document.getElementById('taskEditor').scrollIntoView({behavior:'smooth'})};document.getElementById('morningNone').onclick=function(){localStorage.setItem(MORNING_KEY,new Date().toISOString().slice(0,10));document.getElementById('morningOverlay').classList.remove('show');toast('已记录：今天没有新增硬截止事项。')};document.getElementById('morningYes').onclick=startMorningTask;document.getElementById('morningVoiceBtn').onclick=function(){voiceStartFor('morningTaskText')};document.getElementById('urgentTaskBtn').onclick=function(){document.getElementById('urgentOverlay').classList.add('show')};document.getElementById('urgentCancel').onclick=function(){document.getElementById('urgentOverlay').classList.remove('show')};document.getElementById('urgentSave').onclick=function(){createUrgent(false)};document.getElementById('urgentStartNow').onclick=function(){createUrgent(true)};document.getElementById('nightSave').onclick=saveNightReview;document.getElementById('nightLater').onclick=function(){document.getElementById('nightReviewOverlay').classList.remove('show')};document.getElementById('workspaceBack').onclick=function(){view('main')};document.getElementById('categoryBack').onclick=function(){view('main')};document.getElementById('nightEnergy').onclick=function(e){var b=e.target.closest('[data-energy]');if(b)document.querySelectorAll('#nightEnergy .choice').forEach(function(x){x.classList.toggle('active',x===b)})};document.getElementById('refreshPlan').onclick=renderAutoPlan;document.getElementById('planRange').onchange=renderAutoPlan;document.getElementById('recordTimeLoss').onclick=openTimeLoss;document.getElementById('saveTimeLoss').onclick=saveTimeLoss;document.getElementById('cancelTimeLoss').onclick=closeTimeLoss;document.getElementById('categoryFilter').onchange=renderTasks;document.getElementById('searchTasks').oninput=renderTasks;document.getElementById('statusFilter').onchange=renderTasks;
 document.getElementById('generateBtn').onclick=function(){view('week');document.getElementById('splitName').focus()};document.getElementById('createPhases').onclick=createPhases;document.getElementById('addFixed').onclick=addFixed;document.getElementById('dailyHours').onchange=function(e){state.dailyHours=Math.max(1,Math.min(24,Number(e.target.value)||8));save();updateWeek();renderAutoPlan()};
 document.getElementById('plannerStart').onchange=function(e){state.plannerStart=e.target.value||'07:00';if(plannerMinutes(state.plannerEnd||'23:30')<=plannerMinutes(state.plannerStart)){state.plannerStart='07:00';state.plannerEnd='23:30';document.getElementById('plannerStart').value=state.plannerStart;document.getElementById('plannerEnd').value=state.plannerEnd;toast('结束时间必须晚于开始时间，已恢复默认时段。')}save();renderAutoPlan()};
