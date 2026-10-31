@@ -578,7 +578,7 @@ function voiceStartFor(targetId){var SR=window.SpeechRecognition||window.webkitS
     state.tasks.forEach(function(t){if(t.dailyRoutine&&t.routineDate<day&&!t.done&&!t.abandoned){t.abandoned=true;t.dailyExpired=true;t.executionState='abandoned';t.abandonReason='昨日未达标，已归档实际投入；不滚入今天';t.dailyMissed=true;changed=true;}});
     defs.forEach(function(d){
       var old=state.tasks.find(function(t){return t.dailyRoutineId===d.id&&t.routineDate===day});
-      if(old){if(d.id==='exam'&&!old.startedAt&&!Number(old.accumulatedMinutes)){var revised=dailyTargetForExam();if(Number(old.dailyTargetMinutes)!==revised){old.dailyTargetMinutes=revised;old.estimate=revised;old.remainingEstimate=revised;changed=true;}}return;}
+      if(old){if(d.id==='exam'&&!old.startedAt&&!old.actualStartedAt&&!Number(old.accumulatedMinutes)){var revised=dailyTargetForExam();if(Number(old.dailyTargetMinutes)!==revised){old.dailyTargetMinutes=revised;old.estimate=revised;old.remainingEstimate=revised;changed=true;}}return;}
       var t={
         id:id(),sourceId:'daily-'+d.id+'-'+day,dailyRoutine:true,dailyRoutineId:d.id,routineDate:day,
         category:d.category,type:d.type,name:d.name,parent:d.parent,goalId:d.goalId,
