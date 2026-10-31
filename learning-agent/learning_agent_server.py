@@ -23,6 +23,7 @@ import artifact_store
 import team_inputs
 import team_revision
 import cc_progress
+import research_companion
 
 ROOT = Path(__file__).resolve().parent
 try:
@@ -87,6 +88,11 @@ class Handler(LegacyHandler):
                 return self.send_json(cc_progress.board(team.state(identifier)))
             if path == '/api/agent/team':
                 return self.send_json(team.state(parse_qs(parsed.query).get('id', [None])[0]))
+            if path == '/api/agent/team/research-today':
+                identifier = parse_qs(parsed.query).get('id', [''])[0]
+                if not identifier:
+                    raise ValueError('请提供项目 id')
+                return self.send_json(research_companion.today(identifier))
             if path in ('/api/agent/team/interventions', '/api/agent/team/evidence-score'):
                 identifier = parse_qs(parsed.query).get('id', [''])[0]
                 if not identifier:
@@ -202,7 +208,9 @@ class Handler(LegacyHandler):
                 return self.send_json(action_planner.replan(data['diagnosis'], data['plan'], data['settings'], data['expected_plan_version']))
             if path.startswith('/api/agent/team/'):
                 operation = path.rsplit('/',1)[-1]
-                handlers = {'intervention-checkin':team_intervention.checkin,
+                handlers = {'research-save':research_companion.save,
+                            'research-checkin':research_companion.checkin,
+                            'intervention-checkin':team_intervention.checkin,
                             'intervention-respond':team_intervention.respond,
                             'intervention-feedback':team_intervention.feedback,
                             'recover':team_sessions.recover,'recover-confirm':team_sessions.confirm,
