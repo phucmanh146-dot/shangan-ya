@@ -424,7 +424,7 @@ sortTasks(current,day,Math.floor(p/60));
 var task=current[0],room=gap.end-p;
 if(sameDay(task.deadline,day))room=Math.min(room,deadlineMinute(task)-p);
 if(room<15)break;
-var work=Math.min(50,task.remain,room,budget);
+var blockCap=task.t.dailyRoutineId==='ops'?20:(task.t.dailyRoutineId==='exam'?30:50);var work=Math.min(blockCap,task.remain,room,budget);
 if(work<15)break;
 var slotStart=new Date(day.getFullYear(),day.getMonth(),day.getDate(),Math.floor(p/60),p%60,0,0);if(!firstSchedule[task.t.id])firstSchedule[task.t.id]=slotStart;items.push({type:'task',t:task.t,start:p,end:p+work,mins:work,level:task.level,deadline:task.deadline});
 p+=work;budget-=work;used+=work;task.remain-=work;
@@ -575,9 +575,10 @@ function voiceStartFor(targetId){var SR=window.SpeechRecognition||window.webkitS
       {id:'exam',category:'考研督学',type:'考研每日学习',name:'考研每日学习',parent:'考研每日学习',goalId:'g-exam',target:dailyTargetForExam(),priority:'high',importance:3,load:'高',acceptance:'完成一个知识点或章节：理解 → 主动回忆 / 练习 → 记录错题或复习点。',minimum:'今天只攻一个科目 / 章节，留下可复习的学习记录。'},
       {id:'ops',category:'运营',type:'运营岗位每日执行',name:'运营岗位每日执行',parent:'运营岗位日常工作',goalId:'g-ops',target:60,priority:'medium',importance:2,load:'中',acceptance:'完成一项可留存产出：选题、素材、文案、剪辑、发布准备或数据复盘；发布动作由本人确认。',minimum:'今天至少留下一个能继续使用的运营产出。'}
     ],changed=false;
+    state.tasks.forEach(function(t){if(t.dailyRoutine&&t.routineDate<day&&!t.done&&!t.abandoned){t.abandoned=true;t.dailyExpired=true;t.executionState='abandoned';t.abandonReason='昨日未达标，已归档实际投入；不滚入今天';t.dailyMissed=true;changed=true;}});
     defs.forEach(function(d){
       var old=state.tasks.find(function(t){return t.dailyRoutineId===d.id&&t.routineDate===day});
-      if(old)return;
+      if(old){if(d.id==='exam'&&!old.startedAt&&!Number(old.accumulatedMinutes)){var revised=dailyTargetForExam();if(Number(old.dailyTargetMinutes)!==revised){old.dailyTargetMinutes=revised;old.estimate=revised;old.remainingEstimate=revised;changed=true;}}return;}
       var t={
         id:id(),sourceId:'daily-'+d.id+'-'+day,dailyRoutine:true,dailyRoutineId:d.id,routineDate:day,
         category:d.category,type:d.type,name:d.name,parent:d.parent,goalId:d.goalId,
@@ -590,7 +591,7 @@ function voiceStartFor(targetId){var SR=window.SpeechRecognition||window.webkitS
       };
       state.tasks.push(t);changed=true;
     });
-    if(changed)save();
+    if(changed){save();if(typeof renderTasks==='function')renderTasks();}
     return changed;
   }
   function needStatusOf(t){
@@ -701,7 +702,7 @@ function voiceStartFor(targetId){var SR=window.SpeechRecognition||window.webkitS
       var done=list.filter(function(t){return t.done}).length;
       var open=list.filter(function(t){return !t.done&&!t.abandoned}).length;
       var ids={};list.forEach(function(t){ids[t.id]=1});
-      var minutes=(state.logs||[]).filter(function(l){return ids[l.taskId]&&Number(l.at||l.endedAt||0)>=weekAgo}).reduce(function(sum,l){return sum+Number(l.actual||0)},0);
+      var goalCategories={'g-exam':'考研督学','g-ops':'运营','g-agent':'竞赛','g-pm':'学习 AI 产品经理','g-camp':'竞赛','g-school':'学校作业'};var minutes=(state.logs||[]).filter(function(l){return (ids[l.taskId]||l.category===goalCategories[g.id])&&Number(l.at||l.endedAt||0)>=weekAgo}).reduce(function(sum,l){return sum+Number(l.actual||0)},0);
       var urgent=list.filter(function(t){var d=due(t);return d&&!t.done&&!t.abandoned&&d.getTime()-now<=72*3600000}).length;
       return '<div class="policy-goal"><div class="policy-goal-head"><b>'+esc(g.title)+'</b><button class="btn soft" data-policy-edit-goal="'+esc(g.id)+'">编辑目标</button></div><small>'+esc(g.desc||'')+'</small><small>关联任务 '+list.length+' 项 · 已完成 '+done+' · 待推进 '+open+' · 72 小时内截止 '+urgent+' 项 · 近 7 天实测 '+minutes+' 分钟</small></div>';
     }).join('');
@@ -710,7 +711,7 @@ function voiceStartFor(targetId){var SR=window.SpeechRecognition||window.webkitS
     var routinesEl=document.getElementById('policyRoutineCards');
     if(routinesEl)routinesEl.innerHTML=routines.map(function(t){
       var target=Number(t.dailyTargetMinutes)||Number(t.estimate)||0,actual=Number(t.accumulatedMinutes)||0,left=Math.max(0,target-actual);
-      return '<div class="policy-routine"><div class="policy-routine-head"><b>'+esc(t.name)+'</b><span class="tag">'+(t.done?'今日完成':('还差 '+left+' 分钟'))+'</span></div><small>今日目标 '+target+' 分钟 · 已累计 '+actual+' 分钟 · 可拆成 '+(t.dailyRoutineId==='ops'?'15–20 分钟':'25–40 分钟')+' 小段</small><small>最小产出：'+esc(t.minimumDeliverable||t.acceptance||'完成一小步')+'</small><div class="policy-actions"><button class="btn soft" data-start="'+esc(t.id)+'">开始 / 继续</button></div></div>';
+      return '<div class="policy-routine"><div class="policy-routine-head"><b>'+esc(t.name)+'</b><span class="tag">'+(t.done?'今日完成':('还差 '+left+' 分钟'))+'</span></div><small>今日目标 '+target+' 分钟 · 已累计 '+actual+' 分钟 · 可拆成 '+(t.dailyRoutineId==='ops'?'20 分钟':'30 分钟')+' 小段</small><small>最小产出：'+esc(t.minimumDeliverable||t.acceptance||'完成一小步')+'</small><div class="policy-actions"><button class="btn soft" data-start="'+esc(t.id)+'">开始 / 继续</button></div></div>';
     }).join('')||'<div class="policy-routine">今日循环任务将在每日启动时自动生成。</div>';
     var ideasEl=document.getElementById('policyIdeaList');
     if(ideasEl)ideasEl.innerHTML=(state.ideas||[]).slice(-5).reverse().map(function(x){
@@ -799,7 +800,7 @@ function voiceStartFor(targetId){var SR=window.SpeechRecognition||window.webkitS
       '<option value="pending" '+(v==='pending'?'selected':'')+'>待判断</option>'+
       '<option value="deferred" '+(v==='deferred'?'selected':'')+'>暂缓</option>'+
       '<option value="not_needed" '+(v==='not_needed'?'selected':'')+'>不需要做</option></select>';
-    var extra='<div class="task-meta policy-meta"><span>目标：'+esc(goal)+'</span><span>'+esc(needStatusLabel(v))+dueLabel+'</span>'+select+'</div>'+
+    var extra='<div class="task-meta policy-meta"><span>目标：'+esc(goal)+'</span><span>'+esc(needStatusLabel(v))+dueLabel+'</span>'+(t.dailyExpired?'<span class="tag warn">昨日未达标 · 已归档</span>':'')+select+'</div>'+
       (t.minimumDeliverable?'<div class="task-meta"><span>最小交付：'+esc(t.minimumDeliverable)+'</span></div>':'');
     html=html.replace('<div class="task-actions">',extra+'<div class="task-actions">');
     html=html.replace('<button class="edit" data-edit="'+t.id+'">编辑</button>',
