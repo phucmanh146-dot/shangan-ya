@@ -15,6 +15,8 @@ class LocatorContractTests(unittest.TestCase):
     def test_embedded_slide_label_uses_actual_unit_locator(self):
         self.setup_inputs()
         self.upload('原件slide:14：发明专利1项；统计日期未知')
+        self.p['research_companion'] = {'outcome': '先核一行', 'blocker': '术语看不懂',
+                                         'events': [{'note': 'not part of the model intake projection'}]}
         reply = fixtures.diagnosis_reply(self.p)
         observed = []
         def complete(messages, cfg):
@@ -26,6 +28,8 @@ class LocatorContractTests(unittest.TestCase):
             result = ai.researcher(self.p)
         self.assertEqual(result['gaps'][0]['current_locator'], 'line:1')
         locations = observed[0]['citation_locator_contract']['allowed_locations']
+        self.assertEqual(observed[0]['research_companion']['blocker'], '术语看不懂')
+        self.assertNotIn('events', observed[0]['research_companion'])
         self.assertEqual(locations, [{'artifact_id': 'report', 'artifact_version': 2,
                                      'locator': 'line:1'}])
 

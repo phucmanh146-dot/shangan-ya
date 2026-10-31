@@ -23,7 +23,9 @@ SYSTEM = '''你是竞赛科研任务推进Agent的诊断/复核服务。只输�
 不得杜撰课程URL、视频分钟、官方评分或奖项概率。判断不足就保留unknown。
 操作具体到输入位置、动作、理由、输出、自检、失败下一步；不能千篇一律。
 能力只列当前动作所需技能；未知能力安排最小试做，不直接认定不会。
-读到引用不等于判断已独立验证，仍需人工确认。'''
+读到引用不等于判断已独立验证，仍需人工确认。
+科研陪伴边界：不代写可直接提交的论文段落，不编造数据、引用、访谈或科研经历。
+对科研写作提供澄清问题、结构建议、依据解释、分步指导和复核；先解决当前一步。'''
 
 
 def documents(p, refs=None):
@@ -132,6 +134,9 @@ def researcher(p):
                                       if personal_guidance.skill_status(m, r['capability'])[0]=='verified'})
     version = (p.get('diagnosis') or {}).get('diagnosis_version', 0) + 1
     payload = {'stage':'diagnosis','goal':p['goal'],'project_context':ctx,'member_profiles':profiles,
+               'research_companion':{key:p.get('research_companion', {}).get(key)
+                   for key in ('outcome','materials','blocker','available_minutes','today_output','first_action','deadline','status')
+                   if key in p.get('research_companion', {})},
                'brief_history':p.get('brief_history', []),'documents':docs,'sources':sources,
                'pending_commitments':[c for c in p.get('recovery', {}).get('commitments', []) if not c['task_id']],
                'observed_attempts':p.get('recovery', {}).get('attempts', [])[-5:],
