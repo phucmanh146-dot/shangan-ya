@@ -653,9 +653,9 @@ function voiceStartFor(targetId){var SR=window.SpeechRecognition||window.webkitS
       '<section class="policy-dashboard" id="taskPolicyDashboard">'+
         '<div class="policy-card"><div class="policy-head"><div><h2>近期总体目标</h2><p>先看近期要抵达哪里，再决定今天哪些任务值得占用时间。</p></div><button class="btn soft" id="policyAddGoal">＋ 新增目标</button></div><div id="policyGoalCards" class="policy-goals"></div></div>'+
         '<div class="policy-card"><div class="policy-head"><div><h2>每日循环任务</h2><p>考研按精力安排 60–120 分钟；运营每日约 60 分钟，可拆成零碎时间累计。</p></div><span class="tag">每日自动生成</span></div><div id="policyRoutineCards" class="policy-routines"></div></div>'+
-        '<div class="policy-card"><div class="policy-head"><div><h2>完成比完美重要 · 本轮主题锁定</h2><span class="policy-quote">一轮只做一个主题；先做出可交付版本，再做必要优化。</span></div></div><div class="policy-rules"><div><b>① 定一个主题</b><span>明确受众、目的和本轮唯一交付，不临时另起方向。</span></div><div><b>② 做最小版本</b><span>先达到验收标准，不把“再润色一下”无限延长。</span></div><div><b>③ 通过质量闸门就收工</b><span>事实准确、满足要求、能交付；三项通过就进入下一任务。</span></div><div><b>④ 新想法先停车</b><span>临时想到的新主题先保存，不立即打断当前任务。</span></div></div></div>'+
-        '<div class="policy-card"><div class="policy-head"><div><h2>想法停车场</h2><p>想到新主题先收纳，当前任务做完后再判断是否值得做。</p></div></div><div class="policy-idea-entry"><input id="policyIdeaInput" placeholder="把突然想到的新主题 / 新功能写在这里"><button class="btn" id="policyAddIdea">先收纳想法</button></div><div id="policyIdeaList"></div></div>'+
-        '<div class="policy-card"><div class="policy-head"><div><h2>MCP 与资料读取能力状态</h2><p>当前 ChatGPT 会话的 MCP 能力，不等于网页后台已经接通；未验证的来源不会显示“已连接”。</p></div></div><div id="policyMcpCards" class="policy-mcp"></div><div class="policy-links"><b>任务资料链接</b><div id="policySourceLinks"></div></div></div>'+
+        '<details class="policy-card policy-details"><summary>完成比完美重要 · 本轮主题锁定 <span>展开质量闸门</span></summary><div class="policy-quote">一轮只做一个主题；先做出可交付版本，再做必要优化。</div><div class="policy-rules"><div><b>① 定一个主题</b><span>明确受众、目的和本轮唯一交付，不临时另起方向。</span></div><div><b>② 做最小版本</b><span>先达到验收标准，不把“再润色一下”无限延长。</span></div><div><b>③ 通过质量闸门就收工</b><span>事实准确、满足要求、能交付；三项通过就进入下一任务。</span></div><div><b>④ 新想法先停车</b><span>临时想到的新主题先保存，不立即打断当前任务。</span></div></div></details>'+
+        '<details class="policy-card policy-details"><summary>想法停车场 <span>先收纳新主题，不打断当前任务</span></summary><p>想到新主题先收纳，当前任务做完后再判断是否值得做。</p><div class="policy-idea-entry"><input id="policyIdeaInput" placeholder="把突然想到的新主题 / 新功能写在这里"><button class="btn" id="policyAddIdea">先收纳想法</button></div><div id="policyIdeaList"></div></details>'+
+        '<details class="policy-card policy-details"><summary>MCP 与资料读取能力状态 <span>展开核验连接与任务资料链接</span></summary><p>当前 ChatGPT 会话的 MCP 能力，不等于网页后台已经接通；未验证的来源不会显示“已连接”。</p><div id="policyMcpCards" class="policy-mcp"></div><div class="policy-links"><b>任务资料链接</b><div id="policySourceLinks"></div></div></details>'+
       '</section>'
     );
   }
@@ -673,6 +673,7 @@ function voiceStartFor(targetId){var SR=window.SpeechRecognition||window.webkitS
     '<style id="task-policy-style">'+
     '.policy-dashboard{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:14px 0 18px}'+
     '.policy-card{background:var(--card,#fff);border:1px solid var(--line,#e5e0da);border-radius:18px;padding:18px;min-width:0}'+
+    '.policy-details>summary{cursor:pointer;list-style:none;font-weight:850;display:flex;justify-content:space-between;gap:12px;align-items:center}.policy-details>summary::-webkit-details-marker{display:none}.policy-details>summary span{font-size:11px;font-weight:600;color:var(--muted,#8b8178)}.policy-details[open]>summary{margin-bottom:12px}'+
     '.policy-card h2{margin:0 0 5px;font-size:17px}.policy-card p{margin:0;color:var(--muted,#8b8178);font-size:12px;line-height:1.65}'+
     '.policy-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}'+
     '.policy-goals,.policy-routines,.policy-mcp{display:grid;gap:9px}'+
