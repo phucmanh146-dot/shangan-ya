@@ -4,6 +4,14 @@ import team_ai
 
 
 class UnifiedContractTests(unittest.TestCase):
+    def test_extraction_with_leading_words_still_needs_observable_output(self):
+        for action in ['从原文中提取专利数量、类型、日期和申请授权口径。',
+                       '从原文中提取与产品/授权/样品相关的具体信息。',
+                       '分析项目描述中的滴灌系统运行和回收机制。']:
+            with self.subTest(action=action),self.assertRaises(ValueError):
+                team_ai.validate_action_specificity({'action':action})
+        team_ai.validate_action_specificity({'action':'从P14提取数量，填入专利核对表第一行并记录统计日'})
+
     def test_omitted_coordinates_bind_only_to_unique_selected_source(self):
         ref={'artifact_id':'A','artifact_version':3,'locator':'line:9',
              'quote_origin':'server_catalog_selected_by_model'}
