@@ -363,6 +363,7 @@ return list.sort(function(a,b){
 var ad=a.deadline?a.deadline.getTime():Infinity,bd=b.deadline?b.deadline.getTime():Infinity;
 if(ad!==bd)return ad-bd;
 if(!!a.t.hardDeadline!==!!b.t.hardDeadline)return a.t.hardDeadline?-1:1;
+if((a.t.executionState==='parked')!==(b.t.executionState==='parked'))return a.t.executionState==='parked'?-1:1;
 function rank(t){var p=String(t.priority||t.importance||'').toLowerCase();return p==='urgent'||p==='high'||p==='高'||p==='重要'?3:p==='medium'||p==='normal'||p==='中'?2:p==='low'||p==='低'?1:0}
 var ap=rank(a.t),bp=rank(b.t);if(ap!==bp)return bp-ap;
 var af=energyFit(a,hour),bf=energyFit(b,hour);if(af!==bf)return bf-af;
@@ -370,7 +371,7 @@ return b.remain-a.remain;
 });
 }
 state.tasks.forEach(function(t){
-if(t.containerOnly||t.done||t.abandoned)return;
+if(t.containerOnly||t.done||t.abandoned||t.executionState==='blocked')return;
 var total=estimate(t),acc=Number(t.accumulatedMinutes)||0,r=Math.max(0,total-acc);
 if(r<=0){var explicitRemaining=Number(t.remainingEstimate)||0;r=explicitRemaining>0?explicitRemaining:Math.max(15,Math.round(Math.max(15,Number(t.estimate)||30)*.5/5)*5);}
 var startAt=t.plannedStart?new Date(t.plannedStart):null;if(startAt&&isNaN(startAt.getTime()))startAt=null;
@@ -464,7 +465,7 @@ var riskHtml=deadlineRisks.length?'<div class="info" style="border-color:#d88b73
 var overflow=left.length?'<div class="info"><b>7 天之后仍有剩余：</b>'+left.map(function(x){return esc(x.t.name)+'（剩余 '+Math.ceil(x.remain)+' 分钟'+(x.deadline?' · DDL '+dayKey(x.deadline):'')+'）'}).join('；')+'。请检查任务拆分、估时或未来固定安排。</div>':'';
 el.innerHTML=days.slice(0,displayDays).join('')+(horizonDays>displayDays?'<div class="info">当前显示 '+displayDays+' 天；系统仍会在后台计算完整 '+horizonDays+' 天的任务容量与 DDL 风险，切换「未来两周」可查看后续时间轴。</div>':'')+riskHtml+overflow+'<div class="info"><b>动态排期逻辑：</b>先锁定固定事务，再扣除今天已经执行的真实耗时和走神/无效时间；按原始 DDL、硬截止、剩余工作量、个人耗时学习曲线和精力适配安排任务。每次最多安排 50 分钟专注块，之后插入恢复休息，并按你设置的比例预留机动缓冲；默认展示未来 14 天，若 DDL 更远则自动延展，最多展示 90 天。当天容量不足时，未完成部分会进入下一天重新计算；原 DDL 不会被悄悄改掉。系统会把每项任务的最近启动时段写回 nextScheduledAt，开始提醒直接读取这个真实排期；无法排入时明确显示容量冲突。完成、疲惫反馈、计时或记录未计划时间后都会重新生成时间轴。'+(kickoffRisks.length?'<div class="info" style="border-color:#d88b73;color:#a45140"><b>长期搁置启动风险：</b>'+kickoffRisks.map(esc).join('、')+'；未来72小时内没有可用空档，请先移出普通弹性任务或调整可用时间。</div>':'')+'</div>';
 }
-function checkScheduledStarts(){var now=Date.now(),changed=false;state.tasks.filter(function(t){return !t.containerOnly&&!t.done&&!t.abandoned&&activeId!==t.id}).forEach(function(t){var planned=t.nextScheduledAt?new Date(t.nextScheduledAt):(t.plannedStart?new Date(t.plannedStart):null);if(!planned||isNaN(planned.getTime())||planned.getTime()>now||Number(t.scheduleSnoozeUntil||0)>now)return;var key=t.id+'|'+planned.getTime(),seen=state.scheduledPrompts.some(function(x){return x.taskId===t.id&&(x.key===key||false)});if(seen)return;state.scheduledPrompts.push({taskId:t.id,key:key,plannedAt:planned.getTime(),at:now});changed=true;if(document.hidden&&'Notification'in window&&Notification.permission==='granted'){new Notification('上岸鸭 · 任务启动提醒',{body:'现在开始「'+t.name+'」吗？'})}else if(!document.getElementById('urgentOverlay').classList.contains('show')){if(confirm('「'+t.name+'」到了系统分配的开始时间。现在开始吗？'))begin(t.id);else{t.delayCount=(Number(t.delayCount)||0)+1;t.lastDelayAt=now;t.lastDelayReason='到计划开始时间仍未启动';t.scheduleSnoozeUntil=now+30*60000;t.nextScheduledAt='';t.executionState='unscheduled'}}});if(changed)save();if(changed)renderAutoPlan();}
+function checkScheduledStarts(){var now=Date.now(),changed=false;state.tasks.filter(function(t){return !t.containerOnly&&!t.done&&!t.abandoned&&t.executionState!=='blocked'&&activeId!==t.id}).forEach(function(t){var planned=t.nextScheduledAt?new Date(t.nextScheduledAt):(t.plannedStart?new Date(t.plannedStart):null);if(!planned||isNaN(planned.getTime())||planned.getTime()>now||Number(t.scheduleSnoozeUntil||0)>now)return;var key=t.id+'|'+planned.getTime(),seen=state.scheduledPrompts.some(function(x){return x.taskId===t.id&&(x.key===key||false)});if(seen)return;state.scheduledPrompts.push({taskId:t.id,key:key,plannedAt:planned.getTime(),at:now});changed=true;if(document.hidden&&'Notification'in window&&Notification.permission==='granted'){new Notification('上岸鸭 · 任务启动提醒',{body:'现在开始「'+t.name+'」吗？'})}else if(!document.getElementById('urgentOverlay').classList.contains('show')){if(confirm('「'+t.name+'」到了系统分配的开始时间。现在开始吗？'))begin(t.id);else{t.delayCount=(Number(t.delayCount)||0)+1;t.lastDelayAt=now;t.lastDelayReason='到计划开始时间仍未启动';t.scheduleSnoozeUntil=now+30*60000;t.nextScheduledAt='';t.executionState='unscheduled'}}});if(changed)save();if(changed)renderAutoPlan();}
 function checkMorningPrompt(){var now=new Date(),day=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0'),saved=localStorage.getItem(MORNING_KEY);if(now.getHours()>=8&&saved!==day&&!document.hidden){document.getElementById('morningOverlay').classList.add('show')}}
 function splitMorningEntries(raw){
 /* 用户明确说分号代表一项；先严格按中英文分号和换行拆分。 */
