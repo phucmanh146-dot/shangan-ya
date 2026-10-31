@@ -828,14 +828,16 @@ function voiceStartFor(targetId){var SR=window.SpeechRecognition||window.webkitS
       t.theme=values.theme;t.minimumDeliverable=values.minimum;t.needStatus=values.need;
       t.goalId=values.goal||policyGoalForCategory(t.category,t.parent);
     }
-    if(t.hardDeadline||t.executionMode==='deadline'||t.dueDate)t.needStatus='required';
+    if((t.hardDeadline||t.executionMode==='deadline')&&t.needStatus!=='not_needed')t.needStatus='required';
     save();renderAll();renderPolicyDashboard();
   };
   var _baseResetForm=resetForm;
   resetForm=function(){
     _baseResetForm();
     if(document.getElementById('taskNeedStatus'))document.getElementById('taskNeedStatus').value='pending';
-    if(document.getElementById('taskGoalId'))document.getElementById('taskGoalId').value='g-pm';
+    if(document.getElementById('taskGoalId'))document.getElementById('taskGoalId').value=policyGoalForCategory(document.getElementById('taskCategory').value,'');
+    ['taskName','taskParent','taskType','taskTheme'].forEach(function(k){var el=document.getElementById(k);if(el)el.readOnly=false});
+    var categoryEl=document.getElementById('taskCategory');if(categoryEl)categoryEl.disabled=false;
     if(document.getElementById('taskTheme'))document.getElementById('taskTheme').value='';
     if(document.getElementById('taskMinimum'))document.getElementById('taskMinimum').value='';
     fillGoalSelect();
@@ -1029,9 +1031,7 @@ function voiceStartFor(targetId){var SR=window.SpeechRecognition||window.webkitS
   document.getElementById('morningNone').addEventListener('click',function(){setTimeout(showDailyNeedCheck,80)});
   document.getElementById('morningYes').addEventListener('click',function(){setTimeout(showDailyNeedCheck,120)});
   document.getElementById('saveCheckin').onclick=saveCheckin;
-  document.getElementById('taskForm').removeEventListener('submit',saveTask);
-  document.getElementById('taskForm').addEventListener('submit',saveTask);
-  document.getElementById('taskForm').addEventListener('change',function(e){
+    document.getElementById('taskForm').addEventListener('change',function(e){
     if(e.target.id==='taskCategory'){var g=document.getElementById('taskGoalId');if(g)g.value=policyGoalForCategory(e.target.value,document.getElementById('taskParent').value)}
   });
   document.addEventListener('change',function(e){
