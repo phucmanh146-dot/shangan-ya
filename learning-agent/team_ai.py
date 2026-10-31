@@ -25,7 +25,7 @@ def validate_action_specificity(step):
                '继续完善', '检查结果', '完成目标产物', '分析原文中提到的竞争因素'}
     writes = ('填写','填入','填到','写入','追加','摘录','复制','记录','列出','标注','圈出',
               '计算','重算','另存','导出','创建','保存','建立','修改','补充')
-    if compact in generic or (action.startswith(('仔细阅读','阅读','分析','理解','提取'))
+    if compact in generic or (('提取' in action or action.startswith(('仔细阅读','阅读','分析','理解')))
                               and not any(word in action for word in writes)):
         raise ValueError('首步只有阅读/分析/泛泛提取，第三人无法直接交付。请写当前材料的具体对象、'
                          '填写/摘录/计算等操作及一行或一处产物；缺凭证时填写缺项和求助对象，不编造结果。')
