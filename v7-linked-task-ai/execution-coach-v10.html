@@ -883,7 +883,7 @@ function voiceStartFor(targetId){var SR=window.SpeechRecognition||window.webkitS
   }
   function copyTaskBrief(id0){
     var t=state.tasks.find(function(x){return String(x.id)===String(id0)});if(!t)return;
-    var brief='你是我的执行教练。请围绕一个主题，不要另起主题或给多个互相冲突的方向。\\n当前主题：'+(t.theme||t.name)+'\\n目标：'+goalName(t.goalId)+'\\n任务：'+t.name+'\\n最小可交付版本：'+(t.minimumDeliverable||t.acceptance||'先完成一版可用成果')+'\\n验收标准：'+(t.acceptance||'符合明确要求、事实准确、可以交付')+'\\n已投入：'+(t.accumulatedMinutes||0)+' 分钟\\n剩余估时：'+Math.max(0,estimate(t)-(Number(t.accumulatedMinutes)||0))+' 分钟\\n请只给我：1）一个最稳妥方案；2）15–30分钟内可执行的下一步；3）达到验收标准后明确告诉我停止润色。原则：完成比完美重要。';
+    var brief='你是我的执行教练。请围绕一个主题，不要另起主题或给多个互相冲突的方向。\\n当前主题：'+(t.theme||t.name)+'\\n目标：'+goalName(t.goalId)+'\\n任务：'+t.name+'\\n最小可交付版本：'+(t.minimumDeliverable||t.acceptance||'先完成一版可用成果')+'\\n验收标准：'+(t.acceptance||'符合明确要求、事实准确、可以交付')+'\\n已投入：'+(t.accumulatedMinutes||0)+' 分钟\\n剩余估时：'+Math.max(0,estimate(t)-(Number(t.accumulatedMinutes)||0))+' 分钟\\n请先明确目标受众、唯一核心信息和一个行动引导；只围绕这个主题给我一版可交付文案，不要另起主题或罗列多个方向。然后只给我：1）一个最稳妥方案；2）15–30分钟内可执行的下一步；3）达到验收标准后明确告诉我停止润色。原则：完成比完美重要。';
     if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(brief).then(function(){toast('已复制单主题 AI 指令。')}).catch(function(){prompt('复制以下任务指令：',brief)});
     else prompt('复制以下任务指令：',brief);
   }
