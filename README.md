@@ -1,12 +1,24 @@
 # 从目标到成果：三人协作 Agent
 
+**2026-11-04 通用主动执行 Agent 接入设计：**[Autoloop 工程接入方案](docs/universal-autoloop-agent-2026-11-04.md) · [Universal Autoloop Skill](skills/universal-autoloop/SKILL.md)。目标是跨会话恢复上下文、事件触发、规则路由、低风险自动执行、证据验收、定时唤醒和必要时审批；当前为工程设计与Skill基线，运行内核和端到端能力仍待实现及验收。
+
+**2026-10-18 队长运行机制交付：**[实际实现、原C五项进度与复现清单](docs/captain-runtime-2026-10-18.md) · [A/B/C逐项批注与交接](docs/team-review-annotations-2026-10-18.md)。本分支集成两套恢复能力，补齐任务寄存器、完整文本上下文预算、工具结果轨迹与显式跨会话确认；继续修复A复核收件、版本确认及阻塞任务预览，本地与Windows各227项工程回归通过。Chrome实际DOM核验复核前后按钮及剩余任务状态，输入为受控工程夹具；真人V2、效果对照及正式交付继续按原标准验收。
+
+
+
+**2026-10-16 受阻与中断恢复增补：**[本轮PRD、已实现范围与验收](docs/recovery-agent-upgrade-2026-10-16.md)。沿用现有 Python/SQLite 和作品复核流程，新增任务现场、条件返回、实际尝试、来源承诺及当前项目的候选顺序。运行 `learning-agent/learning_agent_server.py` 后打开 `/team.html` 的“受阻、打断后，接着把事情做完”。这是一条待共同集成的功能分支，工程检查与真人收益分别验收。
+
 **由队长 phucmanh146-dot 统筹，沿用已有 PRD，参考上岸鸭产品思路继续开发。**
 
 [个人介绍](docs/profile.md) · [队长一步一步操作](docs/team-onboarding.md) · [三人交接约定](docs/p1-contract.md) · [作品主页](https://shanganya-focus-hanyi.phucmanh146.chatgpt.site/) · [Skill 页面](https://shanganya-focus-hanyi.phucmanh146.chatgpt.site/skill)
 
 **进度入口：**[远程核验后的当前总调度（2026-10-12）](docs/current-total-dispatch-2026-10-12.md) · [三人功能、交付记录与问题清单](docs/progress-2026-10-11.md) · [此前总调度记录](docs/current-total-dispatch-2026-10-11.md)。
 
-**当前任务入口（2026-10-12，v5）：**[三人新版任务、交付物与验收](docs/first-prize-delivery-v5.md) · [具体论证与复现材料](evidence/first-prize-v5/README.md)。以全国一等奖质量为对标目标，补实际材料诊断、可执行细步骤、新成果复核、公平对照与真实用户证据。任务升级不代表新增功能已实现或已达到获奖水平。
+**最新任务入口（2026-10-13）：**[现在任务、目标任务与你和A的交接要求](docs/team-goal-tasks-2026-10-13.md)。A抓取已完成，按用户确认记账；下一步接入现有成果并按目标诊断、实改、复核。
+
+**原任务与验收依据（2026-10-12，v5）：**[三人新版任务、交付物与验收](docs/first-prize-delivery-v5.md) · [具体论证与复现材料](evidence/first-prize-v5/README.md)。以全国一等奖质量为对标目标，补实际材料诊断、可执行细步骤、新成果复核、公平对照与真实用户证据。任务升级不代表新增功能已实现或已达到获奖水平。
+
+**B与队长联调候选：**[仓库总结、实际验证与双击启动](docs/repository-summary-2026-10-12.md)。139项后端检查与3组浏览器流程通过；本机Hermes实际文本请求成功，A实际诊断和内容复核仍待交付。
 
 此前的[扣子案例增补](docs/coze-benchmark-tasks.md)与[v4任务](docs/award-benchmark-v4.md)保留为历史；本轮范围、分工和阶段验收以v5为准。
 
@@ -56,6 +68,8 @@ Agent 需要依据目标和当前状态选择下一步工具，并检查工具�
 代码在 `learning-agent/`。启动方法见[模块 README](learning-agent/README.md)，首次操作见[队长与队友指南](docs/team-onboarding.md)。
 
 ## 当前状态与验证边界
+
+2026-10-12本轮在原联调候选上新增真实材料、本人任务/理解/能力证据、已配置模型A诊断/复核与B剩余计划适配器。新增32项检查，加上原有共171项Python检查通过；模型回答在这些检查中为控制夹具。2026-10-13补齐诊断前即可导出的目标、本人任务与实际材料包；具体任务分类见上方最新入口。三人接线、课程小节、执行顺序、冲国奖的六张证据卡与尚缺赛事信息见[最新总调度与实现记录](docs/general-agent-implementation-2026-10-12.md)。优化以[草稿PR #5](https://github.com/phucmanh146-dot/shangan-ya/pull/5)独立审阅，未声称真实用户收益或已经获奖。以下2026-10-12工程论证是本轮实改之前的记录。
 
 2026-10-12，本轮补充可复现工程论证：实际排程函数在首日少30分钟后将剩余60分钟排为两日30/30；当天截止时报告缺30分钟，已完成记录保留。4项交接保护与5项赛事上下文检查通过，共9项。B实际规则调用的样本尚无micro_steps；真实A诊断、自动成果复核、模型细步骤质量和用户收益待验证。详见[原始结果](evidence/first-prize-v5/engineering-results.json)。
 

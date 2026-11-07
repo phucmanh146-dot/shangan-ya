@@ -1,3 +1,18 @@
 /shangan-ya-ai-backend/
 **/__pycache__/
 **/test-output/
+
+demo-runs/
+**/.growth-data/
+**/.growth-tmp/
+**/.growth-backup-*/
+**/obsidian-bridge/data.json
+
+# Local user uploads, model traces and SQLite state
+/work/
+/outputs/
+**/*.sqlite3
+node_modules/
+
+.env.engineering
+**/.learning-agent/

@@ -14,7 +14,7 @@ function rescueChoices(){
 function handoffView(){
  $('b-run').disabled=!project.diagnosis||project.diagnosis_needs_refresh;
  const pending=(project.plan?.tasks||[]).filter(t=>t.status==='pending_review');
- $('review-export').disabled=!pending.length;
+ $('review-export').disabled=false;
  const calls=$('a-review-call');calls.replaceChildren();
  for(const t of pending){const button=el('button','调用 A 复核：'+t.title);button.disabled=!project.dispatch_status.review_provider;button.onclick=()=>safe(()=>mutate('review-run',{task_id:t.task_id}));calls.append(button);}
  if(pending.length&&!project.dispatch_status.review_provider)calls.append(el('p','A 自动复核模块待接入；可导出交付包给 A，接收其实际复核结果。'));
@@ -55,13 +55,15 @@ $('handoff-check').onclick=()=>safe(async()=>{
 });
 $('b-run').onclick=()=>safe(async()=>{$('b-run').disabled=true;try{await mutate('generate-b',{});}finally{if(project)handoffView();}});
 $('review-export').onclick=()=>safe(async()=>{
- const packet=await request('/handoff?id='+encodeURIComponent(project.project_id));
+ const binding=context();
+ const packet=await request('/handoff?id='+encodeURIComponent(binding.project_id));
+ if(project.project_id!==binding.project_id||project.version!==packet.project_version)throw new Error('导出期间项目或版本变化，请刷新后重新导出给 A');
  const url=URL.createObjectURL(new Blob([JSON.stringify(packet,null,2)],{type:'application/json;charset=utf-8'}));
- const link=el('a','');link.href=url;link.download='A-review-request-'+project.project_id+'.json';link.click();
+ const link=el('a','');link.href=url;link.download='A-review-request-'+packet.project_id+'.json';link.click();
  setTimeout(()=>URL.revokeObjectURL(url),1000);
- $('message').textContent='已导出当前版本的待复核交付包';
+ $('message').textContent='已导出当前目标、本人任务、实际材料与待复核成果；请把这一版本交给 A';
 });
-$('a-review-form').onsubmit=e=>{e.preventDefault();safe(()=>mutate('review-receive',{review:JSON.parse($('a-review-json').value)}));};
+$('a-review-form').onsubmit=e=>{e.preventDefault();safe(()=>{const review=JSON.parse($('a-review-json').value);if(review.method==='manual'){if(!window.confirm('请确认：你已打开并阅读当前提交的 V2 原件，按每条验收条件逐项核对，并且不是本次成果执行者。'))return;review.content_read_confirmed=true;return mutate('review-manual',{review});}return mutate('review-receive',{review});});};
 $('rescue-task').onchange=rescueChoices;
 
 function rescueMediaEvent(node,event){return new Promise((resolve,reject)=>{const timer=setTimeout(()=>finish(new Error('媒体读取超时，请换用短录屏或截图。')),15000);function finish(error){clearTimeout(timer);node.removeEventListener(event,ready);node.removeEventListener('error',failed);error?reject(error):resolve();}function ready(){finish();}function failed(){finish(new Error('无法解码媒体，请换用常见图片或视频格式。'));}node.addEventListener(event,ready,{once:true});node.addEventListener('error',failed,{once:true});});}

@@ -24,8 +24,10 @@ class LinkedRescueTests(unittest.TestCase):
             c.executescript('CREATE TABLE runs(id TEXT PRIMARY KEY,kind TEXT,status TEXT,input TEXT,result TEXT,error TEXT,created TEXT); CREATE TABLE events(seq INTEGER PRIMARY KEY AUTOINCREMENT,run_id TEXT,kind TEXT,message TEXT,created TEXT);')
 
     def request(self, **extra):
+        task = next(t for t in self.p['plan']['tasks'] if t['task_id'] == 'G1:deliver')
+        action_id = task['micro_steps'][0]['step_id'] if task.get('micro_steps') else 'step:1'
         return {**self.ctx(), 'expected_plan_version': 1, 'task_id': 'G1:deliver',
-                'gap_id': 'G1', 'action_id': 'step:1', 'note': '人工测试：不知道如何保存结果', **extra}
+                'gap_id': 'G1', 'action_id': action_id, 'note': '人工测试：不知道如何保存结果', **extra}
 
     def queue(self, **extra):
         # Use real submit/input validation and SQLite. Isolate the semaphore and
@@ -65,7 +67,7 @@ class LinkedRescueTests(unittest.TestCase):
             row = c.execute('SELECT input FROM runs WHERE id=?', (record['run_id'],)).fetchone()
         stored = json.loads(row['input'])
         self.assertNotIn('frames', stored)
-        self.assertEqual(stored['team_context']['action_id'], 'step:1')
+        self.assertEqual(stored['team_context']['action_id'], self.request()['action_id'])
         self.assertNotIn(frame['image'], agent.dump(self.p))
 
     def test_duplicate_active_help_rejected_and_other_project_cannot_sync(self):

@@ -56,6 +56,8 @@ def view(project):
                                value['diagnosis']['diagnosis_version'] != rescue['diagnosis_version'])
     from team_dispatch import dashboard
     value['dispatch_status'] = dashboard(value)
+    from team_recovery import summary
+    value['recovery_summary'] = summary(value)
     return value
 
 def state(identifier=None):
@@ -70,7 +72,7 @@ def state(identifier=None):
             return value
         return {'projects': [view(json.loads(x['body'])) for x in c.execute('SELECT body FROM team_projects ORDER BY rowid DESC LIMIT 100')]}
 
-def commit(project, expected, action):
+def commit(project, expected, action, write=None):
     with agent.WRITE_LOCK, connection() as c:
         init(c)
         c.execute('BEGIN IMMEDIATE')
@@ -82,8 +84,11 @@ def commit(project, expected, action):
         project.pop('history', None)
         project.pop('plan_stale', None)
         project.pop('dispatch_status', None)
+        project.pop('recovery_summary', None)
         project['version'] = current + 1
         project['updated_at'] = agent.now()
+        if write is not None:
+            write(c)
         body = agent.dump(project)
         c.execute('INSERT OR REPLACE INTO team_projects VALUES(?,?,?)', (project['project_id'], current+1, body))
         c.execute('INSERT INTO team_history VALUES(?,?,?,?,?)', (project['project_id'], current+1, body, action, agent.now()))
@@ -166,17 +171,68 @@ def validate_diagnosis(d):
         if 'current_artifact' in gap:
             validate_artifact_ref(required(gap, 'current_artifact', dict), catalog)
 
-def diagnosis(data):
+def require_extract_pattern_for_references(gap, sources):
+    referenced = [source for source in sources if source.get('source_id') in gap.get('source_refs', [])]
+    if any(source.get('kind') == 'reference' for source in referenced):
+        required(gap, 'extract_pattern')
+    return referenced
+
+
+def diagnosis(data, persist=True):
     p = current(data)
     d = copy.deepcopy(required(data,'diagnosis',dict))
     validate_diagnosis(d)
+    if p.get('artifact_storage_required'):
+        import artifact_store
+        from personal_guidance import skill_status, capability_basis
+        known_members = {m['member_id']:m for m in p.get('member_task_briefs', [])}
+        for member in d['member_profiles']:
+            if member['member_id'] not in known_members:
+                raise ValueError('先登记本人任务；诊断不能新增未确认成员')
+            actual = known_members[member['member_id']]
+            member['capability_evidence'] = copy.deepcopy(actual['capability_evidence'])
+            member['verified_capabilities'] = sorted({r['capability'] for r in actual['capability_evidence'] if skill_status(actual,r['capability'])[0]=='verified'})
+        for gap in d['gaps']:
+            prior = next((g for g in (p.get('diagnosis') or {}).get('gaps', []) if g['gap_id']==gap['gap_id']),None)
+            if gap.get('status') == 'closed' and (not prior or prior.get('status')!='closed' or
+                    gap.get('confirmed_review_id') not in p.get('applied_review_ids', [])):
+                raise ValueError('关闭差距必须来自本项目已确认且已应用的成果复核')
+            if gap.get('history_only'):
+                if not prior or prior.get('status')!='closed' or prior.get('confirmed_review_id') not in p.get('applied_review_ids', []):
+                    raise ValueError('不能声明未确认的差距仅为历史而跳过证据核对')
+                continue
+            if gap.get('status') != 'closed':
+                if gap.get('verification_status') in ('unknown', 'blocked'):
+                    if gap.get('micro_steps'):
+                        raise ValueError('unknown/blocked 差距不能提前生成生产微动作；先补证据并重新诊断')
+                    continue
+                ref = required(gap,'current_artifact',dict)
+                artifact_store.references(p, gap.get('evidence_refs'), (ref['artifact_id'], ref['artifact_version']))
+                if gap.get('verification_status') in ('verified', 'evidence_linked_pending_confirmation'):
+                    required(gap, 'current_locator')
+                    required(gap, 'current_evidence')
+                    referenced = require_extract_pattern_for_references(gap, d['sources'])
+                    if not referenced:
+                        raise ValueError('已核验差距必须绑定真实来源')
+                    for source in referenced:
+                        if source.get('kind') == 'reference' and not (source.get('reference_locator') or gap.get('reference_locator')):
+                            raise ValueError('参考来源必须定位到原始页、段落、章节或代码位置')
+                    steps = required(gap, 'micro_steps', list)
+                    if not steps:
+                        raise ValueError('已核验差距必须提供 grounded micro_steps')
+                    for step in steps:
+                        step['capability_basis'] = capability_basis(gap, d['member_profiles'])
+                        step['capability_basis_source'] = 'server_member_records'
+                    validate_micro_steps({'micro_steps':steps},d)
+                    for step in steps:
+                        artifact_store.read(p, step['input_version']['artifact_id'], step['input_version']['artifact_version'])
     if p['diagnosis'] and d['diagnosis_version'] <= p['diagnosis']['diagnosis_version']:
         raise Conflict('诊断版本必须递增')
     if p['plan'] and not p.get('plan_diagnosis') and p['diagnosis'] and p['plan']['based_on_diagnosis_version'] == p['diagnosis']['diagnosis_version']:
         p['plan_diagnosis'] = copy.deepcopy(p['diagnosis'])
     p['diagnosis'], p['proposal'] = d, None
     p['diagnosis_needs_refresh'] = False
-    return commit(p,p['version'],'接收 A 的诊断；原计划保留并检查是否过期')
+    return commit(p,p['version'],'接收 A 的诊断；原计划保留并检查是否过期') if persist else p
 
 def validate_plan(plan, d):
     integer(plan,'plan_version',1)
@@ -202,6 +258,9 @@ def validate_plan(plan, d):
         if t.get('status') not in ('candidate','scheduled','in_progress','pending_review','completed','blocked'):
             raise ValueError('任务状态无效')
         validate_micro_steps(t, d)
+        if t.get('kind') == 'production' and not t.get('micro_steps'):
+            if t.get('status') != 'blocked' or t.get('execution_readiness') != 'blocked_missing_grounded_micro_steps' or not t.get('external_dependencies'):
+                raise ValueError('生产任务缺少 grounded micro_steps 时必须阻塞，不能作为可执行任务')
         deps[t['task_id']] = t['depends_on']
     visited = set()
     def visit(key, path):
@@ -240,16 +299,16 @@ def protected(old, new):
             if latest.get(key)!=t:
                 raise ValueError('重排不得覆盖已开始、已完成、待验收或锁定任务：'+key)
     for t in new['tasks']:
-        if t['task_id'] not in previous and t['status'] not in ('candidate','scheduled'):
+        if t['task_id'] not in previous and t['status'] not in ('candidate','scheduled','blocked'):
             raise ValueError('新任务不能伪造执行或完成状态')
-        if t['task_id'] in previous and previous[t['task_id']]['status']=='candidate' and t['status'] not in ('candidate','scheduled'):
+        if t['task_id'] in previous and previous[t['task_id']]['status']=='candidate' and t['status'] not in ('candidate','scheduled','blocked'):
             raise ValueError('排程不能代替执行和验收')
     for block in (old or {}).get('time_blocks',[]):
         if block.get('locked') and block not in new['time_blocks']:
             raise ValueError('锁定时段不能被重排覆盖')
 
-def propose(data):
-    p = current(data)
+def propose(data, prepared_project=None, persist=True):
+    p = copy.deepcopy(prepared_project) if prepared_project is not None else current(data)
     if not p['diagnosis'] or p.get('diagnosis_needs_refresh'):
         raise ValueError('先接收基于最新补充信息的 A 诊断')
     plan = copy.deepcopy(required(data,'plan',dict))
@@ -263,9 +322,9 @@ def propose(data):
                      'diff':{'added':sorted(new.keys()-old.keys()),'removed':sorted(old.keys()-new.keys()),
                              'changed':[k for k in new.keys()&old.keys() if new[k]!=old[k]],
                              'time_blocks_before':(p['plan'] or {}).get('time_blocks',[]),'time_blocks_after':plan['time_blocks']}}
-    return commit(p,p['version'],'保存 B 的计划预览，等待用户采用')
+    return commit(p,p['version'],'保存 B 的计划预览，等待用户采用') if persist else p
 
-def apply(data):
+def _apply_proposal(data, action):
     p = current(data)
     proposal = p['proposal']
     if not proposal or data.get('proposal_id')!=proposal['id']:
@@ -276,7 +335,16 @@ def apply(data):
     p['undo_at_version'] = p['version'] + 1
     p['plan'],p['proposal'] = proposal['plan'],None
     p['plan_diagnosis'] = copy.deepcopy(p['diagnosis'])
-    return commit(p,p['version'],'用户采用计划')
+    return commit(p,p['version'],action)
+
+
+def apply(data):
+    return _apply_proposal(data, '用户采用计划')
+
+
+def apply_automated(data):
+    """Adopt a validated internal plan from a trusted workflow, not a browser flag."""
+    return _apply_proposal(data, '系统按自动推进规则采用已验证计划')
 
 def validate_criterion_results(data, task):
     rows = required(data, 'criterion_results', list)
@@ -290,6 +358,40 @@ def validate_criterion_results(data, task):
     if not all(row['passed'] for row in rows):
         raise ValueError('有验收条件未通过，请退回修改；不能标记完成')
     return copy.deepcopy(rows)
+
+def validate_task_start(p, t):
+    """Shared by normal execution and recovery. Never bypass prerequisites."""
+    if t['status'] not in ('candidate','scheduled','blocked'):
+        raise ValueError('当前状态不能开始')
+    if t.get('guidance_required'):
+        raise ValueError('先补齐具体操作步骤并更新计划，不能开始制作')
+    if any(x['task_id'] in t['depends_on'] and x['status']!='completed' for x in p['plan']['tasks']):
+        raise ValueError('前置任务尚未验收完成')
+    if t.get('external_dependencies'):
+        raise ValueError('外部前置成果尚未交付，不能开始任务')
+    if t.get('capability_requirements'):
+        from personal_guidance import skill_status
+        members = {m['member_id']:m for m in p['diagnosis']['member_profiles']}
+        for needed in t['capability_requirements']:
+            if skill_status(members[needed['member_id']], needed['capability'])[0] != 'verified':
+                raise ValueError('先保存当前能力的实际试做结果并更新诊断，再开始制作：'+needed['capability'])
+    active = next((x for x in p['plan']['tasks'] if x['task_id'] != t['task_id'] and x['status']=='in_progress'
+                   and set(x['owner_ids']) & set(t['owner_ids'])), None)
+    if active:
+        raise ValueError('请先保存当前进行中任务的现场，再切换任务：'+active['title'])
+
+def assert_independent_reviewer(p, task, reviewer_id):
+    """Recorded project identities, not authentication or semantic verification."""
+    if not p.get('artifact_storage_required') or task.get('kind') in ('trial','learn','practice','retest'):
+        return
+    submission = task.get('submission') or {}
+    # Legacy submissions predate executor snapshots: conservatively use all owners.
+    executors = submission.get('executor_ids', task.get('owner_ids', []))
+    if not executors:
+        raise ValueError('执行者未确认，不能完成独立复核；请补充执行记录后重新提交')
+    if reviewer_id in executors:
+        raise ValueError('独立复核不能由本次成果执行者完成，请选择另一位项目成员')
+
 
 def feedback(data):
     p = current(data)
@@ -305,20 +407,29 @@ def feedback(data):
     record = {'task_id':t['task_id'],'action':action,'note':note,'created':agent.now(),
               'expected_plan_version':p['plan']['plan_version'], 'diagnosis_version':p['diagnosis']['diagnosis_version']}
     if action in ('start','resume'):
-        if t['status'] not in ('candidate','scheduled','blocked'):
-            raise ValueError('当前状态不能开始')
-        if any(x['task_id'] in t['depends_on'] and x['status']!='completed' for x in p['plan']['tasks']):
-            raise ValueError('前置任务尚未验收完成')
-        if t.get('external_dependencies'):
-            raise ValueError('外部前置成果尚未交付，不能开始任务')
+        import team_recovery
+        if team_recovery.active_checkpoint(p, t['task_id']):
+            raise ValueError('任务保存了中断现场，请从“返回原任务”入口核对条件后继续')
+        validate_task_start(p, t)
         t['status']='in_progress'
     elif action=='submit':
         if t['status']!='in_progress':
             raise ValueError('请先开始任务')
         record['artifact_id']=required(data,'artifact_id')
         record['artifact_version']=integer(data,'artifact_version',1)
+        if p.get('artifact_storage_required'):
+            import artifact_store
+            artifact_store.read(p, record['artifact_id'], record['artifact_version'])
         record['actual_minutes']=integer(data,'actual_minutes')
         record['evidence']=required(data,'evidence')
+        executors = data.get('executor_ids', t['owner_ids'])
+        if (not isinstance(executors, list) or not executors or
+                any(not isinstance(x, str) or not x.strip() for x in executors) or
+                len(set(executors)) != len(executors) or
+                not set(executors) <= {m['member_id'] for m in p['diagnosis']['member_profiles']}):
+            raise ValueError('executor_ids 需要不重复的实际执行成员编号，且必须属于本项目')
+        record['executor_ids'] = list(executors)
+        record['executor_record_source'] = 'declared' if 'executor_ids' in data else 'task_owner_snapshot'
         t['submission']=copy.deepcopy(record)
         t.pop('external_review', None)
         t['status']='pending_review'
@@ -328,10 +439,29 @@ def feedback(data):
         record['reviewer_id']=required(data,'reviewer_id')
         record['artifact_id']=t['submission']['artifact_id']
         record['artifact_version']=t['submission']['artifact_version']
+        if p.get('artifact_storage_required'):
+            import artifact_store
+            artifact_store.read(p, record['artifact_id'], record['artifact_version'])
         if record['reviewer_id'] not in {m['member_id'] for m in p['diagnosis']['member_profiles']}:
             raise ValueError('验收成员不在项目中')
+        assert_independent_reviewer(p, t, record['reviewer_id'])
         record['evidence']=t['submission']['evidence']
         packet = (t.get('external_review') or {}).get('packet')
+        if action == 'approve' and p.get('artifact_storage_required') and t.get('kind') not in ('trial','learn','practice','retest'):
+            # A review receipt and the human confirmation are separate events.
+            # Recheck the ledger and versions even when the task itself was protected
+            # during a later plan preview; advance() requires this exact pairing.
+            review_id = (t.get('external_review') or {}).get('review_id')
+            received = next((r for r in p.get('artifact_reviews', []) if r['review_id'] == review_id), None)
+            if not packet or not received or received.get('source') != 'A_handoff' or received['packet'] != packet:
+                raise ValueError('请先接收 A 对实际新版的逐项复核，再人工确认验收')
+            if (packet['plan_version'] != p['plan']['plan_version'] or
+                    packet['diagnosis_version'] != p['diagnosis']['diagnosis_version'] or
+                    packet['task_id'] != t['task_id'] or
+                    (packet['artifact_id'], packet['artifact_version']) !=
+                    (record['artifact_id'], record['artifact_version'])):
+                raise Conflict('A 复核对应的计划、诊断或成果版本已变化，请重新核对新版复核')
+            record['review_id'] = review_id
         if action == 'approve' and packet and not all(r['passed'] for r in packet['criterion_results']):
             raise ValueError('A 复核仍有验收条件未通过，请退回修改或接收更新后的复核')
         # Finishing a task (especially learning) is distinct from closing a gap.
@@ -340,6 +470,13 @@ def feedback(data):
             record['criterion_results'] = validate_criterion_results(data, t)
         t['status']='completed' if action=='approve' else 'in_progress'
         t['review']=copy.deepcopy(record)
+        if action == 'reject' and any(x['task_id'] != t['task_id'] and x['status']=='in_progress'
+                and set(x['owner_ids']) & set(t['owner_ids']) for x in p['plan']['tasks']):
+            t['status']='blocked'
+            t['blocker']='成果被退回；先保存当前任务现场，再核对复核意见并重新开始'
+        if action == 'approve':
+            import team_recovery
+            team_recovery.accepted_event(p, t['task_id'])
     elif action=='block':
         if t['status'] not in ('candidate','scheduled','in_progress'):
             raise ValueError('当前状态不能标记卡住')

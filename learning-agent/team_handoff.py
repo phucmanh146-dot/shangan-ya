@@ -1,7 +1,7 @@
 """Captain adapters for B's delivered rules and A's versioned review packets.
 
-The imported B modules are unchanged from action-planner commit 59a1eaff.
-This module does not generate an A diagnosis or claim model verification.
+B's baseline is action-planner commit 59a1eaff. Current extensions add recorded
+capability branching and confirmed-review remaining plans; this adapter is rules.
 """
 import copy
 import team_orchestrator as team
@@ -17,7 +17,7 @@ def check_diagnosis(d):
         team.validate_diagnosis(d)
     except (ValueError, TypeError, KeyError) as exc:
         return {'ready_for_B': False, 'errors': [str(exc)], 'warnings': warnings}
-    if not d['gaps'] or len(d['gaps']) > 100:
+    if (not d['gaps'] and not d.get('resolution_confirmed')) or len(d['gaps']) > 100:
         errors.append('B 需要 1 至 100 条实际差距；空报告模板不能生成计划')
     for member in d['member_profiles']:
         try:
@@ -55,7 +55,10 @@ def planner(diagnosis, project):
         raise ValueError('A 的交付尚不能进入 B：' + '；'.join(report['errors'][:8]))
     context = {'goal': project['goal']}
     old_plan = project.get('plan')
-    if not old_plan:
+    if project.get('artifact_storage_required'):
+        from team_revision import plan_remaining
+        plan = plan_remaining(diagnosis, project)
+    elif not old_plan:
         plan = b.generate(copy.deepcopy(diagnosis), context)
     else:
         old_d = project.get('plan_diagnosis')
@@ -74,9 +77,12 @@ def planner(diagnosis, project):
     # B marks prerequisite work blocked. Captain candidates still enforce prerequisites
     # at start; adopting a draft must never impersonate a recorded execution event.
     for task in plan['tasks']:
-        if task['task_id'] not in old_ids and task['status'] == 'blocked':
+        if (task['task_id'] not in old_ids and task['status'] == 'blocked' and
+                task.get('execution_readiness') != 'blocked_missing_grounded_micro_steps'):
             task['status'] = 'candidate'
     plan['handoff_provenance'] = {'role': 'B', 'source_commit': B_SOURCE_COMMIT,
+                                  'source_commit_role':'original_B_baseline',
+                                  'extensions':['personal_guidance','team_revision'],
                                   'generation': 'rules', 'live_model_verified': False}
     team.validate_plan(plan, diagnosis)
     team.protected(old_plan, plan)
@@ -91,21 +97,66 @@ def generate(data):
     return team.propose({**data, 'plan': draft, 'reason': '调用 B 已交付的规则规划器；核对后再采用'})
 
 
-def review_request(p, task_id=None):
+def review_request(p, task_id=None, include_documents=False):
     tasks = (p.get('plan') or {}).get('tasks', [])
     pending = [copy.deepcopy(t) for t in tasks if t['status'] == 'pending_review' and t.get('submission')]
     if task_id is not None:
         pending = [t for t in pending if t['task_id'] == task_id]
         if not pending:
             raise ValueError('没有对应的待复核成果')
-    return {'schema_version': '0.1', 'project_id': p['project_id'], 'project_version': p['version'],
+    packet = {'schema_version': '0.1', 'project_id': p['project_id'], 'project_version': p['version'],
             'goal': p['goal'], 'plan_version': (p.get('plan') or {}).get('plan_version'),
+            'project_context': copy.deepcopy(p.get('project_context')),
+            'member_task_briefs': copy.deepcopy(p.get('member_task_briefs', [])),
+            'brief_history': copy.deepcopy(p.get('brief_history', [])),
+            'pending_commitments': copy.deepcopy([c for c in p.get('recovery', {}).get('commitments', []) if not c['task_id']]),
+            'task_recovery_summary': copy.deepcopy(p.get('recovery_summary', {})),
+            'artifact_manifest': copy.deepcopy(p.get('stored_artifacts', [])),
+            'diagnosis_needs_refresh': bool(p.get('diagnosis_needs_refresh')),
+            'plan_stale': bool(p.get('plan_stale')),
             'diagnosis': copy.deepcopy(p.get('diagnosis')), 'pending_tasks': pending,
             'feedback': copy.deepcopy(p['feedback']),
             'note': 'A 对照原 gap 与实际新成果复核；总控不会把格式校验当成内容正确。'}
+    if include_documents:
+        import artifact_store
+        refs = {}
+        # Latest diagnostic inputs, then exact old/new versions and capability evidence.
+        for row in p.get('stored_artifacts', []):
+            if row.get('purpose', 'input') == 'input':
+                refs[row['artifact_id']] = row
+        rows = list(refs.values())
+        rows.extend(g['current_artifact'] for g in (p.get('diagnosis') or {}).get('gaps', []) if g.get('current_artifact'))
+        rows.extend(t['submission'] for t in pending)
+        rows.extend(r for m in p.get('member_task_briefs', []) for r in m.get('capability_evidence', []))
+        if p.get('artifact_storage_required'):
+            refs = {(r['artifact_id'], r['artifact_version']) for r in rows}
+            docs, total = [], 0
+            for identifier, version in sorted(refs):
+                doc = artifact_store.read(p, identifier, version)
+                total += sum(len(unit['text']) for unit in doc['units'])
+                if total > 60000:
+                    raise ValueError('交给A的材料正文超过60000字，请拆分本次交付；没有静默裁切')
+                docs.append(doc)
+            packet['documents'] = docs
+        else:
+            packet['documents'] = []
+        packet['document_bytes_checked'] = bool(packet['documents'])
+        packet['response_context'] = {'project_id': p['project_id'], 'expected_version': p['version']}
+        packet['note'] = ('以本次project_context、本人任务及补充记录核对目标；材料已抓取时沿用其内容。'
+                          'documents来自本项目实际文件，哈希和原文位置可核对；空列表表示未接入实际正文。'
+                          '返回交付沿用response_context，版本变化先重新核对；目标变化时旧待复核任务先保留，不能按旧目标放行。')
+    return packet
 
 
-def receive_review(data):
+def receive_manual_review(data):
+    """Accept a human-authored review only after an explicit V2 read attestation."""
+    review = team.required(data, 'review', dict)
+    if review.get('method') != 'manual' or review.get('content_read_confirmed') is not True:
+        raise ValueError('人工复核必须声明 method=manual，并确认已打开当前 V2 原件逐项核对')
+    return receive_review(data, content_read=True)
+
+
+def receive_review(data, content_read=False):
     p = team.current(data)
     if not p['plan'] or p['plan_stale']:
         raise team.Conflict('复核需要有效计划；请先核对最新诊断与计划')
@@ -122,6 +173,7 @@ def receive_review(data):
         raise team.Conflict('A 复核的成果版本与当前提交不一致')
     if review['reviewer_id'] not in {m['member_id'] for m in p['diagnosis']['member_profiles']}:
         raise ValueError('复核成员不在项目中')
+    team.assert_independent_reviewer(p, task, review['reviewer_id'])
     if review.get('method') not in ('manual', 'model', 'rules'):
         raise ValueError('复核需声明 method：manual、model 或 rules')
     rows = team.required(review, 'criterion_results', list)
@@ -142,13 +194,36 @@ def receive_review(data):
             team.required(gap, 'remaining_issue')
         elif not all(row['passed'] for row in rows):
             raise ValueError('验收条件未全部通过，不能将对应差距声明为关闭')
+    if p.get('artifact_storage_required'):
+        import artifact_store
+        ref = (submission['artifact_id'], submission['artifact_version'])
+        for row in rows + gaps:
+            artifact_store.references(p, row.get('evidence_refs'), ref)
+        check_d = copy.deepcopy(p['diagnosis'])
+        known = team.artifact_catalog(check_d)
+        for artifact in p.get('stored_artifacts', []):
+            if (artifact['artifact_id'], artifact['artifact_version']) not in known:
+                check_d.setdefault('artifact_versions', []).append(copy.deepcopy(artifact))
+        for gap in gaps:
+            if gap['status'] == 'remaining' and task.get('kind') in ('production', 'check'):
+                steps = team.required(gap, 'remaining_micro_steps', list)
+                team.validate_micro_steps({'micro_steps':steps}, check_d)
+                if any((s['input_version']['artifact_id'],s['input_version']['artifact_version']) != ref for s in steps):
+                    raise ValueError('剩余动作必须基于实际提交的新版')
     existing = next((r for r in p.get('artifact_reviews', []) if r['review_id'] == review['review_id']), None)
     if existing:
         if existing['packet'] == review:
             return p
         raise team.Conflict('复核编号已存在且内容不同')
+    manual_attestation = bool(content_read and review.get('method') == 'manual'
+                              and review.get('content_read_confirmed') is True
+                              and p.get('artifact_storage_required'))
     record = {'packet': review, 'review_id': review['review_id'], 'created': team.agent.now(),
-              'source': 'A_handoff', 'content_independently_verified': False}
+              'source': 'A_handoff', 'content_independently_verified': manual_attestation,
+              'content_read_verified': bool(content_read and p.get('artifact_storage_required')),
+              'reviewer_id': review['reviewer_id'],
+              'review_method': review['method'],
+              'quotes_checked': bool(p.get('artifact_storage_required'))}
     p.setdefault('artifact_reviews', []).append(record)
     task['external_review'] = copy.deepcopy(record)
     p['feedback'].append({'task_id': task['task_id'], 'action': 'review_received',
@@ -166,4 +241,4 @@ def invoke_review(data):
         raise ValueError('A 的真实复核模块尚未接入，可先接收实际复核 JSON')
     packet = review_request(p, team.required(data, 'task_id'))
     result = REVIEWER(copy.deepcopy(p), copy.deepcopy(packet))
-    return receive_review({**data, 'review': result})
+    return receive_review({**data, 'review': result}, content_read=REVIEWER.__module__ == 'team_ai')

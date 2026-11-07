@@ -15,11 +15,22 @@ import team_handoff as handoff
 def diagnosis_fixture(context=None, skills=None):
     d = team.demo_researcher(context or {'goal': '人工测试目标'})
     d['unknowns'] = ['人工验收夹具，不是 A 模型产出']
+    d['artifact_versions'] = [{'artifact_id':'fixture-input','artifact_version':1,'title':'人工测试输入材料'}]
     gap = d['gaps'][0]
     gap.update(target_result='提交一次可复查的接口记录',
                required_capabilities=skills or [],
                acceptance_criteria=['记录输入版本', '记录执行结果与证据'],
-               steps=['打开当前交接材料核对输入版本', '执行一次接口并保存结果', '逐条核对并提交证据'])
+               current_artifact={'artifact_id':'fixture-input','artifact_version':1},
+               current_locator='fixture:line:1',
+               current_evidence='人工夹具：交接材料输入版本需被核对',
+               extract_pattern='提取输入版本→实际执行→结果证据的可复核记录结构，不复制外部作品',
+               steps=['打开当前交接材料核对输入版本', '执行一次接口并保存结果', '逐条核对并提交证据'],
+               micro_steps=[{'step_id':'G1-step-1','input_version':{'artifact_id':'fixture-input','artifact_version':1},
+                   'target_locator':'fixture:line:1','action':'核对当前交接材料的输入版本，并记录实际接口调用的请求与响应',
+                   'reason':'当前交接必须留下能回查的真实输入和结果','expected_change':'记录中同时包含输入版本、请求摘要、响应状态与结果',
+                   'output':'接口执行记录.md','self_check':'检查记录中的输入版本与请求/响应是否齐全',
+                   'failure_next':'若无法核对版本，暂停执行并请队长补齐材料目录','capability_basis':'人工验收夹具；不代表能力已验证',
+                   'source_refs':['input'] }])
     return d
 
 
@@ -93,7 +104,9 @@ class HandoffTests(unittest.TestCase):
     def test_incremental_A_addition_preserves_completed_task_and_evidence(self):
         self.prepared(); self.event('start')
         self.event('submit', artifact_id='record', artifact_version=1, actual_minutes=10, evidence='实际记录')
-        self.event('approve', reviewer_id='A')
+        self.event('approve', reviewer_id='A', criterion_results=[
+            {'criterion':c,'passed':True,'evidence':'人工夹具：逐条核对本次提交的执行记录'}
+            for c in self.p['plan']['tasks'][0]['acceptance_criteria']])
         original = copy.deepcopy(self.p['plan']['tasks'][0])
         d = copy.deepcopy(self.p['diagnosis']); d['diagnosis_version'] = 2
         extra = copy.deepcopy(d['gaps'][0]); extra['gap_id'] = 'G2'; extra['target_result'] = '第二次交接记录'

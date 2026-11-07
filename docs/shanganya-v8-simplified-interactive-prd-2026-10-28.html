@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f7f8fc">
+<title>上岸鸭工作台｜简化交互 PRD</title>
+<style>
+:root{--bg:#f7f8fc;--paper:#fff;--ink:#202438;--muted:#737991;--line:#e7e9f1;--blue:#5367e8;--blue-soft:#edf0ff;--pink:#f6e8f0;--green:#e6f5ed;--orange:#fff1df;--shadow:0 12px 36px rgba(36,44,83,.07)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}button,input,textarea,select{font:inherit}button{cursor:pointer}.layout{display:grid;grid-template-columns:250px minmax(0,1fr);max-width:1440px;margin:auto;min-height:100vh}.sidebar{position:sticky;top:0;height:100vh;padding:28px 18px;background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:24px}.brand{display:flex;align-items:center;gap:12px;padding:0 8px}.logo{width:42px;height:42px;border-radius:15px;background:linear-gradient(135deg,#6c7cf4,#a6b2ff);display:grid;place-items:center;color:#fff;font-size:22px;box-shadow:0 7px 18px #6476df44}.brand b{font-size:17px;letter-spacing:.3px}.brand small{display:block;color:var(--muted);font-size:11px}.nav-label{padding:0 10px;color:#9ba0b4;font-size:11px;letter-spacing:1.5px}.nav{display:grid;gap:5px}.nav a{display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:12px;color:#656b82;text-decoration:none;font-size:14px}.nav a:hover,.nav a.active{background:var(--blue-soft);color:var(--blue)}.nav a span{width:22px;text-align:center}.side-note{margin-top:auto;padding:16px;border-radius:16px;background:#f6f4ff;color:#656b88;font-size:12px}.side-note b{display:block;color:#414b91;margin-bottom:5px}.main{padding:34px clamp(18px,4vw,58px) 70px;min-width:0}.topline{display:flex;justify-content:space-between;align-items:center;gap:16px;color:var(--muted);font-size:12px;margin-bottom:24px}.top-actions{display:flex;gap:8px;flex-wrap:wrap}.btn{border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 13px;border-radius:10px;font-size:13px}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.hero{padding:clamp(24px,4vw,44px);border-radius:26px;background:linear-gradient(120deg,#edf0ff 0%,#f7eff8 60%,#fff5ec 100%);position:relative;overflow:hidden}.eyebrow{color:var(--blue);font-size:12px;font-weight:700;letter-spacing:1.5px}.hero h1{font-size:clamp(30px,4vw,48px);line-height:1.2;letter-spacing:-1.5px;margin:13px 0 15px;max-width:720px}.hero p{max-width:710px;color:#606781;margin:0}.hero-foot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:24px}.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;background:#ffffffbd;padding:6px 11px;color:#555d7a;font-size:12px}.section{margin-top:38px;scroll-margin-top:22px}.section-head{display:flex;align-items:end;justify-content:space-between;gap:14px;margin-bottom:17px}.section h2{font-size:23px;line-height:1.3;margin:0;letter-spacing:-.4px}.section-head p{margin:5px 0 0;color:var(--muted);font-size:13px}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.card{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:0 3px 12px #25294d05;min-width:0}.card h3{margin:0 0 7px;font-size:16px}.card p{margin:0;color:var(--muted);font-size:13px}.iconbox{display:grid;place-items:center;width:42px;height:42px;border-radius:14px;margin-bottom:14px;font-size:20px}.ib{background:var(--blue-soft)}.ig{background:var(--green)}.ip{background:var(--pink)}.io{background:var(--orange)}.feature-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.feature{padding:17px;background:#fff;border:1px solid var(--line);border-radius:16px}.feature .n{font-size:12px;color:var(--blue);font-weight:700}.feature b{display:block;margin:6px 0}.feature small{color:var(--muted);line-height:1.6;display:block}.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;align-items:stretch}.flow-step{padding:16px;background:#fff;border:1px solid var(--line);border-radius:15px;position:relative}.flow-step:not(:last-child):after{content:"→";position:absolute;right:-12px;top:40%;z-index:1;color:var(--blue);font-weight:700}.flow-step small{color:var(--blue);font-size:11px;font-weight:700}.flow-step b{display:block;margin:5px 0}.flow-step p{font-size:12px;color:var(--muted);margin:0}.demo{border:1px solid #dfe3f5;border-radius:20px;background:#fff;overflow:hidden;box-shadow:var(--shadow)}.demo-top{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--line);background:#fcfcff;gap:10px}.demo-top b{font-size:14px}.demo-body{padding:20px}.demo-label{font-size:12px;color:var(--muted);margin-bottom:8px}.energy{display:flex;gap:8px;flex-wrap:wrap}.energy button{border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px 14px;color:#646b80}.energy button.selected{border-color:var(--blue);background:var(--blue-soft);color:var(--blue)}.task-now{margin-top:17px;padding:18px;border-radius:16px;background:#f6f7ff;border:1px solid #e6e9ff}.task-now h3{margin:0 0 5px}.task-meta{font-size:12px;color:var(--muted)}.timer{font-size:30px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:1px;margin:12px 0}.demo-controls{display:flex;gap:8px;flex-wrap:wrap}.demo-controls .btn{padding:8px 12px}.demo-msg{min-height:26px;color:var(--blue);font-size:12px;margin-top:10px}.field{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);outline:none}.field:focus{border-color:var(--blue);box-shadow:0 0 0 3px #5367e81a}.form-row{display:grid;grid-template-columns:1fr 130px;gap:10px;margin-top:12px}.task-list{display:grid;gap:8px;margin-top:15px}.task-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px}.task-row input{accent-color:var(--blue)}.task-row .task-name{flex:1;min-width:0}.task-row.done .task-name{text-decoration:line-through;color:#9ba0b0}.task-row small{color:var(--muted);font-size:11px}.tag{font-size:11px;background:#f0f2fa;color:#68708a;border-radius:7px;padding:3px 7px;white-space:nowrap}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}.list{padding-left:20px;margin:10px 0 0}.list li{margin:7px 0;color:#596079}.list li::marker{color:var(--blue)}.callout{padding:17px 19px;border-radius:15px;background:#f1f3ff;border:1px solid #e3e7ff;color:#4d567d}.callout strong{color:#3c4bb2}.priority{display:inline-block;padding:4px 8px;border-radius:7px;font-size:11px;font-weight:700}.p0{background:#e8f6ee;color:#237346}.p1{background:#edf0ff;color:#4559bd}.p2{background:#fff0df;color:#98601d}.accordion{border:1px solid var(--line);border-radius:14px;background:#fff;margin:9px 0;overflow:hidden}.accordion summary{cursor:pointer;list-style:none;padding:15px 17px;font-weight:600;display:flex;justify-content:space-between;gap:12px}.accordion summary::-webkit-details-marker{display:none}.accordion summary:after{content:"＋";color:var(--blue)}.accordion[open] summary:after{content:"−"}.accordion .inside{padding:0 17px 17px;color:var(--muted);font-size:13px}.checklist{display:grid;gap:9px}.check{display:flex;gap:10px;align-items:start;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff}.check input{margin-top:5px;accent-color:var(--blue)}.check span{flex:1}.check small{display:block;color:var(--muted);font-size:12px}.progress{height:6px;border-radius:99px;background:#eceef7;overflow:hidden;margin:12px 0}.progress div{height:100%;width:0;background:var(--blue);transition:width .2s}.footer{border-top:1px solid var(--line);margin-top:44px;padding-top:20px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#242943;color:#fff;padding:10px 16px;border-radius:12px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:10}.toast.show{opacity:1}
+@media(max-width:1000px){.layout{grid-template-columns:205px minmax(0,1fr)}.feature-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.flow{grid-template-columns:repeat(2,minmax(0,1fr))}.flow-step:nth-child(2):after{display:none}}
+@media(max-width:720px){.layout{display:block}.sidebar{position:sticky;z-index:5;top:0;height:auto;padding:10px 12px;border-right:0;border-bottom:1px solid var(--line);display:block}.brand{padding:0 3px}.logo{width:35px;height:35px;border-radius:12px}.brand b{font-size:15px}.nav-label,.side-note{display:none}.nav{display:flex;gap:4px;overflow-x:auto;margin-top:10px;padding-bottom:2px}.nav a{white-space:nowrap;padding:7px 10px;font-size:12px}.main{padding:18px 14px 45px}.topline{margin-bottom:15px}.hero{border-radius:20px;padding:23px}.hero h1{font-size:32px}.cards,.two-col{grid-template-columns:1fr}.feature-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.flow{gap:8px}.flow-step{padding:12px}.flow-step:after{display:none!important}.section{margin-top:29px}.section h2{font-size:21px}.card{padding:16px}.demo-body{padding:14px}.form-row{grid-template-columns:1fr 100px}.topline .crumb{display:none}}
+@media print{body{background:#fff}.layout{display:block;max-width:none}.sidebar,.top-actions,.demo-controls,.toast{display:none!important}.main{padding:0}.hero,.card,.demo,.feature,.flow-step{box-shadow:none;break-inside:avoid}.section{break-inside:avoid}.hero{border:1px solid #ddd}.section{margin-top:22px}a{color:inherit;text-decoration:none}}
+</style>
+</head>
+<body>
+<div class="layout">
+<aside class="sidebar">
+ <div class="brand"><div class="logo">鸭</div><div><b>上岸鸭工作台</b><small>SIMPLIFIED PRODUCT PRD</small></div></div>
+ <div class="nav-label">产品文档导航</div>
+ <nav class="nav" id="nav">
+  <a class="active" href="#overview"><span>✦</span>产品宗旨</a>
+  <a href="#structure"><span>▦</span>产品结构</a>
+  <a href="#interaction"><span>↗</span>核心交互</a>
+  <a href="#prototype"><span>◉</span>交互演示</a>
+  <a href="#pages"><span>▤</span>页面需求</a>
+  <a href="#rules"><span>◇</span>业务规则</a>
+  <a href="#roadmap"><span>☷</span>开发优先级</a>
+  <a href="#acceptance"><span>✓</span>验收标准</a>
+ </nav>
+ <div class="side-note"><b>设计原则</b>先做事，再配置工具。<br>默认简单，复杂能力按需展开。<br>休息也是计划的一部分。</div>
+</aside>
+<main class="main">
+ <div class="topline"><div class="crumb">产品设计 / PRD / 简化交互版</div><div class="top-actions"><button class="btn" id="expandAll">展开全部</button><button class="btn" id="printBtn">打印 / 导出 PDF</button><button class="btn primary" id="downloadBtn">下载 HTML</button></div></div>
+ <header class="hero" id="overview">
+  <div class="eyebrow">PRODUCT REQUIREMENTS DOCUMENT · V1.0</div>
+  <h1>让计划适应真实的你，<br>而不是让你追赶计划。</h1>
+  <p>上岸鸭是一款以任务执行为中心的个人工作台。它根据今日目标、实际耗时与精力反馈，帮助用户在学习、运营、比赛和 Agent 项目之间做出合理取舍，并把休息和缓冲正式纳入计划。</p>
+  <div class="hero-foot"><span class="pill">✦ 交互优先</span><span class="pill">◷ 精力感知</span><span class="pill">↻ 动态排期</span><span class="pill">⌁ AI 按需帮助</span><span class="pill">版本 V1.0 · 2026.10.28</span></div>
+ </header>
+ <section class="section">
+  <div class="section-head"><div><h2>为什么要做上岸鸭</h2><p>解决的不是“没有计划”，而是计划无法适应真实执行过程。</p></div></div>
+  <div class="cards">
+   <article class="card"><div class="iconbox ib">◷</div><h3>计划总是理想化</h3><p>预计任务时间不准，一项任务超时，后面的安排全部被挤掉。</p></article>
+   <article class="card"><div class="iconbox ip">↯</div><h3>遇到困难，精力被耗尽</h3><p>缺少及时拆解、降低难度和暂停机制，卡住后难以推进其他任务。</p></article>
+   <article class="card"><div class="iconbox ig">⌁</div><h3>任务和资料相互分离</h3><p>资料、链接和任务散落在不同地方，执行中频繁切换，增加负担。</p></article>
+   <article class="card"><div class="iconbox io">☁</div><h3>休息没有进入计划</h3><p>疲惫时仍要求自己继续高强度工作，把合理休息误认为失败。</p></article>
+  </div>
+  <div class="callout" style="margin-top:14px"><strong>产品宗旨：</strong>计划不是拿来逼自己完成的，而是帮助自己在真实精力下完成更多重要的事。</div>
+ </section>
+ <section class="section" id="structure">
+  <div class="section-head"><div><h2>产品结构：只保留四个主入口</h2><p>把复杂能力收起来，让用户一眼知道下一步做什么。</p></div></div>
+  <div class="feature-grid">
+   <div class="feature"><span class="n">01 / TODAY</span><div class="iconbox ib">☀</div><b>今天</b><small>当前任务、今日清单、精力状态与休息安排。</small></div>
+   <div class="feature"><span class="n">02 / TASKS</span><div class="iconbox ig">☷</div><b>任务</b><small>按学习、运营、比赛、Agent 等主线管理任务。</small></div>
+   <div class="feature"><span class="n">03 / MATERIALS</span><div class="iconbox ip">⌁</div><b>资料</b><small>链接、文档、图片、视频笔记，可关联任务。</small></div>
+   <div class="feature"><span class="n">04 / REVIEW</span><div class="iconbox io">↗</div><b>复盘</b><small>实际耗时、常见卡点、精力变化与可复用经验。</small></div>
+  </div>
+  <p style="font-size:12px;color:var(--muted);margin-top:12px">模型/API、平台连接、统计图表、四象限与时间表放在“设置 / 更多”或相关任务内按需展开。保留原有工作台整体结构，渐进式简化。</p>
+ </section>
+ <section class="section" id="interaction">
+  <div class="section-head"><div><h2>核心交互流程</h2><p>尽量让每个步骤只需要一次明确的选择。</p></div></div>
+  <div class="flow">
+   <div class="flow-step"><small>STEP 01</small><b>生成今日安排</b><p>选择目标、可用时间和当前精力。</p></div>
+   <div class="flow-step"><small>STEP 02</small><b>开始执行</b><p>计时自动开始，任务资料就在手边。</p></div>
+   <div class="flow-step"><small>STEP 03</small><b>卡住或疲惫时</b><p>求助 AI、拆小任务、休息或顺延。</p></div>
+   <div class="flow-step"><small>STEP 04</small><b>完成并复盘</b><p>记录实际耗时，更新之后的估算。</p></div>
+  </div>
+ </section>
+ <section class="section" id="prototype">
+  <div class="section-head"><div><h2>交互原型：今天</h2><p>下面是可操作的前端示意，演示精力反馈、任务计时和新增任务。演示数据仅保存在当前页面，不连接后端或 AI。</p></div><span class="tag">可交互 Demo</span></div>
+  <div class="demo">
+   <div class="demo-top"><b>☀ 今天的工作台</b><span class="tag" id="energyBadge">当前精力：未选择</span></div>
+   <div class="demo-body">
+    <div class="demo-label">01 / 现在的精力怎么样？</div>
+    <div class="energy" id="energyChoices"><button data-energy="高" data-msg="精力不错。优先推进一项需要专注的任务。">⚡ 精力够用</button><button data-energy="中" data-msg="给自己留一点余地。完成一小步后安排短休息。">🌤 有点累</button><button data-energy="低" data-msg="先别硬撑。建议休息，再把高难度任务顺延。">🌙 已经耗尽</button></div>
+    <div class="demo-msg" id="energyAdvice" aria-live="polite">选择当前状态，查看对应建议。</div>
+    <div class="task-now"><div class="demo-label">02 / 当前任务</div><h3 id="currentTaskTitle">学习 AI 产品经理：拆解一个用户需求</h3><div class="task-meta"><span id="taskEstimate">预计 25 分钟</span> · <span id="timerStatus">尚未开始</span></div><div class="timer" id="timer">00:00</div><div class="demo-controls"><button class="btn primary" id="timerToggle">开始任务</button><button class="btn" id="stuckBtn">我卡住了</button><button class="btn" id="completeBtn">完成任务</button></div><div class="demo-msg" id="taskAdvice" aria-live="polite"></div></div>
+    <div class="form-row"><input class="field" id="newTaskName" placeholder="添加一个任务，例如：整理比赛材料"><input class="field" id="newTaskMinutes" type="number" min="1" max="600" value="30" aria-label="预计分钟数"></div>
+    <div style="margin-top:8px"><button class="btn" id="addTaskBtn">＋ 添加到今日清单</button></div>
+    <div class="task-list" id="taskList"><label class="task-row"><input type="checkbox"><span class="task-name">整理今天最重要的三件事</span><small>10 分钟</small><span class="tag">待开始</span></label><label class="task-row"><input type="checkbox"><span class="task-name">学习一个 AI 产品案例</span><small>35 分钟</small><span class="tag">待开始</span></label><label class="task-row"><input type="checkbox"><span class="task-name">休息 / 发呆缓冲</span><small>15 分钟</small><span class="tag">计划内</span></label></div>
+   </div>
+  </div>
+ </section>
+ <section class="section" id="pages">
+  <div class="section-head"><div><h2>页面需求</h2><p>默认只显示必要信息，高级能力在需要时出现。</p></div></div>
+  <details class="accordion" open><summary>01 · 今天首页</summary><div class="inside">从上到下：精力快捷反馈、当前任务卡片、今日任务清单（已完成默认折叠）、休息/缓冲提示、添加任务入口。当前任务有且只有一个主要行动按钮。进入后 10 秒内应能开始工作。</div></details>
+  <details class="accordion"><summary>02 · 任务管理</summary><div class="inside">按主线分组，例如 AI 产品经理学习、运营、比赛、Agent/个人项目，支持自定义。任务基础字段：名称、主线、优先级、预计时长、截止时间（可选）、状态。默认列表视图；四象限与时间表作为可选视图。新建表单保持简短。</div></details>
+  <details class="accordion"><summary>03 · 资料中心</summary><div class="inside">支持添加链接、上传文档/图片、保存视频链接。通过可搜索下拉列表关联任务，也允许暂不关联。任务卡片直接显示相关资料。外部连接失败时如实说明，并提供手动上传或粘贴链接的替代方案。</div></details>
+  <details class="accordion"><summary>04 · 复盘与统计</summary><div class="inside">展示本周完成任务数、预计与实际耗时对比、常见卡点、低精力时适合的任务类型。数据不足时明确显示“样本还不够”，不生成虚假的精确结论。</div></details>
+  <details class="accordion"><summary>05 · AI 卡点求助</summary><div class="inside">点击“我卡住了”后，仅显示一句话描述、添加截图/文档/链接（可选）和“帮我拆解”。AI 输出通俗解释、最多 3 步的下一步动作和参考资料。AI 不可用时，输入仍可保存，用户可继续手动执行或暂停。</div></details>
+ </section>
+ <section class="section" id="rules">
+  <div class="section-head"><div><h2>关键业务规则</h2><p>让计划可以调整，而不是把用户锁死在原来的时间表里。</p></div></div>
+  <div class="two-col">
+   <div class="card"><h3>⏱ 时间与计时</h3><ul class="list"><li>任务开始后持续计时，刷新后可正确恢复。</li><li>暂停时间不计入实际执行时长。</li><li>超时触发提醒和重排建议，不自动判定失败。</li><li>同类任务实际耗时逐步修正未来估算。</li></ul></div>
+   <div class="card"><h3>🌿 精力与休息</h3><ul class="list"><li>默认预留可用时间的 15%–25% 作为缓冲，可调整。</li><li>低精力时优先推荐休息或低认知负荷任务。</li><li>排期调整先给建议，用户确认后再应用。</li><li>不自动删除任务，也不把休息记为失败。</li></ul></div>
+   <div class="card"><h3>⌁ AI 与外部连接</h3><ul class="list"><li>普通任务功能不要求先配置 API。</li><li>API Key 掩码显示，不写入公开仓库或日志。</li><li>连接器必须验证实际权限和读取结果。</li><li>连接失败时如实提示，不伪装已读取。</li></ul></div>
+   <div class="card"><h3>▤ 数据与状态</h3><ul class="list"><li>任务状态：未开始、进行中、已暂停、已完成、已顺延。</li><li>任务、计时与复盘数据可查看、修改和删除。</li><li>AI 不可用不影响任务、计时和资料保存。</li><li>演示原型与真实后端数据必须明确区分。</li></ul></div>
+  </div>
+ </section>
+ <section class="section" id="roadmap">
+  <div class="section-head"><div><h2>开发优先级</h2><p>先把核心闭环做可靠，再增加增强能力。</p></div></div>
+  <div class="cards">
+   <div class="card"><span class="priority p0">P0 · 必须可用</span><h3 style="margin-top:12px">核心执行闭环</h3><p>新建/编辑/完成/顺延任务；今日清单；稳定计时、暂停和恢复；精力反馈；休息缓冲；资料关联；卡点保存；持久化。</p></div>
+   <div class="card"><span class="priority p1">P1 · 增强体验</span><h3 style="margin-top:12px">更聪明的排期与复盘</h3><p>根据历史耗时调整预计时间；列表/四象限/时间表切换；资料检索与文档解析；周复盘和卡点归类。</p></div>
+   <div class="card"><span class="priority p2">P2 · 按需扩展</span><h3 style="margin-top:12px">连接器与高级 AI</h3><p>多模型选择、API 文档跳转、视频讲解/生成、微信/飞书/Obsidian 连接、语音输入和 Agent 自动化。</p></div>
+   <div class="card"><h3>建议的迭代顺序</h3><p>① 首页和任务计时 → ② 精力与动态排期 → ③ 任务资料关联与 AI 求助 → ④ 统计、连接器和高级功能。</p></div>
+  </div>
+ </section>
+ <section class="section" id="acceptance">
+  <div class="section-head"><div><h2>验收清单</h2><p>勾选记录开发验证进度。当前勾选仅保存在本次页面会话中。</p></div><span class="tag" id="checkCount">0 / 8 已检查</span></div>
+  <div class="progress"><div id="progressBar"></div></div>
+  <div class="checklist" id="checks">
+   <label class="check"><input type="checkbox"><span><b>无需配置 AI 也能完成任务</b><small>创建、计时、暂停、完成、顺延和复盘均可用。</small></span></label>
+   <label class="check"><input type="checkbox"><span><b>计时稳定且能恢复</b><small>页面切换或刷新后状态正确，不重复累计时间。</small></span></label>
+   <label class="check"><input type="checkbox"><span><b>卡点信息不会丢失</b><small>文字和附件可保存，AI 失败不阻断任务流程。</small></span></label>
+   <label class="check"><input type="checkbox"><span><b>疲惫时提出合理建议</b><small>可建议休息或降低难度，未经确认不改排期。</small></span></label>
+   <label class="check"><input type="checkbox"><span><b>资料和任务真正关联</b><small>可关联、取消关联，并能从任务卡片进入。</small></span></label>
+   <label class="check"><input type="checkbox"><span><b>首页主操作清晰</b><small>不同时突出多个相互竞争的主按钮。</small></span></label>
+   <label class="check"><input type="checkbox"><span><b>连接状态真实</b><small>连接失败时有原因与替代方案，不伪装成功。</small></span></label>
+   <label class="check"><input type="checkbox"><span><b>桌面与手机均可用</b><small>按钮、计时状态和错误提示清晰可见。</small></span></label>
+  </div>
+ </section>
+ <section class="section">
+  <div class="callout"><strong>最终体验原则</strong><br>一个页面只突出一个主要动作；先做事，再配置工具；默认展示必要信息，复杂能力按需展开；把休息当作计划的一部分；让系统适应人的真实状态，而不是要求人适应理想化计划。</div>
+ </section>
+ <footer class="footer"><span>上岸鸭工作台 · 简化交互 PRD · V1.0</span><span>文档日期：2026-10-28 · 交互原型为前端演示，不代表后端功能已接通</span></footer>
+</main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+(function(){
+ const $=id=>document.getElementById(id);
+ let running=false,startedAt=0,elapsed=0,interval=null,seconds=0;
+ function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+ function fmt(n){const m=Math.floor(n/60),s=n%60;return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')}
+ function tick(){seconds=elapsed+(running?Math.floor((Date.now()-startedAt)/1000):0);$('timer').textContent=fmt(seconds);$('timerStatus').textContent=running?'正在计时':seconds?'已暂停':'尚未开始'}
+ $('timerToggle').addEventListener('click',()=>{if(!running){running=true;startedAt=Date.now();$('timerToggle').textContent='暂停任务';$('timerToggle').classList.add('primary');$('taskAdvice').textContent='开始了。先专注完成眼前这一小步。';if(!interval)interval=setInterval(tick,500)}else{elapsed+=Math.floor((Date.now()-startedAt)/1000);running=false;$('timerToggle').textContent='继续任务';$('timerToggle').classList.remove('primary');tick();$('taskAdvice').textContent='已暂停，休息一下或准备好后继续。'}});
+ $('completeBtn').addEventListener('click',()=>{if(running){elapsed+=Math.floor((Date.now()-startedAt)/1000);running=false}tick();$('timerToggle').textContent='重新开始';$('timerToggle').classList.remove('primary');$('taskAdvice').textContent='已完成本次演示任务。用时 '+fmt(seconds)+'。真实产品中这里会保存记录并建议下一步。';toast('演示任务已标记完成')});
+ $('stuckBtn').addEventListener('click',()=>{const note=prompt('简单说说你卡在哪里？（此演示不会发送给 AI）');if(note&&note.trim()){$('taskAdvice').textContent='已记录卡点：“'+note.trim()+'”。当前是交互演示，尚未连接真实 AI。';toast('卡点已记录在当前页面')}else $('taskAdvice').textContent='可以先缩小目标：写下你卡住的具体一步，再决定求助或暂停。'});
+ document.querySelectorAll('#energyChoices button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('#energyChoices button').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');$('energyBadge').textContent='当前精力：'+b.dataset.energy;$('energyAdvice').textContent=b.dataset.msg}));
+ $('addTaskBtn').addEventListener('click',()=>{const name=$('newTaskName').value.trim(),mins=Math.max(1,Math.min(600,Number($('newTaskMinutes').value)||30));if(!name){$('newTaskName').focus();toast('先写下任务名称');return}const row=document.createElement('label');row.className='task-row';const cb=document.createElement('input');cb.type='checkbox';cb.addEventListener('change',()=>row.classList.toggle('done',cb.checked));const title=document.createElement('span');title.className='task-name';title.textContent=name;const time=document.createElement('small');time.textContent=mins+' 分钟';const tag=document.createElement('span');tag.className='tag';tag.textContent='待开始';row.append(cb,title,time,tag);$('taskList').appendChild(row);$('newTaskName').value='';toast('任务已添加到演示清单')});
+ $('taskList').querySelectorAll('input').forEach(cb=>cb.addEventListener('change',()=>cb.closest('.task-row').classList.toggle('done',cb.checked)));
+ function updateChecks(){const all=[...$('checks').querySelectorAll('input')],n=all.filter(x=>x.checked).length;$('checkCount').textContent=n+' / '+all.length+' 已检查';$('progressBar').style.width=(n/all.length*100)+'%'}
+ $('checks').querySelectorAll('input').forEach(x=>x.addEventListener('change',updateChecks));
+ let expanded=false;$('expandAll').addEventListener('click',()=>{expanded=!expanded;document.querySelectorAll('details.accordion').forEach(d=>d.open=expanded);$('expandAll').textContent=expanded?'收起全部':'展开全部'});
+ $('printBtn').addEventListener('click',()=>window.print());
+ $('downloadBtn').addEventListener('click',()=>{const html='<!doctype html>\\n'+document.documentElement.outerHTML;const blob=new Blob([html],{type:'text/html;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='上岸鸭工作台-简化交互PRD.html';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);toast('HTML 文件已生成下载')});
+ const links=[...document.querySelectorAll('#nav a')];const sections=links.map(a=>document.querySelector(a.getAttribute('href'))).filter(Boolean);if('IntersectionObserver'in window){const io=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting){links.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+e.target.id))}}),{rootMargin:'-20% 0px -65% 0px'});sections.forEach(s=>io.observe(s))}
+})();
+</script>
+</body>
+</html>
